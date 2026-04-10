@@ -318,6 +318,8 @@ export function UsageOverTimeChart({
             const gap = points[i].x - points[prevIntervalIdx].x;
             if (gap < 40) return null;
           }
+          const isFirst = i === 0;
+          const anchor = isSinglePoint ? "middle" : isFirst ? "start" : isLast ? "end" : "middle";
           return (
             <text
               key={d.date}
@@ -325,7 +327,7 @@ export function UsageOverTimeChart({
               y={H - 6}
               fill="#a1a1aa"
               fontSize={10}
-              textAnchor="middle"
+              textAnchor={anchor}
             >
               {formatXLabel(d.date)}
             </text>

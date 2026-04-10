@@ -273,6 +273,7 @@ export function App() {
           result: {
             total: checkedIds.size,
             donated: 0,
+            donation_id: null,
             errors: [{ session_id: "", error: errorMsg }],
           },
         });
@@ -286,6 +287,7 @@ export function App() {
         result: {
           total: checkedIds.size,
           donated: 0,
+          donation_id: null,
           errors: [{ session_id: "", error: String(err) }],
         },
       });
@@ -326,6 +328,11 @@ export function App() {
           `Donated: ${dr.donated}`,
           `Total: ${dr.total}`,
         ];
+        if (dr.donation_id) {
+          donateLines.push("");
+          donateLines.push(`Donation ID: ${dr.donation_id}`);
+          donateLines.push(`Session Token: ${sessionToken}`);
+        }
         if (hasDonateErrors) {
           donateLines.push("");
           donateLines.push(`Errors: ${dr.errors.length}`);
@@ -360,8 +367,10 @@ export function App() {
               <span className="text-sm text-violet-300 font-medium">Shared session</span>
             </div>
             <div className="flex items-center gap-2">
-              <img src="/icon.png" alt="VibeLens" className="w-6 h-6" />
-              <span className="text-sm font-bold text-cyan-400">VibeLens</span>
+              <a href="https://github.com/CHATS-lab/VibeLens" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-80 transition">
+                <img src="/icon.png" alt="VibeLens" className="w-6 h-6" />
+                <span className="text-sm font-bold text-cyan-400">VibeLens</span>
+              </a>
             </div>
           </div>
           <div className="flex-1 min-h-0">
@@ -384,8 +393,10 @@ export function App() {
             <ResizeHandle side="left" onResize={handleSidebarResize} />
             <div data-tour="sidebar-header" className="flex items-center justify-between px-4 h-[75px] border-b border-zinc-800 sticky top-0">
               <div className="flex items-center gap-3">
-                <img src="/icon.png" alt="VibeLens" className="w-12 h-12" />
-                <h1 className="text-2xl font-bold text-cyan-400">VibeLens</h1>
+                <a href="https://github.com/CHATS-lab/VibeLens" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:opacity-80 transition">
+                  <img src="/icon.png" alt="VibeLens" className="w-12 h-12" />
+                  <h1 className="text-2xl font-bold text-cyan-400">VibeLens</h1>
+                </a>
               </div>
               <div className="flex items-center gap-1">
                 <button

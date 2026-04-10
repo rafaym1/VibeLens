@@ -127,6 +127,7 @@ export interface UserPreferenceResult {
 export interface DonateResult {
   total: number;
   donated: number;
+  donation_id: string | null;
   errors: Array<{ session_id: string; error: string }>;
 }
 

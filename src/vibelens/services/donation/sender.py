@@ -91,7 +91,12 @@ async def send_donation(session_ids: list[str], session_token: str | None = None
     finally:
         shutil.rmtree(bundle_dir, ignore_errors=True)
 
-    return DonateResult(total=len(session_ids), donated=donated, errors=sessions_data.errors)
+    return DonateResult(
+        total=len(session_ids),
+        donated=donated,
+        donation_id=donation_id if donated > 0 else None,
+        errors=sessions_data.errors,
+    )
 
 
 class _SessionCollectionResult:
