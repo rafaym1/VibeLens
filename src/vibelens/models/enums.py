@@ -20,7 +20,6 @@ class AgentType(StrEnum):
     CURSOR = "cursor"
     DATACLAW = "dataclaw"
     GEMINI = "gemini"
-    GEMINI_CLI = "gemini_cli"
     KIMI = "kimi"
     OPENCODE = "opencode"
     OPENCLAW = "openclaw"

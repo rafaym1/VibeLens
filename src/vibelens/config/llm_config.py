@@ -66,6 +66,7 @@ LEGACY_BACKEND_ALIASES: dict[str, str] = {
     "claude-cli": "claude_code",
     "codex-cli": "codex",
     "gemini-cli": "gemini",
+    "gemini_cli": "gemini",
     "cursor-cli": "cursor",
     "kimi-cli": "kimi",
     "openclaw-cli": "openclaw",

@@ -22,7 +22,6 @@ class SkillSourceType(StrEnum):
     CURSOR = AgentType.CURSOR
     DATACLAW = AgentType.DATACLAW
     GEMINI = AgentType.GEMINI
-    GEMINI_CLI = AgentType.GEMINI_CLI
     KIMI = AgentType.KIMI
     OPENCODE = AgentType.OPENCODE
     OPENCLAW = AgentType.OPENCLAW

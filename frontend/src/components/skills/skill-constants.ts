@@ -4,7 +4,6 @@ export const SOURCE_COLORS: Record<string, string> = {
   codex: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700/30",
   central: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/30",
   gemini: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/30",
-  gemini_cli: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/30",
   copilot: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-700/30",
   openclaw: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-700/30",
   cursor: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700/30",
@@ -21,7 +20,6 @@ export const SOURCE_LABELS: Record<string, string> = {
   codex: "Codex",
   central: "Central",
   gemini: "Gemini",
-  gemini_cli: "gemini_cli",
   copilot: "Copilot",
   openclaw: "OpenClaw",
 };
@@ -32,7 +30,6 @@ export const SOURCE_DESCRIPTIONS: Record<string, string> = {
   codex: "Installed in ~/.codex/skills/",
   central: "Central store in ~/.vibelens/skills/",
   gemini: "Installed for Gemini CLI",
-  gemini_cli: "Installed in ~/.gemini/skills/",
   copilot: "Installed in ~/.copilot/skills/",
   openclaw: "Installed in ~/.openclaw/skills/",
 };
@@ -75,7 +72,6 @@ export const SUBDIR_DESCRIPTIONS: Record<string, string> = {
 export const ALL_SYNC_TARGETS: { key: string; label: string }[] = [
   { key: "claude_code", label: "Claude Code" },
   { key: "codex", label: "Codex" },
-  { key: "gemini_cli", label: "gemini_cli" },
   { key: "copilot", label: "Copilot" },
   { key: "openclaw", label: "OpenClaw" },
 ];
