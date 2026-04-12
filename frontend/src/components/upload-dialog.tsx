@@ -312,7 +312,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
                 className={`flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-lg cursor-pointer transition ${
                   dragOver
                     ? "border-violet-400 bg-violet-500/10"
-                    : "border-card hover:border-zinc-500 bg-subtle"
+                    : "border-card hover:border-hover bg-subtle"
                 }`}
               >
                 <FileArchive
@@ -389,7 +389,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setStep("upload")}
-                  className="px-4 py-1.5 text-xs text-muted hover:text-secondary border border-card hover:border-zinc-500 rounded transition"
+                  className="px-4 py-1.5 text-xs text-muted hover:text-secondary border border-card hover:border-hover rounded transition"
                 >
                   Back
                 </button>
@@ -543,7 +543,7 @@ function SelectorRow({
             className={`px-3 py-1 text-xs rounded-full transition ${
               selected === opt.value
                 ? "bg-violet-600 text-white"
-                : "bg-control text-muted border border-card hover:border-zinc-500 hover:text-secondary"
+                : "bg-control text-muted border border-card hover:border-hover hover:text-secondary"
             }`}
           >
             {opt.label}
