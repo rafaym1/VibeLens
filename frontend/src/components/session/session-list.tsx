@@ -8,24 +8,21 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
-  Bot,
   SlidersHorizontal,
   Loader2,
-  Link2,
-  Heart,
   Download,
   ArrowLeftRight,
-  ShieldCheck,
   FileUp,
-  Check,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../app";
 import type { Trajectory } from "../../types";
-import { formatTime, truncate, baseProjectName } from "../../utils";
+import { baseProjectName } from "../../utils";
 import { SearchOptionsDialog } from "./search-options-dialog";
 import { Tooltip } from "../tooltip";
 import { SESSIONS_PER_PAGE, SEARCH_DEBOUNCE_MS } from "../../constants";
+import { SessionRow } from "./session-row";
+import { AgentFilterDropdown, DonateButton } from "./session-list-controls";
 
 export type ViewMode = "time" | "project";
 
@@ -446,171 +443,4 @@ export function SessionList({
       </div>
     </div>
   );
-}
-
-function SessionRow({
-  session,
-  selectedId,
-  checkedIds,
-  onSelect,
-  onToggle,
-  showProject,
-  isDemo,
-}: {
-  session: Trajectory;
-  selectedId: string | null;
-  checkedIds: Set<string>;
-  onSelect: (id: string) => void;
-  onToggle: (id: string) => void;
-  showProject: boolean;
-  isDemo: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center border-b border-card transition-all duration-200 ${
-        selectedId === session.session_id
-          ? "bg-accent-cyan-subtle border-l-2 border-l-accent-cyan"
-          : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border-l-2 border-l-transparent"
-      }`}
-    >
-      {/* Checkbox — indented under project header chevron when nested */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle(session.session_id);
-        }}
-        className={`shrink-0 pr-1 py-1 text-dimmed hover:text-accent-cyan hover:bg-control/40 rounded transition ${
-          showProject ? "pl-3" : "pl-8"
-        }`}
-      >
-        {checkedIds.has(session.session_id) ? (
-          <CheckSquare className="w-3.5 h-3.5 text-accent-cyan" />
-        ) : (
-          <Square className="w-3.5 h-3.5" />
-        )}
-      </button>
-
-      {/* Session content */}
-      <button
-        onClick={() => onSelect(session.session_id)}
-        className="flex-1 text-left pr-3 py-2.5 min-w-0"
-      >
-        {showProject && (
-          <div className="flex items-center justify-between mb-0.5 min-w-0">
-            <span className="text-xs text-muted uppercase tracking-wide truncate" title={session.project_path || ""}>
-              {baseProjectName(session.project_path || "")}
-            </span>
-            <div className="flex items-center gap-1 shrink-0 ml-2">
-              {isDemo && !session._upload_id && (
-                <span className="px-1 py-0.5 text-[9px] font-medium bg-amber-500/20 text-accent-amber border border-amber-500/30 rounded" title="Example session (not donatable)">Example</span>
-              )}
-              {!!session.extra?._anonymized && (
-                <span title="Session anonymized"><ShieldCheck className="w-3 h-3 text-accent-emerald" /></span>
-              )}
-              {(session.last_trajectory_ref || session.continued_trajectory_ref || session.parent_trajectory_ref) && (
-                <span title="Part of continuation chain"><Link2 className="w-3 h-3 text-accent-violet" /></span>
-              )}
-              <span className="text-xs text-muted whitespace-nowrap">
-                {formatTime(session.timestamp ?? null)}
-              </span>
-            </div>
-          </div>
-        )}
-        <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm text-secondary truncate flex-1 min-w-0" title={session.first_message || ""}>
-            {truncate(session.first_message || "", 120) || "Empty session"}
-          </p>
-          <div className="flex items-center gap-1 shrink-0">
-            {!showProject && isDemo && !session._upload_id && (
-              <span className="px-1 py-0.5 text-[9px] font-medium bg-amber-500/20 text-accent-amber border border-amber-500/30 rounded" title="Example session (not donatable)">Example</span>
-            )}
-            {!showProject && !!session.extra?._anonymized && (
-              <span title="Session anonymized"><ShieldCheck className="w-3 h-3 text-accent-emerald" /></span>
-            )}
-            {!showProject && (session.last_trajectory_ref || session.continued_trajectory_ref || session.parent_trajectory_ref) && (
-              <span title="Part of continuation chain"><Link2 className="w-3 h-3 text-accent-violet" /></span>
-            )}
-            {!showProject && (
-              <span className="text-xs text-muted whitespace-nowrap">
-                {formatTime(session.timestamp ?? null)}
-              </span>
-            )}
-          </div>
-        </div>
-      </button>
-    </div>
-  );
-}
-
-function AgentFilterDropdown({ value, agents, onChange }: { value: string; agents: string[]; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  const options = [{ value: "all", label: "All agents" }, ...agents.map((a) => ({ value: a, label: a }))];
-  const activeLabel = options.find((o) => o.value === value)?.label ?? "All agents";
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 bg-control text-secondary text-sm rounded px-2.5 py-1.5 border border-card hover:border-hover transition cursor-pointer"
-      >
-        <Bot className="w-3.5 h-3.5 text-dimmed shrink-0" />
-        <span className="flex-1 text-left truncate">{activeLabel}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-dimmed shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-control border border-card rounded-md shadow-xl overflow-hidden">
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-sm transition ${
-                value === opt.value
-                  ? "bg-accent-cyan-subtle text-cyan-700 dark:text-cyan-200"
-                  : "text-secondary hover:bg-control-hover hover:text-primary"
-              }`}
-            >
-              {value === opt.value ? (
-                <Check className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
-              ) : (
-                <span className="w-3.5 shrink-0" />
-              )}
-              <span className="truncate">{opt.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DonateButton({ onClick, disabled, tooltip }: { onClick: () => void; disabled: boolean; tooltip?: string }) {
-  const button = (
-    <button
-      onClick={disabled ? undefined : onClick}
-      className={`w-full flex items-center justify-center gap-1.5 py-1.5 text-sm font-semibold rounded border transition ${
-        disabled
-          ? "bg-rose-600/40 text-rose-700 dark:text-rose-200 border-rose-500/30 cursor-not-allowed opacity-60"
-          : "bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-900/40"
-      }`}
-    >
-      <Heart className="w-3.5 h-3.5" />
-      Donate Data
-    </button>
-  );
-
-  if (disabled && tooltip) {
-    return <Tooltip text={tooltip} className="w-full">{button}</Tooltip>;
-  }
-  return button;
 }
