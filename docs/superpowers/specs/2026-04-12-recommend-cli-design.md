@@ -130,7 +130,7 @@ The function is called after extraction but before concatenation. The engine log
 | Metric | Current (extract_all_contexts) | New (lightweight) |
 |--------|-------------------------------|-------------------|
 | I/O | 1.3 GB (all sessions) | ~25 MB (compaction files only) |
-| Parse time | Minutes | Seconds |
+| Parse time | Minutes | 2-5 seconds |
 | Output tokens | Exceeds budget | 30-50K tokens (sampled if needed) |
 
 ## 3. `vibelens recommend` CLI Command

@@ -497,7 +497,7 @@ For `vibelens recommend` which processes ALL local sessions (500+, 1GB+), the st
 1. Get all session metadata from `LocalTrajectoryStore.list_metadata()` (cached, instant)
 2. **Sessions WITH compaction agents (~80%)**: Read ONLY compaction JSONL files directly (skip main trajectory). Extract the AGENT step's summary text, truncate to 300 chars. Claude Code layout: `{uuid}/subagents/agent-acompact-*.jsonl`
 3. **Sessions WITHOUT compaction (~20%)**: Use cached metadata only: `"Project: {path} | Tools: {count} | Duration: {dur} | Model: {model}"`
-4. **Diversity sampling** (if digest exceeds token budget): Group by project, take up to 3 most recent per project, rank projects by session count, keep top N until under budget. Ensures coverage of all active projects with recency bias.
+4. **Diversity sampling** (if digest exceeds 80K token budget, leaving room for system prompt overhead): Group by project, take up to 3 most recent per project, rank projects by session count, keep top N until under budget. Ensures coverage of all active projects with recency bias.
 
 Output: 30-50K tokens for 500+ sessions. I/O: ~25 MB (compaction files only vs 1.3 GB for all sessions).
 
