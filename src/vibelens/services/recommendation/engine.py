@@ -44,8 +44,10 @@ from vibelens.services.analysis_shared import (
 from vibelens.services.analysis_store import generate_analysis_id
 from vibelens.services.context_params import PRESET_RECOMMENDATION
 from vibelens.services.recommendation.catalog import CatalogSnapshot, load_catalog
+from vibelens.services.recommendation.extraction import extract_lightweight_digest
 from vibelens.services.recommendation.retrieval import KeywordRetrieval
 from vibelens.services.recommendation.scoring import score_candidates
+from vibelens.services.session.store_resolver import list_all_metadata
 from vibelens.services.skill.shared import parse_llm_output
 from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 
@@ -85,9 +87,7 @@ def estimate_recommendation(
     """
     backend = require_backend()
     context_set = extract_all_contexts(
-        session_ids=session_ids,
-        session_token=session_token,
-        params=PRESET_RECOMMENDATION,
+        session_ids=session_ids, session_token=session_token, params=PRESET_RECOMMENDATION
     )
     if not context_set.contexts:
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
@@ -117,7 +117,7 @@ def estimate_recommendation(
 
 
 async def analyze_recommendation(
-    session_ids: list[str], session_token: str | None = None
+    session_ids: list[str] | None = None, session_token: str | None = None
 ) -> RecommendationResult:
     """Run the full L1-L4 recommendation pipeline.
 
@@ -157,14 +157,14 @@ async def analyze_recommendation(
 
 
 async def _run_pipeline(
-    session_ids: list[str], session_token: str | None, analysis_id: str
+    session_ids: list[str] | None, session_token: str | None, analysis_id: str
 ) -> RecommendationResult:
     """Execute L1-L4 pipeline steps.
 
     Separated from analyze_recommendation for clean try/finally in caller.
 
     Args:
-        session_ids: Sessions to analyze.
+        session_ids: Sessions to analyze. None triggers the lightweight path.
         session_token: Browser tab token.
         analysis_id: Pre-generated analysis ID for log correlation.
 
@@ -174,37 +174,52 @@ async def _run_pipeline(
     backend = require_backend()
 
     # L1: Context extraction
-    context_set = extract_all_contexts(
-        session_ids=session_ids,
-        session_token=session_token,
-        params=PRESET_RECOMMENDATION,
-    )
-    if not context_set.contexts:
-        raise ValueError(f"No sessions could be loaded from: {session_ids}")
+    if session_ids:
+        # Standard path: web UI with explicit session selection
+        context_set = extract_all_contexts(
+            session_ids=session_ids, session_token=session_token, params=PRESET_RECOMMENDATION
+        )
+        if not context_set.contexts:
+            raise ValueError(f"No sessions could be loaded from: {session_ids}")
+        loaded_session_ids = context_set.session_ids
+        skipped_session_ids = context_set.skipped_session_ids
+        digest = format_batch_digest(context_set)
+    else:
+        # Lightweight path: CLI with all local sessions
+        all_metadata = list_all_metadata(session_token)
+        if not all_metadata:
+            raise ValueError("No sessions found in local stores.")
+        digest, total_count, signal_count = extract_lightweight_digest(all_metadata)
+        loaded_session_ids = [m.get("session_id", "") for m in all_metadata]
+        skipped_session_ids = []
+        logger.info(
+            "Lightweight extraction: %d sessions, %d signals",
+            total_count,
+            signal_count,
+        )
 
     catalog = load_catalog()
     if not catalog or not catalog.items:
         return _build_empty_result(
             analysis_id=analysis_id,
-            session_ids=context_set.session_ids,
-            skipped_session_ids=context_set.skipped_session_ids,
+            session_ids=loaded_session_ids,
+            skipped_session_ids=skipped_session_ids,
             backend=backend,
             reason="No catalog available",
         )
 
     run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     log_dir = RECOMMENDATION_LOG_DIR / run_timestamp
-    digest = format_batch_digest(context_set)
 
     logger.info(
         "Recommendation pipeline: %d sessions, %d catalog items",
-        len(context_set.session_ids),
+        len(loaded_session_ids),
         len(catalog.items),
     )
 
     # L2: Profile generation (1 LLM call)
     profile, profile_cost = await _generate_profile(
-        backend, digest, context_set.session_ids, log_dir
+        backend, digest, loaded_session_ids, log_dir
     )
 
     # L3: Retrieval + scoring (no LLM)
@@ -212,8 +227,8 @@ async def _run_pipeline(
     if not scored_candidates:
         return _build_empty_result(
             analysis_id=analysis_id,
-            session_ids=context_set.session_ids,
-            skipped_session_ids=context_set.skipped_session_ids,
+            session_ids=loaded_session_ids,
+            skipped_session_ids=skipped_session_ids,
             backend=backend,
             reason="No matching catalog items found",
             profile=profile,
@@ -234,8 +249,8 @@ async def _run_pipeline(
 
     return RecommendationResult(
         analysis_id=analysis_id,
-        session_ids=context_set.session_ids,
-        skipped_session_ids=context_set.skipped_session_ids,
+        session_ids=loaded_session_ids,
+        skipped_session_ids=skipped_session_ids,
         title=title,
         summary=_build_summary(profile, len(recommendations)),
         user_profile=profile,
@@ -385,8 +400,7 @@ async def _generate_rationales(
 
 
 def _merge_scores_and_rationales(
-    scored_candidates: list[tuple[CatalogItem, float]],
-    rationale_output: RationaleOutput,
+    scored_candidates: list[tuple[CatalogItem, float]], rationale_output: RationaleOutput
 ) -> list[CatalogRecommendation]:
     """Combine L3 scores with L4 rationales into final recommendations.
 
@@ -408,21 +422,23 @@ def _merge_scores_and_rationales(
         rationale_text = rationale_item.rationale if rationale_item else "Matches your workflow."
         confidence = rationale_item.confidence if rationale_item else 0.5
 
-        recommendations.append(CatalogRecommendation(
-            item_id=item.item_id,
-            item_type=item.item_type,
-            user_label=ITEM_TYPE_LABELS.get(item.item_type, item.item_type.value),
-            name=item.name,
-            description=item.description,
-            rationale=rationale_text,
-            confidence=confidence,
-            quality_score=item.quality_score,
-            score=round(score, 4),
-            install_method=item.install_method,
-            install_command=item.install_command,
-            has_content=item.install_content is not None,
-            source_url=item.source_url,
-        ))
+        recommendations.append(
+            CatalogRecommendation(
+                item_id=item.item_id,
+                item_type=item.item_type,
+                user_label=ITEM_TYPE_LABELS.get(item.item_type, item.item_type.value),
+                name=item.name,
+                description=item.description,
+                rationale=rationale_text,
+                confidence=confidence,
+                quality_score=item.quality_score,
+                score=round(score, 4),
+                install_method=item.install_method,
+                install_command=item.install_command,
+                has_content=item.install_content is not None,
+                source_url=item.source_url,
+            )
+        )
     return recommendations
 
 
@@ -490,7 +506,9 @@ def _build_summary(profile: UserProfile, count: int) -> str:
     )
 
 
-def _recommendation_cache_key(session_ids: list[str]) -> str:
+def _recommendation_cache_key(session_ids: list[str] | None) -> str:
     """Generate a cache key from sorted session IDs."""
+    if not session_ids:
+        return "recommendation:all-local"
     sorted_ids = ",".join(sorted(session_ids))
     return f"recommendation:{hashlib.sha256(sorted_ids.encode()).hexdigest()[:16]}"
