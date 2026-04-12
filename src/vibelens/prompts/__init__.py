@@ -1,16 +1,11 @@
-"""Analysis prompt registry.
-
-Central lookup for all available AnalysisPrompt instances.
-"""
+"""Analysis prompt registry."""
 
 from vibelens.models.llm.prompts import AnalysisPrompt
+from vibelens.prompts.evolution import SKILL_EVOLUTION_PROPOSAL_PROMPT
 from vibelens.prompts.friction_analysis import FRICTION_ANALYSIS_PROMPT
-from vibelens.prompts.skill_evolution import SKILL_EVOLUTION_PROPOSAL_PROMPT
-from vibelens.prompts.skill_retrieval import SKILL_RETRIEVAL_PROMPT
 
 PROMPT_REGISTRY: dict[str, AnalysisPrompt] = {
     FRICTION_ANALYSIS_PROMPT.task_id: FRICTION_ANALYSIS_PROMPT,
-    SKILL_RETRIEVAL_PROMPT.task_id: SKILL_RETRIEVAL_PROMPT,
     SKILL_EVOLUTION_PROPOSAL_PROMPT.task_id: SKILL_EVOLUTION_PROPOSAL_PROMPT,
 }
 

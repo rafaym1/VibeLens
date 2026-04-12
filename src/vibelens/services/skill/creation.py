@@ -28,7 +28,7 @@ from vibelens.models.skill import (
     SkillMode,
 )
 from vibelens.models.trajectories.metrics import Metrics
-from vibelens.prompts.skill_creation import (
+from vibelens.prompts.creation import (
     SKILL_CREATION_GENERATE_PROMPT,
     SKILL_CREATION_PROPOSAL_PROMPT,
     SKILL_CREATION_PROPOSAL_SYNTHESIS_PROMPT,
