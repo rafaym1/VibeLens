@@ -76,3 +76,12 @@ class SessionPhase(StrEnum):
     VERIFICATION = "verification"
     PLANNING = "planning"
     MIXED = "mixed"
+
+
+class ElementType(StrEnum):
+    """File-based element types that can be created or evolved."""
+
+    SKILL = "skill"
+    SUBAGENT = "subagent"
+    COMMAND = "command"
+    HOOK = "hook"
