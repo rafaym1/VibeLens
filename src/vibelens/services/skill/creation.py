@@ -17,11 +17,6 @@ from cachetools import TTLCache
 from vibelens.deps import get_skill_analysis_store
 from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
-from vibelens.llm.prompts.skill_creation import (
-    SKILL_CREATION_GENERATE_PROMPT,
-    SKILL_CREATION_PROPOSAL_PROMPT,
-    SKILL_CREATION_PROPOSAL_SYNTHESIS_PROMPT,
-)
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContextBatch
 from vibelens.models.llm.inference import InferenceRequest
@@ -33,6 +28,11 @@ from vibelens.models.skill import (
     SkillMode,
 )
 from vibelens.models.trajectories.metrics import Metrics
+from vibelens.prompts.skill_creation import (
+    SKILL_CREATION_GENERATE_PROMPT,
+    SKILL_CREATION_PROPOSAL_PROMPT,
+    SKILL_CREATION_PROPOSAL_SYNTHESIS_PROMPT,
+)
 from vibelens.services.analysis_shared import (
     CACHE_TTL_SECONDS,
     build_digest_from_contexts,

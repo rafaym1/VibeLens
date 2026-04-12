@@ -15,10 +15,6 @@ from cachetools import TTLCache
 from vibelens.deps import get_friction_store
 from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
-from vibelens.llm.prompts.friction_analysis import (
-    FRICTION_ANALYSIS_PROMPT,
-    FRICTION_SYNTHESIS_PROMPT,
-)
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContextBatch
 from vibelens.models.friction import (
@@ -31,6 +27,10 @@ from vibelens.models.llm.inference import InferenceRequest
 from vibelens.models.step_ref import StepRef
 from vibelens.models.trajectories import Trajectory
 from vibelens.models.trajectories.metrics import Metrics
+from vibelens.prompts.friction_analysis import (
+    FRICTION_ANALYSIS_PROMPT,
+    FRICTION_SYNTHESIS_PROMPT,
+)
 from vibelens.services.analysis_shared import (
     CACHE_MAXSIZE,
     CACHE_TTL_SECONDS,

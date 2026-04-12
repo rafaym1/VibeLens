@@ -9,10 +9,6 @@ from pathlib import Path
 from vibelens.deps import get_skill_analysis_store
 from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
-from vibelens.llm.prompts.skill_retrieval import (
-    SKILL_RETRIEVAL_PROMPT,
-    SKILL_RETRIEVAL_SYNTHESIS_PROMPT,
-)
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContextBatch
 from vibelens.models.llm.inference import InferenceRequest
@@ -23,6 +19,10 @@ from vibelens.models.skill import (
     WorkflowPattern,
 )
 from vibelens.models.trajectories.metrics import Metrics
+from vibelens.prompts.skill_retrieval import (
+    SKILL_RETRIEVAL_PROMPT,
+    SKILL_RETRIEVAL_SYNTHESIS_PROMPT,
+)
 from vibelens.services.analysis_shared import (
     build_system_kwargs,
     extract_all_contexts,
