@@ -29,7 +29,7 @@ export function ModalHeader({ title, children, onClose }: { title?: string; chil
   return (
     <div className="flex items-center justify-between px-5 py-4 border-b border-default shrink-0">
       {children ?? <h2 className="text-sm font-semibold text-primary">{title}</h2>}
-      <button onClick={onClose} className="text-dimmed hover:text-secondary transition">
+      <button onClick={onClose} className="p-1 text-dimmed hover:text-secondary hover:bg-control-hover rounded transition">
         <X className="w-4 h-4" />
       </button>
     </div>

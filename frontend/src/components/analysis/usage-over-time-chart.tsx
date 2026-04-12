@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
+import { BarChart3 } from "lucide-react";
 import type { DailyStat } from "../../types";
 import { formatTokens, formatCost } from "../../utils";
 import { TOGGLE_ACTIVE, TOGGLE_INACTIVE, CHART } from "../../styles";
@@ -149,9 +150,11 @@ export function UsageOverTimeChart({
         <h3 className="text-base font-medium text-secondary mb-3">
           Usage Over Time
         </h3>
-        <p className="text-sm text-muted py-8 text-center">
-          No data available
-        </p>
+        <div className="flex flex-col items-center justify-center py-12 gap-2">
+          <BarChart3 className="w-8 h-8 text-faint" />
+          <p className="text-sm text-muted">No usage data yet</p>
+          <p className="text-xs text-dimmed">Session activity will appear here over time</p>
+        </div>
       </div>
     );
   }

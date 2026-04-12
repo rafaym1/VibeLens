@@ -23,7 +23,7 @@ export function CollapsiblePill({
     <div className={`rounded-lg border ${className} overflow-hidden`}>
       <button
         onClick={onToggle}
-        className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-control dark:hover:bg-white/5 transition-colors"
       >
         {open ? (
           <ChevronDown className="w-3 h-3 shrink-0" />

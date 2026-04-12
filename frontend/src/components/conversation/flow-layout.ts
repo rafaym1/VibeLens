@@ -96,6 +96,18 @@ const TOOL_CATEGORY_MAP: Record<string, string> = {
   TaskUpdate: "task",
   TaskList: "task",
   TaskGet: "task",
+  TaskOutput: "task",
+  TaskStop: "task",
+  TodoWrite: "task",
+  TodoRead: "task",
+  AskUserQuestion: "interact",
+  AskUser: "interact",
+  EnterPlanMode: "interact",
+  ExitPlanMode: "interact",
+  EnterWorktree: "interact",
+  NotebookRead: "file_read",
+  LS: "search",
+  ls: "search",
 };
 
 function truncateLabel(text: string, max: number): string {

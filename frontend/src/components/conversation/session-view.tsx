@@ -337,12 +337,12 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
   if (error) {
     return (
       <div className="flex items-center justify-center h-full p-4">
-        <div className="text-center bg-rose-900/20 border border-rose-800 rounded-lg p-6 max-w-md">
-          <p className="text-sm font-semibold text-rose-300 mb-2">Failed to load session</p>
-          <p className="text-xs text-rose-400 mb-4 font-mono break-all">{error}</p>
+        <div className="text-center bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-6 max-w-md">
+          <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2">Failed to load session</p>
+          <p className="text-xs text-rose-600 dark:text-rose-400 mb-4 font-mono break-all">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-3 py-1 bg-rose-700/50 hover:bg-rose-700 rounded text-xs text-rose-200 transition"
+            className="px-3 py-1 bg-rose-200 hover:bg-rose-300 dark:bg-rose-700/50 dark:hover:bg-rose-700 rounded text-xs text-rose-700 dark:text-rose-200 transition"
           >
             Retry
           </button>
@@ -420,7 +420,7 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
               onClick={() => setHeaderExpanded((v) => !v)}
             >
               <button
-                className="flex items-center gap-0.5 shrink-0 text-xs text-dimmed hover:text-secondary transition"
+                className="flex items-center gap-0.5 shrink-0 text-xs text-dimmed hover:text-secondary hover:bg-control/30 rounded p-0.5 transition"
               >
                 {headerExpanded
                   ? <ChevronDown className="w-3.5 h-3.5" />
@@ -441,14 +441,14 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
             </div>
             <div className="flex items-center gap-1 shrink-0 ml-3">
               {/* View mode toggle */}
-              <div data-tour="view-modes" className="flex rounded-md border border-accent-cyan bg-control/60 mr-2 w-[280px]">
+              <div data-tour="view-modes" className="flex rounded-lg bg-zinc-100 dark:bg-zinc-800/60 p-0.5 mr-2 w-[280px]">
                 <Tooltip text="Messages only, tool calls hidden" className="flex-1">
                   <button
                     onClick={() => setViewMode("concise")}
-                    className={`w-full flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs rounded-l-md transition ${
+                    className={`w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md transition ${
                       viewMode === "concise"
-                        ? "bg-accent-cyan-muted text-accent-cyan font-semibold"
-                        : "text-dimmed hover:text-secondary hover:bg-control-hover/40"
+                        ? "bg-white dark:bg-zinc-700 text-primary font-semibold shadow-sm"
+                        : "text-muted hover:text-secondary"
                     }`}
                   >
                     <AlignLeft className="w-3 h-3" />
@@ -458,10 +458,10 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
                 <Tooltip text="Full conversation with all tool calls" className="flex-1">
                   <button
                     onClick={() => setViewMode("detail")}
-                    className={`w-full flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs transition ${
+                    className={`w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md transition ${
                       viewMode === "detail"
-                        ? "bg-accent-cyan-muted text-accent-cyan font-semibold"
-                        : "text-dimmed hover:text-secondary hover:bg-control-hover/40"
+                        ? "bg-white dark:bg-zinc-700 text-primary font-semibold shadow-sm"
+                        : "text-muted hover:text-secondary"
                     }`}
                   >
                     <List className="w-3 h-3" />
@@ -471,10 +471,10 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
                 <Tooltip text="Visual diagram of the agent's steps" className="flex-1">
                   <button
                     onClick={() => setViewMode("workflow")}
-                    className={`w-full flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs rounded-r-md transition ${
+                    className={`w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md transition ${
                       viewMode === "workflow"
-                        ? "bg-accent-cyan-muted text-accent-cyan font-semibold"
-                        : "text-dimmed hover:text-secondary hover:bg-control-hover/40"
+                        ? "bg-white dark:bg-zinc-700 text-primary font-semibold shadow-sm"
+                        : "text-muted hover:text-secondary"
                     }`}
                   >
                     <GitBranch className="w-3 h-3" />
@@ -617,7 +617,7 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
               {main.parent_trajectory_ref && onNavigateSession && (
                 <button
                   onClick={() => onNavigateSession(main.parent_trajectory_ref!.session_id)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-violet-subtle border border-accent-violet text-xs text-accent-violet hover:bg-violet-800/40 hover:border-violet-600/50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-violet-subtle border border-accent-violet text-xs text-accent-violet hover:bg-violet-100 dark:hover:bg-violet-800/40 hover:border-violet-300 dark:hover:border-violet-600/50 transition-colors"
                   title={`Navigate to parent session: ${main.parent_trajectory_ref.session_id}`}
                 >
                   <Link2 className="w-3 h-3" />
@@ -630,7 +630,7 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
               {main.last_trajectory_ref && onNavigateSession && (
                 <button
                   onClick={() => onNavigateSession(main.last_trajectory_ref!.session_id)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-violet-subtle border border-accent-violet text-xs text-accent-violet hover:bg-violet-800/40 hover:border-violet-600/50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-violet-subtle border border-accent-violet text-xs text-accent-violet hover:bg-violet-100 dark:hover:bg-violet-800/40 hover:border-violet-300 dark:hover:border-violet-600/50 transition-colors"
                   title={`Navigate to previous session: ${main.last_trajectory_ref.session_id}`}
                 >
                   <ArrowUpRight className="w-3 h-3" />
@@ -643,7 +643,7 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
               {main.continued_trajectory_ref && onNavigateSession && (
                 <button
                   onClick={() => onNavigateSession(main.continued_trajectory_ref!.session_id)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-violet-subtle border border-accent-violet text-xs text-accent-violet hover:bg-violet-800/40 hover:border-violet-600/50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-violet-subtle border border-accent-violet text-xs text-accent-violet hover:bg-violet-100 dark:hover:bg-violet-800/40 hover:border-violet-300 dark:hover:border-violet-600/50 transition-colors"
                   title={`Navigate to next session: ${main.continued_trajectory_ref.session_id}`}
                 >
                   <ArrowDownRight className="w-3 h-3" />
@@ -661,7 +661,7 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
             <div className={`grid ${sessionCost != null ? "grid-cols-6" : "grid-cols-5"} gap-2 text-xs`}>
               <TokenStat icon={<ArrowUpRight className="w-3 h-3" />} label="Input" value={metrics.total_prompt_tokens || 0} color="text-accent-cyan" tooltip="Prompt tokens sent to the model" />
               <TokenStat icon={<ArrowDownRight className="w-3 h-3" />} label="Output" value={metrics.total_completion_tokens || 0} color="text-accent-cyan" tooltip="Completion tokens generated by the model" />
-              <TokenStat icon={<Database className="w-3 h-3" />} label="Cache Read" value={metrics.total_cache_read || 0} color="text-green-300" tooltip="Tokens served from prompt cache (reduced cost)" />
+              <TokenStat icon={<Database className="w-3 h-3" />} label="Cache Read" value={metrics.total_cache_read || 0} color="text-green-700 dark:text-green-300" tooltip="Tokens served from prompt cache (reduced cost)" />
               <TokenStat icon={<HardDrive className="w-3 h-3" />} label="Cache Write" value={metrics.total_cache_write || 0} color="text-accent-violet" tooltip="Tokens written to prompt cache for future reuse" />
               <TokenStat icon={<BarChart3 className="w-3 h-3" />} label="Total" value={totalTokens} color="text-accent-amber" tooltip="Total tokens (input + output)" />
               {sessionCost != null && (
@@ -811,9 +811,9 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
     {shareDialog.kind === "demo-blocked" && (
       <Modal onClose={() => setShareDialog({ kind: "hidden" })} maxWidth="max-w-md">
         <ModalBody>
-          <div className="text-center bg-rose-900/20 border border-rose-800 rounded-lg p-6">
-            <p className="text-sm font-semibold text-rose-300 mb-2">Cannot share uploaded sessions</p>
-            <p className="text-xs text-rose-400">
+          <div className="text-center bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-6">
+            <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2">Cannot share uploaded sessions</p>
+            <p className="text-xs text-rose-600 dark:text-rose-400">
               Uploaded sessions are temporary and only visible in your browser tab.
               Install VibeLens locally to share sessions with a permanent link.
             </p>
@@ -821,7 +821,7 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
               href="https://github.com/chats-lab/VibeLens"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block mt-4 px-4 py-2 rounded text-xs font-medium bg-rose-800/50 hover:bg-rose-700/50 text-rose-200 transition"
+              className="inline-block mt-4 px-4 py-2 rounded text-xs font-medium bg-rose-200 hover:bg-rose-300 dark:bg-rose-800/50 dark:hover:bg-rose-700/50 text-rose-700 dark:text-rose-200 transition"
             >
               Install VibeLens
             </a>
@@ -850,7 +850,7 @@ function MetaPill({
 
   const pill = (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] hover:brightness-125 transition-colors ${bgClass} ${color}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] hover:bg-control-hover transition-colors ${bgClass} ${color}`}
     >
       {icon}
       <span>{label}</span>
@@ -904,7 +904,7 @@ function CostStat({ value }: { value: number }) {
       onMouseLeave={() => setShow(false)}
     >
       <p className={`${METRIC_LABEL} flex items-center gap-1`}><DollarSign className="w-3 h-3" />Est. Cost</p>
-      <p className="text-emerald-300 font-mono">{formatCost(value)}</p>
+      <p className="text-emerald-700 dark:text-emerald-300 font-mono">{formatCost(value)}</p>
       {show && (
         <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-[100] px-2.5 py-1.5 rounded-md bg-canvas border border-card text-[11px] text-secondary whitespace-nowrap shadow-lg pointer-events-none">
           Estimated cost based on API pricing

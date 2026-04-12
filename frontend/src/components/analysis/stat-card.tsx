@@ -31,7 +31,7 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div
-      className="rounded-xl border border-card bg-panel/80 px-5 py-5 flex flex-col gap-3 hover:border-hover/60 transition-colors cursor-default"
+      className="rounded-xl border border-card bg-panel/80 px-5 py-5 flex flex-col gap-3 hover:border-hover/60 transition-colors cursor-default shadow-card"
       onMouseEnter={(e) => onHover(e, tooltipText)}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
@@ -52,7 +52,7 @@ export function StatCard({
       <div className="text-3xl font-bold text-accent-cyan tabular-nums tracking-tight">
         {value}
       </div>
-      <div className="border-t border-card/40 pt-2.5 space-y-1.5">
+      <div className="border-t border-card pt-2.5 space-y-1.5">
         {rows.map((row) => (
           <div
             key={row.label}

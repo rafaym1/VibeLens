@@ -52,7 +52,7 @@ export function TagPill({ tag }: { tag: string }) {
 export function ToolBadge({ tool }: { tool: string }) {
   return (
     <Tooltip text={`Allowed tool: ${tool}`}>
-      <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/20 text-cyan-400/70 font-mono cursor-default">
+      <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-600/70 dark:bg-cyan-900/20 dark:text-cyan-400/70 font-mono cursor-default">
         {tool}
       </span>
     </Tooltip>

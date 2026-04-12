@@ -69,7 +69,7 @@ function UserStep({ step }: { step: Step }) {
 
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] bg-gradient-to-br from-slate-600/70 to-slate-700/60 text-primary rounded-2xl rounded-br-md px-4 py-2.5 text-sm overflow-hidden break-words">
+      <div className="max-w-[85%] bg-blue-100 dark:bg-gradient-to-br dark:from-slate-600/70 dark:to-slate-700/60 text-primary rounded-2xl rounded-br-md px-4 py-2.5 text-sm overflow-hidden break-words">
         {!expanded ? (
           <>
             <div className="line-clamp-4">
@@ -77,7 +77,7 @@ function UserStep({ step }: { step: Step }) {
             </div>
             <button
               onClick={() => setExpanded(true)}
-              className="mt-1.5 text-xs text-accent-cyan hover:text-accent-cyan transition"
+              className="mt-1.5 text-xs text-accent-cyan hover:text-accent-cyan hover:bg-control/30 rounded px-1 -mx-1 transition"
             >
               Show full prompt ({lineCount} lines)
             </button>
@@ -88,7 +88,7 @@ function UserStep({ step }: { step: Step }) {
             {isLong && (
               <button
                 onClick={() => setExpanded(false)}
-                className="mt-1.5 text-xs text-accent-cyan hover:text-accent-cyan transition"
+                className="mt-1.5 text-xs text-accent-cyan hover:text-accent-cyan hover:bg-control/30 rounded px-1 -mx-1 transition"
               >
                 Collapse
               </button>
@@ -145,16 +145,16 @@ function SkillStep({ step }: { step: Step }) {
     <div className="max-w-[85%]">
       <button
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm border transition-colors bg-amber-500/10 hover:bg-amber-500/15 text-amber-300 border-amber-500/25"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm border transition-colors bg-amber-500/10 hover:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/25"
       >
         {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         <Zap className="w-4 h-4" />
         <span className="font-medium">Skill</span>
-        {skillName && <span className="text-amber-400 ml-0.5">/{skillName}</span>}
+        {skillName && <span className="text-amber-600 dark:text-amber-400 ml-0.5">/{skillName}</span>}
       </button>
       {open && (
         <div className="mt-1 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
-          <pre className="text-xs text-amber-200/70 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+          <pre className="text-xs text-amber-600 dark:text-amber-200/70 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
             {text}
           </pre>
         </div>
@@ -173,18 +173,18 @@ function AutoPromptStep({ step }: { step: Step }) {
     <div className="max-w-[85%]">
       <button
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm border transition-colors bg-teal-500/15 hover:bg-teal-500/20 text-teal-200 border-teal-400/30"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm border transition-colors bg-teal-500/15 hover:bg-teal-500/20 text-teal-700 dark:text-teal-200 border-teal-400/30"
       >
         {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         <ScrollText className="w-4 h-4" />
         <span className="font-medium">Plan</span>
         {!open && (
-          <span className="text-teal-300/80 truncate max-w-[250px] ml-0.5">{firstLine}</span>
+          <span className="text-teal-600/80 dark:text-teal-300/80 truncate max-w-[250px] ml-0.5">{firstLine}</span>
         )}
       </button>
       {open && (
-        <div className="mt-1 bg-teal-950/40 border border-teal-500/25 rounded-lg p-3">
-          <pre className="text-xs text-teal-100/80 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+        <div className="mt-1 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/50 dark:border-teal-500/25 rounded-lg p-3">
+          <pre className="text-xs text-teal-800/80 dark:text-teal-100/80 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
             {text}
           </pre>
         </div>
@@ -270,7 +270,7 @@ function ConcurrentToolsBlock({
     <div className="max-w-[85%] rounded-lg border bg-cyan-500/5 border-cyan-500/20 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-cyan-300 hover:bg-white/5 transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-cyan-700 dark:text-cyan-300 hover:bg-control dark:hover:bg-white/5 transition-colors"
       >
         {open ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
         <Layers className="w-4 h-4" />
@@ -322,7 +322,7 @@ function ThinkingBlock({ text }: { text: string }) {
     <div className="max-w-[85%]">
       <button
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/15 text-sm text-amber-400 border border-amber-500/25 transition-colors"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/15 text-sm text-amber-700 dark:text-amber-400 border border-amber-500/25 transition-colors"
       >
         {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         <Lightbulb className="w-4 h-4" />
@@ -330,7 +330,7 @@ function ThinkingBlock({ text }: { text: string }) {
       </button>
       {open && (
         <div className="mt-1 bg-panel/80 border border-default rounded-lg p-3">
-          <pre className="text-xs text-amber-200/80 whitespace-pre-wrap overflow-x-auto">
+          <pre className="text-xs text-amber-600 dark:text-amber-200/80 whitespace-pre-wrap overflow-x-auto">
             {text}
           </pre>
         </div>
@@ -406,8 +406,8 @@ function ToolResultBlock({ result }: { result: ObservationResult }) {
         onClick={() => setOpen(!open)}
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm border transition-colors ${
           isError
-            ? "bg-rose-500/10 hover:bg-rose-500/15 text-rose-300 border-rose-500/25"
-            : "bg-teal-500/10 hover:bg-teal-500/15 text-teal-300 border-teal-500/25"
+            ? "bg-rose-500/10 hover:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/25"
+            : "bg-teal-500/10 hover:bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/25"
         }`}
       >
         {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -467,7 +467,7 @@ function ToolInputRenderer({
     return (
       <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-control/60 border-b border-card">
-          <FileCode className="w-3.5 h-3.5 text-sky-400" />
+          <FileCode className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
           <span className="text-[11px] font-mono text-secondary truncate flex-1">{filePath}</span>
           {lang && (
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-control-hover/60 text-muted uppercase">{lang}</span>
@@ -482,9 +482,9 @@ function ToolInputRenderer({
     return (
       <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 bg-control/60">
-          <Search className="w-3.5 h-3.5 text-amber-400" />
+          <Search className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           <span className="text-[11px] font-mono text-secondary">
-            {Boolean(data.pattern) && <span className="text-amber-300">{String(data.pattern)}</span>}
+            {Boolean(data.pattern) && <span className="text-amber-700 dark:text-amber-300">{String(data.pattern)}</span>}
             {Boolean(data.path) && <span className="text-dimmed ml-2">in {String(data.path)}</span>}
           </span>
         </div>
@@ -496,9 +496,9 @@ function ToolInputRenderer({
     return (
       <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 bg-control/60">
-          <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
+          <FolderOpen className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
           <span className="text-[11px] font-mono text-secondary">
-            {Boolean(data.pattern) && <span className="text-cyan-300">{String(data.pattern)}</span>}
+            {Boolean(data.pattern) && <span className="text-cyan-700 dark:text-cyan-300">{String(data.pattern)}</span>}
             {Boolean(data.path) && <span className="text-dimmed ml-2">in {String(data.path)}</span>}
           </span>
         </div>
@@ -522,12 +522,12 @@ function BashRenderer({ command }: { command: string }) {
     <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-3 py-1.5 bg-control/60 border-b border-card">
         <div className="flex items-center gap-1.5">
-          <Terminal className="w-3.5 h-3.5 text-green-400" />
+          <Terminal className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
           <span className="text-[10px] font-medium text-muted uppercase tracking-wider">Command</span>
         </div>
         <CopyButton text={command} />
       </div>
-      <pre className="p-3 overflow-x-auto text-[12px] font-mono text-green-300 leading-relaxed">
+      <pre className="p-3 overflow-x-auto text-[12px] font-mono text-green-700 dark:text-green-300 leading-relaxed">
         <span className="text-dimmed">$ </span>{command}
       </pre>
     </div>
@@ -558,13 +558,13 @@ function EditRenderer({
   return (
     <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-1.5 bg-control/60 border-b border-card">
-        <Pencil className="w-3.5 h-3.5 text-blue-400" />
+        <Pencil className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
         <span className="text-[11px] font-mono text-secondary truncate flex-1">{filePath}</span>
         {addCount > 0 && (
-          <span className="text-[10px] text-emerald-400 font-mono" title={`${addCount} line${addCount !== 1 ? "s" : ""} added`}>+{addCount}</span>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono" title={`${addCount} line${addCount !== 1 ? "s" : ""} added`}>+{addCount}</span>
         )}
         {removeCount > 0 && (
-          <span className="text-[10px] text-rose-400 font-mono" title={`${removeCount} line${removeCount !== 1 ? "s" : ""} removed`}>-{removeCount}</span>
+          <span className="text-[10px] text-rose-600 dark:text-rose-400 font-mono" title={`${removeCount} line${removeCount !== 1 ? "s" : ""} removed`}>-{removeCount}</span>
         )}
       </div>
       {diffLines.length > 0 && (
@@ -581,14 +581,14 @@ function EditRenderer({
 function DiffLine({ line }: { line: string }) {
   if (line.startsWith("+")) {
     return (
-      <div className="px-3 bg-emerald-500/8 text-emerald-300 border-l-2 border-emerald-500/50">
+      <div className="px-3 bg-emerald-500/8 text-emerald-700 dark:text-emerald-300 border-l-2 border-emerald-500/50">
         {line}
       </div>
     );
   }
   if (line.startsWith("-")) {
     return (
-      <div className="px-3 bg-rose-500/8 text-rose-300 border-l-2 border-rose-500/50">
+      <div className="px-3 bg-rose-500/8 text-rose-700 dark:text-rose-300 border-l-2 border-rose-500/50">
         {line}
       </div>
     );
@@ -619,7 +619,7 @@ function WriteRenderer({
   return (
     <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-1.5 bg-control/60 border-b border-card">
-        <FilePlus2 className="w-3.5 h-3.5 text-emerald-400" />
+        <FilePlus2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
         <span className="text-[11px] font-mono text-secondary truncate flex-1">{filePath}</span>
         <span className="text-[10px] text-dimmed">{lineCount} lines</span>
       </div>
@@ -668,7 +668,7 @@ function ToolOutput({ text, isError }: { text: string; isError: boolean }) {
         {shouldTruncate && !expanded && (
           <button
             onClick={() => setExpanded(true)}
-            className="text-[10px] text-muted hover:text-secondary px-3 pb-2"
+            className="text-[10px] text-muted hover:text-secondary hover:bg-control/30 rounded px-3 pb-2"
           >
             Show all ({lines.length} lines)
           </button>
@@ -681,7 +681,7 @@ function ToolOutput({ text, isError }: { text: string; isError: boolean }) {
     <div className="relative">
       <pre
         className={`text-xs p-3 overflow-x-auto whitespace-pre-wrap break-words max-h-96 overflow-y-auto ${
-          isError ? "text-rose-300" : "text-teal-200/80"
+          isError ? "text-rose-700 dark:text-rose-300" : "text-teal-700 dark:text-teal-200/80"
         }`}
       >
         {displayed}
@@ -689,7 +689,7 @@ function ToolOutput({ text, isError }: { text: string; isError: boolean }) {
       {shouldTruncate && !expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="text-[10px] text-muted hover:text-secondary px-3 pb-2"
+          className="text-[10px] text-muted hover:text-secondary hover:bg-control/30 rounded px-3 pb-2"
         >
           Show all ({lines.length} lines)
         </button>
@@ -698,53 +698,55 @@ function ToolOutput({ text, isError }: { text: string; isError: boolean }) {
   );
 }
 
+const TOOL_PILL_BASE = "bg-slate-500/10 hover:bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-400/25 dark:border-slate-500/20";
+
 function getToolIconAndColor(name: string): { icon: React.ReactNode; color: string } {
   const n = name.toLowerCase();
   if (n === "bash") {
     return {
-      icon: <Terminal className="w-4 h-4 text-green-400" />,
-      color: "bg-slate-500/10 hover:bg-slate-500/15 text-slate-300 border-slate-500/20",
+      icon: <Terminal className="w-4 h-4 text-green-600 dark:text-green-400" />,
+      color: TOOL_PILL_BASE,
     };
   }
   if (n === "edit") {
     return {
-      icon: <Pencil className="w-4 h-4 text-blue-400" />,
-      color: "bg-slate-500/10 hover:bg-slate-500/15 text-slate-300 border-slate-500/20",
+      icon: <Pencil className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
+      color: TOOL_PILL_BASE,
     };
   }
   if (n === "read") {
     return {
-      icon: <FileCode className="w-4 h-4 text-sky-400" />,
-      color: "bg-slate-500/10 hover:bg-slate-500/15 text-slate-300 border-slate-500/20",
+      icon: <FileCode className="w-4 h-4 text-sky-600 dark:text-sky-400" />,
+      color: TOOL_PILL_BASE,
     };
   }
   if (n === "write") {
     return {
-      icon: <FilePlus2 className="w-4 h-4 text-emerald-400" />,
-      color: "bg-slate-500/10 hover:bg-slate-500/15 text-slate-300 border-slate-500/20",
+      icon: <FilePlus2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
+      color: TOOL_PILL_BASE,
     };
   }
   if (n === "grep") {
     return {
-      icon: <Search className="w-4 h-4 text-amber-400" />,
-      color: "bg-slate-500/10 hover:bg-slate-500/15 text-slate-300 border-slate-500/20",
+      icon: <Search className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
+      color: TOOL_PILL_BASE,
     };
   }
   if (n === "glob") {
     return {
-      icon: <FolderOpen className="w-4 h-4 text-cyan-400" />,
-      color: "bg-slate-500/10 hover:bg-slate-500/15 text-slate-300 border-slate-500/20",
+      icon: <FolderOpen className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />,
+      color: TOOL_PILL_BASE,
     };
   }
   if (n === "agent" || n.includes("task") || n.includes("agent")) {
     return {
-      icon: <Bot className="w-4 h-4 text-violet-400" />,
-      color: "bg-violet-500/10 hover:bg-violet-500/15 text-violet-300 border-violet-500/20",
+      icon: <Bot className="w-4 h-4 text-violet-600 dark:text-violet-400" />,
+      color: "bg-violet-500/10 hover:bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-400/25 dark:border-violet-500/20",
     };
   }
   return {
     icon: <Wrench className="w-4 h-4 text-muted" />,
-    color: "bg-slate-500/10 hover:bg-slate-500/15 text-slate-300 border-slate-500/20",
+    color: TOOL_PILL_BASE,
   };
 }
 

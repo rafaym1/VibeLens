@@ -279,18 +279,19 @@ export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: Fricti
             className="shrink-0 border-l border-default bg-panel/50 flex flex-col"
             style={{ width: sidebarWidth }}
           >
-            <div className="shrink-0 flex items-center justify-between px-3 pt-3 pb-1">
+            <div className="shrink-0 flex items-center justify-between px-3 pt-3 pb-2 border-b border-card">
               <div className="flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5 text-dimmed" />
-                <span className="text-xs font-medium text-muted">History</span>
+                <History className="w-3.5 h-3.5 text-accent-cyan" />
+                <span className="text-xs font-semibold text-secondary tracking-wide uppercase">History</span>
               </div>
-              <button
-                onClick={() => setShowSidebar(false)}
-                className="p-0.5 text-dimmed hover:text-secondary transition"
-                title="Hide history"
-              >
-                <PanelRightClose className="w-3.5 h-3.5" />
-              </button>
+              <Tooltip text="Hide history">
+                <button
+                  onClick={() => setShowSidebar(false)}
+                  className="p-1 text-dimmed hover:text-secondary hover:bg-control-hover rounded transition"
+                >
+                  <PanelRightClose className="w-3.5 h-3.5" />
+                </button>
+              </Tooltip>
             </div>
             <div className="flex-1 overflow-y-auto p-3 pt-1">
               <FrictionHistory onSelect={handleHistorySelect} refreshTrigger={historyRefresh} activeJobId={activeJobId} />
@@ -300,13 +301,14 @@ export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: Fricti
       )}
       {!showSidebar && (
         <div className="shrink-0 border-l border-default bg-panel/50 flex flex-col items-center pt-3 px-1">
-          <button
-            onClick={() => setShowSidebar(true)}
-            className="p-1 text-dimmed hover:text-secondary transition"
-            title="Show history"
-          >
-            <PanelRightOpen className="w-4 h-4" />
-          </button>
+          <Tooltip text="Show history">
+            <button
+              onClick={() => setShowSidebar(true)}
+              className="p-1.5 text-dimmed hover:text-secondary hover:bg-control-hover rounded transition"
+            >
+              <PanelRightOpen className="w-4 h-4" />
+            </button>
+          </Tooltip>
         </div>
       )}
     </>
@@ -328,7 +330,7 @@ export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: Fricti
           <div className="flex flex-col items-center gap-5 max-w-md">
             <LoadingSpinnerRings color="amber" />
             <div className="text-center space-y-1.5">
-              <p className="text-base font-semibold text-white">
+              <p className="text-base font-semibold text-primary">
                 Analyzing {checkedIds.size} session{checkedIds.size !== 1 ? "s" : ""} for friction
               </p>
               <p className="text-sm text-secondary">Identifying patterns that slow you down</p>
@@ -337,7 +339,7 @@ export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: Fricti
             <div className="flex flex-col items-center gap-3 mt-1">
               <button
                 onClick={handleStopAnalysis}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs text-rose-300 hover:text-white bg-rose-900/30 hover:bg-rose-800/50 border border-rose-700/50 rounded-md transition"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 dark:text-rose-300 dark:hover:text-white dark:bg-rose-900/30 dark:hover:bg-rose-800/50 dark:border-rose-700/50 rounded-md transition"
               >
                 Stop
               </button>
@@ -368,7 +370,7 @@ export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: Fricti
       <div className="h-full flex">
         <div className="flex-1">
           <AnalysisWelcomePage
-            icon={<Sparkles className="w-12 h-12 text-accent-amber/50" />}
+            icon={<Sparkles className="w-12 h-12 text-amber-600 dark:text-amber-400" />}
             title="Productivity Tips"
             description="Identify patterns that slow you down. Select sessions and run analysis to detect wasted effort, recurring mistakes, and get concrete improvement suggestions."
             accentColor="amber"
@@ -452,7 +454,7 @@ function ResultHeader({
       <Tooltip text="Analyze your own sessions">
         <button
           onClick={onNew}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-amber hover:text-white bg-accent-amber-subtle hover:bg-amber-600/40 border border-accent-amber rounded-lg transition"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-amber hover:text-amber-800 dark:hover:text-white bg-accent-amber-subtle hover:bg-amber-100 dark:hover:bg-amber-600/40 border border-accent-amber rounded-lg transition"
         >
           <Plus className="w-3.5 h-3.5" />
           New
@@ -528,7 +530,7 @@ function MitigationCard({ mitigation, frictionTypes }: { mitigation: Mitigation;
   );
 
   return (
-    <div className="border border-accent-amber rounded-xl bg-amber-950/10 overflow-hidden">
+    <div className="border border-zinc-200 dark:border-zinc-700/30 rounded-xl bg-zinc-50/50 dark:bg-zinc-800/20 overflow-hidden">
       {/* Header: Title + Confidence */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
@@ -543,10 +545,10 @@ function MitigationCard({ mitigation, frictionTypes }: { mitigation: Mitigation;
 
       {/* Rationale */}
       {mitigation.rationale && (
-        <div className="px-5 py-3 border-t border-accent-amber/20">
+        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
           <button
             onClick={() => setRationaleExpanded(!rationaleExpanded)}
-            className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+            className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
           >
             {rationaleExpanded
               ? <ChevronDown className="w-3.5 h-3.5 text-accent-amber" />
@@ -562,10 +564,10 @@ function MitigationCard({ mitigation, frictionTypes }: { mitigation: Mitigation;
 
       {/* Addressed Friction Types */}
       {matchedTypes.length > 0 && (
-        <div className="px-5 py-3 border-t border-accent-amber/20">
+        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
           <button
             onClick={() => setTypesExpanded(!typesExpanded)}
-            className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+            className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
           >
             {typesExpanded
               ? <ChevronDown className="w-3.5 h-3.5 text-accent-amber" />
@@ -577,7 +579,7 @@ function MitigationCard({ mitigation, frictionTypes }: { mitigation: Mitigation;
           {typesExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedTypes.map((ft) => (
-                <div key={ft.type_name} className="border-l-2 border-accent-amber pl-3 space-y-1.5">
+                <div key={ft.type_name} className="border-l-2 border-amber-300 dark:border-amber-700/50 pl-3 space-y-1.5">
                   <h6 className="text-base font-semibold text-primary">
                     {frictionTypeLabel(ft.type_name)}
                   </h6>
@@ -672,7 +674,7 @@ function FrictionStepButton({ ref_ }: { ref_: FrictionType["example_refs"][numbe
     <Tooltip text="Open step in session viewer">
       <button
         onClick={handleClick}
-        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-control-hover/50 text-secondary hover:bg-amber-900/40 hover:text-accent-amber transition font-mono border border-hover/30 hover:border-accent-amber"
+        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-control-hover/50 text-secondary hover:bg-amber-50 dark:hover:bg-amber-900/40 hover:text-accent-amber transition font-mono border border-hover/30 hover:border-accent-amber"
       >
         {ref_.start_step_id.slice(0, 8)}
         <ArrowUpRight className="w-3 h-3" />
@@ -690,14 +692,14 @@ function CostBadges({ cost }: { cost: FrictionCost }) {
       </div>
       <Tooltip text="Steps affected by this issue">
         <span className="inline-flex items-center gap-1.5 text-sm text-muted cursor-help">
-          <Footprints className="w-4 h-4 text-rose-400" />
+          <Footprints className="w-4 h-4 text-rose-600 dark:text-rose-400" />
           {cost.affected_steps} step{cost.affected_steps !== 1 ? "s" : ""}
         </span>
       </Tooltip>
       {cost.affected_time_seconds != null && (
         <Tooltip text="Duration affected">
           <span className="inline-flex items-center gap-1.5 text-sm text-muted cursor-help">
-            <Clock className="w-4 h-4 text-sky-400" />
+            <Clock className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             {formatDuration(cost.affected_time_seconds)}
           </span>
         </Tooltip>
@@ -738,7 +740,7 @@ function AnalysisMeta({ result }: { result: FrictionAnalysisResult }) {
 
   return (
     <Tooltip text="Inference backend, model, and estimated API cost for this analysis run">
-      <div className="border-t border-default pt-4 text-xs text-dimmed flex items-center justify-between gap-4">
+      <div className="border-t border-card pt-4 text-xs text-dimmed flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 flex-wrap">
           <span>{result.backend_id}/{result.model}</span>
           {result.metrics.cost_usd != null && (

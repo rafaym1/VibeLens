@@ -1,5 +1,6 @@
 import { Check, Copy } from "lucide-react";
 import { useCallback, useState } from "react";
+import { Tooltip } from "./tooltip";
 
 const FEEDBACK_TIMEOUT_MS = 1500;
 
@@ -19,16 +20,17 @@ export function CopyButton({ text, className = "" }: CopyButtonProps) {
   }, [text]);
 
   return (
-    <button
-      onClick={handleCopy}
-      className={`p-1 rounded hover:bg-control-hover/50 transition-colors ${className}`}
-      title={copied ? "Copied!" : "Copy"}
-    >
-      {copied ? (
-        <Check className="w-3.5 h-3.5 text-accent-emerald" />
-      ) : (
-        <Copy className="w-3.5 h-3.5 text-muted" />
-      )}
-    </button>
+    <Tooltip text={copied ? "Copied!" : "Copy"}>
+      <button
+        onClick={handleCopy}
+        className={`p-1 rounded hover:bg-control-hover/50 transition-colors ${className}`}
+      >
+        {copied ? (
+          <Check className="w-3.5 h-3.5 text-accent-emerald" />
+        ) : (
+          <Copy className="w-3.5 h-3.5 text-muted" />
+        )}
+      </button>
+    </Tooltip>
   );
 }

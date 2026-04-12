@@ -59,7 +59,7 @@ export function SkillEditorDialog({
               }`}
             />
             {name && !nameValid && (
-              <p className="text-[10px] text-red-400 mt-1">
+              <p className="text-[10px] text-red-600 dark:text-red-400 mt-1">
                 Lowercase letters, numbers, and hyphens only
               </p>
             )}

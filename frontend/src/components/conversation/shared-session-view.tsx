@@ -37,9 +37,9 @@ export function SharedSessionView({ shareToken }: SharedSessionViewProps) {
   if (error) {
     return (
       <div className="flex items-center justify-center h-full p-4">
-        <div className="text-center bg-rose-900/20 border border-rose-800 rounded-lg p-6 max-w-md">
-          <p className="text-sm font-semibold text-rose-300 mb-2">Failed to load shared session</p>
-          <p className="text-xs text-rose-400 font-mono break-all">{error}</p>
+        <div className="text-center bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-6 max-w-md">
+          <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2">Failed to load shared session</p>
+          <p className="text-xs text-rose-600 dark:text-rose-400 font-mono break-all">{error}</p>
         </div>
       </div>
     );

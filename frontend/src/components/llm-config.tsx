@@ -125,7 +125,7 @@ function ModelCombobox({
             updateDropDirection();
             setOpen((v) => !v);
           }}
-          className="absolute right-0 inset-y-0 px-2 flex items-center text-dimmed hover:text-secondary"
+          className="absolute right-0 inset-y-0 px-2 flex items-center text-dimmed hover:text-secondary hover:bg-control/30 rounded-r-lg transition"
         >
           <ChevronDown className={`w-3.5 h-3.5 transition ${open ? "rotate-180" : ""}`} />
         </button>
@@ -204,7 +204,7 @@ function CliModelSelector({
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="absolute right-0 inset-y-0 px-2 flex items-center text-dimmed hover:text-secondary"
+              className="absolute right-0 inset-y-0 px-2 flex items-center text-dimmed hover:text-secondary hover:bg-control/30 rounded-r-lg transition"
             >
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
@@ -471,7 +471,7 @@ export function LLMConfigForm({
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="flex items-center gap-1 text-xs text-muted hover:text-secondary transition"
+          className="flex items-center gap-1 text-xs text-muted hover:text-secondary hover:bg-control/30 rounded px-1 -mx-1 transition"
         >
           {showAdvanced ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
           Advanced
@@ -520,7 +520,7 @@ export function LLMConfigForm({
       )}
 
       {configError && (
-        <div className="px-3 py-2 bg-accent-rose-subtle border border-accent-rose rounded-lg text-xs text-accent-rose">
+        <div className="px-3 py-2 bg-accent-rose-subtle border border-rose-200 dark:border-rose-800/40 rounded-lg text-xs text-accent-rose">
           {configError}
         </div>
       )}
@@ -570,7 +570,7 @@ export function LLMConfigSection({
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-1 text-xs text-dimmed hover:text-secondary transition"
+          className="inline-flex items-center gap-1 text-xs text-dimmed hover:text-secondary hover:bg-control/30 rounded px-1 -mx-1 transition"
         >
           <Pencil className="w-3 h-3" />
           Change
@@ -599,7 +599,7 @@ export function LLMConfigSection({
       {isConnected && (
         <button
           onClick={() => setShowForm(false)}
-          className="mt-2 text-xs text-dimmed hover:text-secondary transition"
+          className="mt-2 text-xs text-dimmed hover:text-secondary hover:bg-control/30 rounded px-1 -mx-1 transition"
         >
           Cancel
         </button>

@@ -107,7 +107,7 @@ export function SettingsDialog({ onClose, onShowOnboarding }: SettingsDialogProp
                   onClick={() => setTheme(option)}
                   className={`flex-1 py-2 text-sm font-medium rounded-md border transition ${
                     theme === option
-                      ? "bg-accent-cyan-subtle text-accent-cyan border-accent-cyan"
+                      ? "bg-accent-cyan-subtle text-accent-cyan border-cyan-200 dark:border-cyan-700/40"
                       : "text-muted border-card hover:text-secondary hover:border-hover"
                   }`}
                 >
@@ -129,7 +129,7 @@ export function SettingsDialog({ onClose, onShowOnboarding }: SettingsDialogProp
                   onClick={() => setFontScale(scale)}
                   className={`flex-1 py-2 text-sm font-medium rounded-md border transition ${
                     fontScale === scale
-                      ? "bg-accent-cyan-subtle text-accent-cyan border-accent-cyan"
+                      ? "bg-accent-cyan-subtle text-accent-cyan border-cyan-200 dark:border-cyan-700/40"
                       : "text-muted border-card hover:text-secondary hover:border-hover"
                   }`}
                 >
@@ -149,7 +149,7 @@ export function SettingsDialog({ onClose, onShowOnboarding }: SettingsDialogProp
                 onClick={() => openFeedback("bug")}
                 className="flex flex-col items-center gap-1.5 py-3 text-xs font-medium text-secondary hover:text-primary bg-control/80 hover:bg-control-hover rounded-lg border border-card transition"
               >
-                <Bug className="w-4 h-4 text-red-400" />
+                <Bug className="w-4 h-4 text-red-600 dark:text-red-400" />
                 Bug Report
               </button>
               <button

@@ -22,11 +22,11 @@ const TRANSITION_DURATION = "0.3s";
 const ICON_MAP: Record<string, React.ReactNode> = {
   eye: <Eye className="w-5 h-5 text-accent-cyan" />,
   list: <List className="w-5 h-5 text-accent-cyan" />,
-  message: <MessageSquare className="w-5 h-5 text-indigo-400" />,
+  message: <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />,
   layout: <LayoutGrid className="w-5 h-5 text-accent-cyan" />,
   "bar-chart": <BarChart3 className="w-5 h-5 text-accent-cyan" />,
-  lightbulb: <Lightbulb className="w-5 h-5 text-amber-400" />,
-  wand: <Wand2 className="w-5 h-5 text-teal-400" />,
+  lightbulb: <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+  wand: <Wand2 className="w-5 h-5 text-teal-600 dark:text-teal-400" />,
   upload: <Upload className="w-5 h-5 text-accent-violet" />,
 };
 
@@ -234,7 +234,7 @@ export function SpotlightTour({ onComplete, appMode }: SpotlightTourProps) {
         {/* Icon + Title */}
         <div className="flex items-center gap-2.5 mb-2">
           {ICON_MAP[currentStep.icon]}
-          <h3 className="text-sm font-semibold text-white">{currentStep.title}</h3>
+          <h3 className="text-sm font-semibold text-primary">{currentStep.title}</h3>
         </div>
 
         {/* Content */}

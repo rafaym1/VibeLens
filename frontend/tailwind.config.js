@@ -68,12 +68,23 @@ export default {
 
         'accent-blue': 'var(--color-accent-blue)',
 
+        // Tutorial banner
+        'tutorial-cyan-bg': 'var(--color-tutorial-cyan-bg)',
+        'tutorial-cyan-border': 'var(--color-tutorial-cyan-border)',
+        'tutorial-amber-bg': 'var(--color-tutorial-amber-bg)',
+        'tutorial-amber-border': 'var(--color-tutorial-amber-border)',
+        'tutorial-teal-bg': 'var(--color-tutorial-teal-bg)',
+        'tutorial-teal-border': 'var(--color-tutorial-teal-border)',
+
         // Chart
         'chart-line': 'var(--color-chart-line)',
         'chart-text': 'var(--color-chart-text)',
 
         // Shadow
         shadow: 'var(--color-shadow)',
+      },
+      boxShadow: {
+        card: 'var(--color-card-shadow)',
       },
       keyframes: {
         "fade-in": {

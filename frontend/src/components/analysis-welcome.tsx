@@ -15,46 +15,42 @@ const ACCENT_BUTTON: Record<AccentColor, string> = {
 };
 
 const ACCENT_LINK: Record<AccentColor, string> = {
-  amber: "text-amber-400 hover:text-amber-300",
-  teal: "text-teal-400 hover:text-teal-300",
-  cyan: "text-cyan-400 hover:text-cyan-300",
+  amber: "text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300",
+  teal: "text-teal-600 hover:text-teal-500 dark:text-teal-400 dark:hover:text-teal-300",
+  cyan: "text-cyan-600 hover:text-cyan-500 dark:text-cyan-400 dark:hover:text-cyan-300",
 };
 
 const ACCENT_TUTORIAL: Record<AccentColor, {
   border: string;
   bg: string;
-  radial: string;
   iconBg: string;
   iconColor: string;
   title: string;
   desc: string;
 }> = {
   amber: {
-    border: "border-amber-800/40",
-    bg: "bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-orange-950/40",
-    radial: "bg-[radial-gradient(ellipse_at_top_right,rgba(234,88,12,0.08),transparent_60%)]",
-    iconBg: "bg-amber-500/15 border border-amber-500/20",
-    iconColor: "text-amber-400",
-    title: "text-amber-300",
-    desc: "text-amber-400/70",
+    border: "border-amber-300 dark:border-tutorial-amber-border",
+    bg: "bg-amber-50 dark:bg-tutorial-amber-bg",
+    iconBg: "bg-amber-100 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/20",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    title: "text-primary",
+    desc: "text-secondary",
   },
   teal: {
-    border: "border-teal-800/40",
-    bg: "bg-gradient-to-r from-teal-950/40 via-teal-900/20 to-indigo-950/40",
-    radial: "bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.08),transparent_60%)]",
-    iconBg: "bg-teal-500/15 border border-teal-500/20",
-    iconColor: "text-teal-400",
-    title: "text-teal-300",
-    desc: "text-teal-400/70",
+    border: "border-teal-300 dark:border-tutorial-teal-border",
+    bg: "bg-teal-50 dark:bg-tutorial-teal-bg",
+    iconBg: "bg-teal-100 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/20",
+    iconColor: "text-teal-600 dark:text-teal-400",
+    title: "text-primary",
+    desc: "text-secondary",
   },
   cyan: {
-    border: "border-cyan-800/40",
-    bg: "bg-gradient-to-r from-cyan-950/40 via-cyan-900/20 to-blue-950/40",
-    radial: "bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.08),transparent_60%)]",
-    iconBg: "bg-cyan-500/15 border border-cyan-500/20",
-    iconColor: "text-cyan-400",
-    title: "text-cyan-300",
-    desc: "text-cyan-400/70",
+    border: "border-cyan-300 dark:border-tutorial-cyan-border",
+    bg: "bg-cyan-50 dark:bg-tutorial-cyan-bg",
+    iconBg: "bg-cyan-100 dark:bg-cyan-500/15 border border-cyan-200 dark:border-cyan-500/20",
+    iconColor: "text-cyan-600 dark:text-cyan-400",
+    title: "text-primary",
+    desc: "text-secondary",
   },
 };
 
@@ -109,7 +105,7 @@ export function AnalysisWelcomePage({
         <div className="max-w-md w-full px-6">
           <button
             onClick={() => setView("intro")}
-            className="flex items-center gap-1.5 text-xs text-dimmed hover:text-secondary transition mb-6"
+            className="flex items-center gap-1.5 text-xs text-dimmed hover:text-secondary hover:bg-control/30 rounded px-1 -mx-1 transition mb-6"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back
@@ -138,8 +134,8 @@ export function AnalysisWelcomePage({
     <div className="flex items-center justify-center h-full">
       <div className="text-center max-w-md px-6">
         <div className="flex justify-center mb-4">{icon}</div>
-        <h3 className="text-lg font-semibold text-secondary mb-2">{title}</h3>
-        <p className="text-sm text-muted mb-6 leading-relaxed">
+        <h3 className="text-xl font-bold text-primary mb-2">{title}</h3>
+        <p className="text-sm text-secondary mb-6 leading-relaxed">
           {description}
         </p>
 
@@ -178,13 +174,13 @@ export function AnalysisWelcomePage({
         )}
 
         {error && (
-          <div className="mb-4 px-4 py-2.5 bg-accent-rose-subtle border border-accent-rose rounded-lg text-xs text-accent-rose text-left">
+          <div className="mb-4 px-4 py-2.5 bg-accent-rose-subtle border border-rose-200 dark:border-rose-800/40 rounded-lg text-xs text-accent-rose text-left">
             {error}
           </div>
         )}
 
         {overLimit && (
-          <div className="mb-4 px-4 py-2.5 bg-amber-900/20 border border-amber-800/50 rounded-lg text-xs text-amber-300 text-left">
+          <div className="mb-4 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-700 dark:text-amber-300 text-left">
             Too many sessions selected ({checkedCount}). Maximum is {maxSessions}. Deselect some sessions to continue.
           </div>
         )}
@@ -193,7 +189,7 @@ export function AnalysisWelcomePage({
           <button
             onClick={isDemo ? () => setShowInstallDialog(true) : onRun}
             disabled={checkedCount === 0 || overLimit || (!isConnected && !isMock)}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 ${ACCENT_BUTTON[accentColor]} text-white text-sm font-medium rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed`}
+            className={`inline-flex items-center gap-2 px-5 py-2.5 ${ACCENT_BUTTON[accentColor]} text-white text-sm font-medium rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed`}
           >
             <Play className="w-4 h-4" />
             {checkedCount > 0
@@ -213,9 +209,8 @@ export function AnalysisWelcomePage({
 export function TutorialBanner({ tutorial, accentColor }: { tutorial: Tutorial; accentColor: AccentColor }) {
   const s = ACCENT_TUTORIAL[accentColor];
   return (
-    <div className={`relative w-full px-4 py-3.5 rounded-lg ${s.border} ${s.bg} overflow-hidden text-left mb-6`}>
-      <div className={`absolute inset-0 ${s.radial}`} />
-      <div className="relative flex items-center gap-3">
+    <div className={`relative w-full px-4 py-3.5 rounded-lg border ${s.border} ${s.bg} overflow-hidden text-left mb-6`}>
+      <div className="flex items-center gap-3">
         <div className={`shrink-0 p-2 rounded-lg ${s.iconBg}`}>
           <Lightbulb className={`w-4 h-4 ${s.iconColor}`} />
         </div>

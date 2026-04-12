@@ -57,7 +57,7 @@ export function SkillUpdateDialog({
         />
 
         {/* Central store — always selected */}
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-teal-900/15 border border-accent-teal">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-teal-50 dark:bg-teal-900/15 border border-teal-200 dark:border-teal-800/40">
           <Check className="w-4 h-4 text-accent-teal shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-secondary">Central Store</p>

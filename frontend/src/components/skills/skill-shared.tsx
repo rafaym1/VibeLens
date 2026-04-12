@@ -64,14 +64,14 @@ export function SourceFilterBar({
         className={`px-2.5 py-1 text-[11px] font-medium rounded-md border transition ${
           activeKey === null
             ? "bg-control-hover text-secondary border-hover"
-            : "text-secondary border-card/50 hover:text-primary hover:border-hover"
+            : "text-secondary border-card hover:text-primary hover:border-hover"
         }`}
       >
         All ({totalCount})
       </button>
       {items.map((key) => {
         const count = countByKey(key);
-        const colorClass = colorMap[key] || "bg-control text-muted border-card/50";
+        const colorClass = colorMap[key] || "bg-control text-muted border-card";
         return (
           <button
             key={key}
@@ -79,7 +79,7 @@ export function SourceFilterBar({
             className={`px-2.5 py-1 text-[11px] font-medium rounded-md border transition ${
               activeKey === key
                 ? colorClass
-                : "text-secondary border-card/50 hover:text-primary hover:border-hover"
+                : "text-secondary border-card hover:text-primary hover:border-hover"
             }`}
           >
             {labelMap[key] || key} ({count})
@@ -93,10 +93,10 @@ export function SourceFilterBar({
 /** Dismissible error banner with a red alert icon. */
 export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
-    <div className="flex items-start gap-2 px-4 py-3 rounded-lg bg-red-900/20 border border-red-800/30 mb-4">
-      <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-      <p className="text-sm text-red-300">{message}</p>
-      <button onClick={onDismiss} className="ml-auto shrink-0 text-red-400 hover:text-red-300">
+    <div className="flex items-start gap-2 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 mb-4">
+      <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+      <p className="text-sm text-red-700 dark:text-red-300">{message}</p>
+      <button onClick={onDismiss} className="ml-auto shrink-0 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
         <X className="w-3.5 h-3.5" />
       </button>
     </div>
@@ -107,7 +107,7 @@ export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss
 export function LoadingState({ label = "Loading..." }: { label?: string }) {
   return (
     <div className="flex items-center justify-center py-16">
-      <Loader2 className="w-6 h-6 text-dimmed animate-spin" />
+      <Loader2 className="w-6 h-6 text-zinc-400 dark:text-cyan-400/60 animate-spin" />
       <span className="ml-2 text-sm text-dimmed">{label}</span>
     </div>
   );

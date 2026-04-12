@@ -231,16 +231,15 @@ export function LocalSkillsTab() {
       </div>
 
       {/* Skill explanation */}
-      <div className="relative mb-5 px-4 py-3.5 rounded-lg border border-teal-800/40 bg-gradient-to-r from-teal-950/40 via-teal-900/20 to-indigo-950/40 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.08),transparent_60%)]" />
-        <div className="relative flex items-center gap-3">
-          <div className="shrink-0 p-2 rounded-lg bg-teal-500/15 border border-teal-500/20">
-            <Info className="w-4 h-4 text-teal-400" />
+      <div className="mb-5 px-4 py-3.5 rounded-lg border border-teal-300 dark:border-teal-800/40 bg-teal-50 dark:bg-teal-950/20 overflow-hidden">
+        <div className="flex items-center gap-3">
+          <div className="shrink-0 p-2 rounded-lg bg-teal-100 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/20">
+            <Info className="w-4 h-4 text-teal-600 dark:text-teal-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-teal-300">What's a skill?</p>
-            <p className="text-sm text-teal-400/70 mt-0.5">
-              A skill is an instruction file that tells your coding agent how to handle specific tasks, like a personalized rulebook. Create them here, install community skills from the <span className="font-semibold text-teal-300">Explore</span> tab, or let VibeLens generate them from your coding sessions.
+            <p className="text-sm font-semibold text-primary">What's a skill?</p>
+            <p className="text-sm text-secondary mt-0.5">
+              A skill is an instruction file that tells your coding agent how to handle specific tasks, like a personalized rulebook. Create them here, install community skills from the <span className="font-semibold text-primary">Explore</span> tab, or let VibeLens generate them from your coding sessions.
             </p>
           </div>
         </div>

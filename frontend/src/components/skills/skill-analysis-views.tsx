@@ -69,7 +69,7 @@ export function AnalysisLoadingState({ mode, sessionCount }: { mode: SkillMode; 
     <div className="flex flex-col items-center gap-5">
       <LoadingSpinnerRings color="teal" />
       <div className="text-center space-y-1.5">
-        <p className="text-base font-semibold text-white">
+        <p className="text-base font-semibold text-primary">
           Analyzing {sessionCount} session{sessionCount !== 1 ? "s" : ""}
         </p>
         <p className="text-sm text-secondary">{MODE_SUBLABELS[mode]}</p>
@@ -202,7 +202,7 @@ function ResultHeader({
       <Tooltip text="Analyze your own sessions">
         <button
           onClick={onNew}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-teal hover:text-white bg-accent-teal-subtle hover:bg-teal-600/40 border border-accent-teal rounded-lg transition"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-teal hover:text-teal-800 dark:hover:text-white bg-accent-teal-subtle hover:bg-teal-100 dark:hover:bg-teal-600/40 border border-accent-teal rounded-lg transition"
         >
           <Plus className="w-3.5 h-3.5" /> New
         </button>
@@ -288,7 +288,7 @@ function PatternCard({ pattern, index }: { pattern: WorkflowPattern; index: numb
   return (
     <div
       onClick={() => setExpanded(!expanded)}
-      className="border border-card/60 rounded-xl overflow-hidden cursor-pointer hover:border-hover/60 transition-all"
+      className="border border-card rounded-xl overflow-hidden cursor-pointer hover:border-hover transition-all"
     >
       <div className="px-4 py-3 space-y-2.5">
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -308,7 +308,7 @@ function PatternCard({ pattern, index }: { pattern: WorkflowPattern; index: numb
         <BulletText text={pattern.description} className="text-sm text-secondary leading-relaxed" />
       </div>
       {expanded && (
-        <div className="px-4 pb-3.5 space-y-2.5 border-t border-card/30 pt-3 mx-3 mb-1">
+        <div className="px-4 pb-3.5 space-y-2.5 border-t border-card pt-3 mx-3 mb-1">
           <StepRefList refs={pattern.example_refs} />
         </div>
       )}
@@ -345,7 +345,7 @@ function JumpToStepButton({ stepRef }: { stepRef: StepRef }) {
     <Tooltip text="Open step in session viewer">
       <button
         onClick={handleClick}
-        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-control-hover/50 text-secondary hover:bg-teal-900/40 hover:text-accent-teal transition font-mono border border-hover/30 hover:border-accent-teal"
+        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-control-hover/50 text-secondary hover:bg-teal-50 dark:hover:bg-teal-900/40 hover:text-accent-teal transition font-mono border border-hover/30 hover:border-accent-teal"
       >
         {stepRef.start_step_id.slice(0, 8)}
         <ArrowUpRight className="w-3 h-3" />
@@ -446,7 +446,7 @@ function RecommendationCard({
   }, [fetchWithToken, rec.skill_name]);
 
   return (
-    <div className="border border-accent-teal rounded-xl bg-teal-950/10 overflow-hidden">
+    <div className="border border-zinc-200 dark:border-zinc-700/30 rounded-xl bg-zinc-50/50 dark:bg-zinc-800/20 overflow-hidden">
       {/* Header: Name + Confidence + Action */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
@@ -481,10 +481,10 @@ function RecommendationCard({
       </div>
 
       {/* Why this helps */}
-      <div className="px-5 py-3 border-t border-accent-teal">
+      <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
         <button
           onClick={() => setRationaleExpanded(!rationaleExpanded)}
-          className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+          className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
         >
           {rationaleExpanded
             ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
@@ -499,10 +499,10 @@ function RecommendationCard({
 
       {/* Toggleable What this covers */}
       {matchedPatterns.length > 0 && (
-        <div className="px-5 py-3 border-t border-accent-teal">
+        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
           <button
             onClick={() => setPatternsExpanded(!patternsExpanded)}
-            className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+            className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
           >
             {patternsExpanded
               ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
@@ -514,7 +514,7 @@ function RecommendationCard({
           {patternsExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedPatterns.map((p, i) => (
-                <div key={i} className="border-l-2 border-accent-teal pl-3 space-y-1.5">
+                <div key={i} className="border-l-2 border-teal-300 dark:border-teal-700/50 pl-3 space-y-1.5">
                   <h6 className="text-sm font-semibold text-primary">{p.title}</h6>
                   <BulletText text={p.description} className="text-sm text-secondary leading-relaxed" />
                   <StepRefList refs={p.example_refs} />
@@ -584,12 +584,12 @@ function ConfidenceBar({ confidence, accentColor = "emerald" }: { confidence: nu
 
   const HIGH_COLORS: Record<string, { bar: string; text: string }> = {
     emerald: { bar: "bg-emerald-500", text: "text-accent-emerald" },
-    amber: { bar: "bg-amber-500", text: "text-amber-400" },
+    amber: { bar: "bg-amber-500", text: "text-amber-700 dark:text-amber-400" },
     teal: { bar: "bg-teal-500", text: "text-accent-teal" },
   };
   const high = HIGH_COLORS[accentColor];
   const barColor = isHigh ? high.bar : isMedium ? "bg-amber-500" : "bg-zinc-600";
-  const textColor = isHigh ? high.text : isMedium ? "text-amber-400" : "text-dimmed";
+  const textColor = isHigh ? high.text : isMedium ? "text-amber-700 dark:text-amber-400" : "text-dimmed";
 
   return (
     <Tooltip text={`${pct}% confidence`}>
@@ -652,7 +652,7 @@ function CreatedSkillCard({
   );
 
   return (
-    <div className="border border-accent-emerald rounded-xl bg-emerald-950/15 overflow-hidden">
+    <div className="border border-zinc-200 dark:border-zinc-700/30 rounded-xl bg-zinc-50/50 dark:bg-zinc-800/20 overflow-hidden">
       {/* Header: Name + Confidence + Action */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
@@ -685,10 +685,10 @@ function CreatedSkillCard({
       </div>
 
       {/* Why this helps */}
-      <div className="px-5 py-3 border-t border-accent-emerald">
+      <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
         <button
           onClick={() => setRationaleExpanded(!rationaleExpanded)}
-          className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+          className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
         >
           {rationaleExpanded
             ? <ChevronDown className="w-3.5 h-3.5 text-accent-emerald" />
@@ -703,10 +703,10 @@ function CreatedSkillCard({
 
       {/* Toggleable What this covers */}
       {matchedPatterns.length > 0 && (
-        <div className="px-5 py-3 border-t border-accent-emerald">
+        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
           <button
             onClick={() => setPatternsExpanded(!patternsExpanded)}
-            className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+            className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
           >
             {patternsExpanded
               ? <ChevronDown className="w-3.5 h-3.5 text-accent-emerald" />
@@ -718,7 +718,7 @@ function CreatedSkillCard({
           {patternsExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedPatterns.map((p, i) => (
-                <div key={i} className="border-l-2 border-accent-emerald pl-3 space-y-1.5">
+                <div key={i} className="border-l-2 border-emerald-300 dark:border-emerald-700/50 pl-3 space-y-1.5">
                   <h6 className="text-sm font-semibold text-primary">{p.title}</h6>
                   <BulletText text={p.description} className="text-sm text-secondary leading-relaxed" />
                   <StepRefList refs={p.example_refs} />
@@ -872,7 +872,7 @@ function EvolutionCard({
   }, [fetchWithToken, suggestion.skill_name]);
 
   return (
-    <div className="border border-accent-teal rounded-xl bg-teal-950/10 overflow-hidden">
+    <div className="border border-zinc-200 dark:border-zinc-700/30 rounded-xl bg-zinc-50/50 dark:bg-zinc-800/20 overflow-hidden">
       {/* Header: Name + Badges + Confidence + Action */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
@@ -905,7 +905,7 @@ function EvolutionCard({
                 </button>
               </Tooltip>
             )}
-            {fetchError && <span className="text-xs text-red-400">{fetchError}</span>}
+            {fetchError && <span className="text-xs text-red-600 dark:text-red-400">{fetchError}</span>}
           </div>
         </div>
         {suggestion.description && (
@@ -917,10 +917,10 @@ function EvolutionCard({
       </div>
 
       {/* Why this helps */}
-      <div className="px-5 py-3 border-t border-accent-teal">
+      <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
         <button
           onClick={() => setRationaleExpanded(!rationaleExpanded)}
-          className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+          className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
         >
           {rationaleExpanded
             ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
@@ -935,10 +935,10 @@ function EvolutionCard({
 
       {/* Toggleable What this covers */}
       {matchedPatterns.length > 0 && (
-        <div className="px-5 py-3 border-t border-accent-teal">
+        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
           <button
             onClick={() => setPatternsExpanded(!patternsExpanded)}
-            className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+            className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
           >
             {patternsExpanded
               ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
@@ -950,7 +950,7 @@ function EvolutionCard({
           {patternsExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedPatterns.map((p, i) => (
-                <div key={i} className="border-l-2 border-accent-teal pl-3 space-y-1.5">
+                <div key={i} className="border-l-2 border-teal-300 dark:border-teal-700/50 pl-3 space-y-1.5">
                   <h6 className="text-sm font-semibold text-primary">{p.title}</h6>
                   <BulletText text={p.description} className="text-sm text-secondary leading-relaxed" />
                   <StepRefList refs={p.example_refs} />
@@ -962,10 +962,10 @@ function EvolutionCard({
       )}
 
       {/* Toggleable Proposed Edits */}
-      <div className="px-5 py-3 border-t border-accent-teal">
+      <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
         <button
           onClick={handleExpand}
-          className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
+          className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
         >
           {expanded
             ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />

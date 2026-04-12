@@ -77,12 +77,12 @@ function ContextLine({ lineNum, text }: { lineNum: number; text: string }) {
 
 function RemovedLine({ lineNum, text }: { lineNum: number; text: string }) {
   return (
-    <div className="flex bg-red-950/30">
-      <span className="w-10 shrink-0 text-right pr-1.5 text-[10px] leading-5 select-none bg-red-900/40 text-red-400/70">
+    <div className="flex bg-red-50 dark:bg-red-950/30">
+      <span className="w-10 shrink-0 text-right pr-1.5 text-[10px] leading-5 select-none bg-red-100 text-red-500/70 dark:bg-red-900/40 dark:text-red-400/70">
         {lineNum}
       </span>
       <span className="w-5 shrink-0 text-center leading-5 select-none text-red-500/70">-</span>
-      <span className="flex-1 px-2 leading-5 whitespace-pre-wrap break-words text-red-300/90">
+      <span className="flex-1 px-2 leading-5 whitespace-pre-wrap break-words text-red-700 dark:text-red-300/90">
         {text}
       </span>
     </div>
@@ -91,12 +91,12 @@ function RemovedLine({ lineNum, text }: { lineNum: number; text: string }) {
 
 function AddedLine({ lineNum, text }: { lineNum: number; text: string }) {
   return (
-    <div className="flex bg-emerald-950/25">
-      <span className="w-10 shrink-0 text-right pr-1.5 text-[10px] leading-5 select-none bg-emerald-900/35 text-emerald-400/70">
+    <div className="flex bg-emerald-50 dark:bg-emerald-950/25">
+      <span className="w-10 shrink-0 text-right pr-1.5 text-[10px] leading-5 select-none bg-emerald-100 text-emerald-500/70 dark:bg-emerald-900/35 dark:text-emerald-400/70">
         {lineNum}
       </span>
       <span className="w-5 shrink-0 text-center leading-5 select-none text-emerald-500/70">+</span>
-      <span className="flex-1 px-2 leading-5 whitespace-pre-wrap break-words text-emerald-300/90">
+      <span className="flex-1 px-2 leading-5 whitespace-pre-wrap break-words text-emerald-700 dark:text-emerald-300/90">
         {text}
       </span>
     </div>

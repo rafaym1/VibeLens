@@ -38,7 +38,7 @@ export function RecommendationView({ analysisId, onBack }: RecommendationViewPro
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-zinc-400 dark:text-cyan-400/60" />
       </div>
     );
   }

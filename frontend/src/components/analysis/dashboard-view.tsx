@@ -8,6 +8,7 @@ import {
   FolderOpen,
   Bot,
   Cpu,
+  Loader2,
   RefreshCw,
   Wrench,
 } from "lucide-react";
@@ -141,7 +142,7 @@ export function DashboardView({ cache }: DashboardViewProps) {
 
   if (error || !stats) {
     return (
-      <div className="flex items-center justify-center h-full text-red-400">
+      <div className="flex items-center justify-center h-full text-red-600 dark:text-red-400">
         {error || "Failed to load dashboard"}
       </div>
     );
@@ -172,7 +173,7 @@ export function DashboardView({ cache }: DashboardViewProps) {
               <>
                 <button
                   onClick={handleClearFilters}
-                  className="text-sm text-accent-cyan hover:text-accent-cyan transition font-medium"
+                  className="text-sm text-accent-cyan hover:text-accent-cyan hover:bg-control/30 rounded px-1 -mx-1 transition font-medium"
                 >
                   All Sessions
                 </button>
@@ -182,7 +183,7 @@ export function DashboardView({ cache }: DashboardViewProps) {
                     {selectedProject ? (
                       <button
                         onClick={() => setSelectedProject(null)}
-                        className="text-sm text-accent-cyan hover:text-accent-cyan transition font-medium"
+                        className="text-sm text-accent-cyan hover:text-accent-cyan hover:bg-control/30 rounded px-1 -mx-1 transition font-medium"
                       >
                         {selectedAgent}
                       </button>
@@ -233,7 +234,7 @@ export function DashboardView({ cache }: DashboardViewProps) {
               onMouseLeave={hide}
             >
               {exporting === "csv" ? (
-                <div className="w-3.5 h-3.5 border-2 border-muted/30 border-t-secondary rounded-full animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Download className="w-3.5 h-3.5" />
               )}
@@ -250,7 +251,7 @@ export function DashboardView({ cache }: DashboardViewProps) {
               onMouseLeave={hide}
             >
               {exporting === "json" ? (
-                <div className="w-3.5 h-3.5 border-2 border-muted/30 border-t-secondary rounded-full animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Download className="w-3.5 h-3.5" />
               )}
@@ -711,7 +712,7 @@ function ProjectRow({
             <BarChart3 className="w-3 h-3 text-amber-500" />
             {formatTokens(detail.tokens)}
           </span>
-          <span className="inline-flex items-center gap-1 text-emerald-400">
+          <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
             {formatCost(detail.cost_usd)}
           </span>
         </div>

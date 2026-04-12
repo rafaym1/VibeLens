@@ -37,7 +37,7 @@ export function SkillCard({
   const allowedTools = (skill.metadata?.allowed_tools as string[]) || [];
 
   return (
-    <div className="border border-card rounded-lg bg-subtle hover:bg-control/80 transition">
+    <div className="border border-card rounded-lg bg-panel hover:bg-control/80 transition">
       <div className="flex items-start">
         <button
           onClick={() => onViewDetail(skill)}
@@ -66,20 +66,22 @@ export function SkillCard({
           </div>
         </button>
         <div className="flex items-center gap-1 px-2 py-3 shrink-0">
-          <button
-            onClick={() => onEdit(skill)}
-            className="p-1.5 text-dimmed hover:text-accent-teal hover:bg-control-hover rounded transition"
-            title="Edit skill"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => onDelete(skill.name)}
-            className="p-1.5 text-dimmed hover:text-red-400 hover:bg-control-hover rounded transition"
-            title="Delete skill"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          <Tooltip text="Edit skill">
+            <button
+              onClick={() => onEdit(skill)}
+              className="p-1.5 text-dimmed hover:text-accent-teal hover:bg-control-hover rounded transition"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          </Tooltip>
+          <Tooltip text="Delete skill">
+            <button
+              onClick={() => onDelete(skill.name)}
+              className="p-1.5 text-dimmed hover:text-red-600 dark:hover:text-red-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>
@@ -166,7 +168,7 @@ export function SkillDetailPopup({
             <Package className="w-5 h-5 text-accent-teal" />
           </div>
           <div>
-            <h2 className="text-lg font-bold font-mono text-white">{skill.name}</h2>
+            <h2 className="text-lg font-bold font-mono text-primary">{skill.name}</h2>
             {lineCount > 0 && (
               <span className="text-xs text-secondary">{lineCount} lines in SKILL.md</span>
             )}
@@ -185,7 +187,7 @@ export function SkillDetailPopup({
 
         {/* Metadata grid: tags, tools, subdirs */}
         {(tags.length > 0 || allowedTools.length > 0 || subdirs.length > 0) && (
-          <div className="rounded-lg border border-card bg-subtle divide-y divide-card">
+          <div className="rounded-lg border border-card bg-panel divide-y divide-card">
             {/* Tags + Tools row */}
             {(tags.length > 0 || allowedTools.length > 0) && (
               <div className="px-4 py-3 flex flex-wrap gap-x-6 gap-y-2">
@@ -216,7 +218,7 @@ export function SkillDetailPopup({
 
         {/* Sync to agent interfaces — show all agents from backend */}
         {agentSources.length > 0 && (
-          <div className="rounded-lg border border-accent-teal bg-teal-950/10 px-4 py-3">
+          <div className="rounded-lg border border-teal-200 dark:border-teal-800/40 bg-teal-50 dark:bg-teal-950/10 px-4 py-3">
             <SectionTitle icon={<Share2 className="w-4 h-4" />} label="Sync to Agent Interfaces" />
             <div className="flex flex-wrap gap-2">
               {agentSources.map((src) => {
@@ -235,9 +237,9 @@ export function SkillDetailPopup({
                       disabled={syncing === src.key || (!isSynced && !hasDir)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition ${
                         isSynced
-                          ? "bg-emerald-900/20 text-emerald-400 border-emerald-700/30"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-700/30"
                           : hasDir
-                            ? "bg-control/60 text-muted border-hover/60 hover:text-accent-teal hover:border-accent-teal-focus/50 hover:bg-teal-950/20"
+                            ? "bg-control/60 text-muted border-hover/60 hover:text-accent-teal hover:border-accent-teal-focus/50 hover:bg-teal-50 dark:hover:bg-teal-950/20"
                             : "bg-subtle text-faint border-card cursor-not-allowed"
                       } disabled:opacity-50`}
                     >
@@ -255,7 +257,7 @@ export function SkillDetailPopup({
               })}
             </div>
             {syncMessage && (
-              <p className="text-xs text-emerald-400/70 mt-1.5">{syncMessage}</p>
+              <p className="text-xs text-emerald-600/80 dark:text-emerald-400/70 mt-1.5">{syncMessage}</p>
             )}
           </div>
         )}
@@ -265,7 +267,7 @@ export function SkillDetailPopup({
           <SectionTitle icon={<Code2 className="w-4 h-4" />} label="Skill Content" />
           {loadingContent ? (
             <div className="flex items-center gap-2 py-4">
-              <Loader2 className="w-4 h-4 text-dimmed animate-spin" />
+              <Loader2 className="w-4 h-4 text-zinc-400 dark:text-cyan-400/60 animate-spin" />
               <span className="text-xs text-dimmed">Loading...</span>
             </div>
           ) : content ? (

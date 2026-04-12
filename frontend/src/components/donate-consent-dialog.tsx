@@ -10,23 +10,23 @@ interface DonateConsentDialogProps {
 
 const CONSENT_ITEMS: { icon: React.ReactNode; text: string }[] = [
   {
-    icon: <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />,
+    icon: <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />,
     text: "Please ensure you have permission to share this data and it does not belong to a confidential project.",
   },
   {
-    icon: <FileText className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />,
+    icon: <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />,
     text: "Sessions may contain code snippets, git bundles, file paths, and conversation content from your coding agent interactions.",
   },
   {
-    icon: <BookOpen className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />,
+    icon: <BookOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />,
     text: "Data will be used solely for academic research and will not be sold or used commercially.",
   },
   {
-    icon: <Eye className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />,
+    icon: <Eye className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />,
     text: "Data may appear in anonymized or aggregated form in research publications and open datasets.",
   },
   {
-    icon: <Trash2 className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />,
+    icon: <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />,
     text: "You may request deletion of your donated data by contacting the research team.",
   },
 ];
@@ -43,10 +43,10 @@ export function DonateConsentDialog({
       <ModalHeader onClose={onCancel}>
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-rose-600/20">
-            <Heart className="w-5 h-5 text-rose-400" />
+            <Heart className="w-5 h-5 text-rose-600 dark:text-rose-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="text-lg font-bold text-primary">
               Donate {sessionCount} Session{sessionCount !== 1 ? "s" : ""}
             </h2>
             <p className="text-xs text-muted">Support open research on coding agents</p>
@@ -56,14 +56,14 @@ export function DonateConsentDialog({
 
       <ModalBody>
         <div className="space-y-5">
-          <div className="rounded-lg border border-accent-cyan bg-cyan-950/10 px-4 py-3">
+          <div className="rounded-lg border border-cyan-200 dark:border-cyan-800/40 bg-cyan-50 dark:bg-cyan-950/10 px-4 py-3">
             <p className="text-sm text-secondary leading-relaxed">
               Your sessions will be donated to{" "}
               <a
                 href="https://github.com/CHATS-lab"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-accent-cyan hover:text-cyan-300 underline font-medium"
+                className="text-accent-cyan hover:text-cyan-700 dark:hover:text-cyan-300 underline font-medium"
               >
                 CHATS-Lab
               </a>{" "}
@@ -97,7 +97,7 @@ export function DonateConsentDialog({
               onChange={(e) => setAgreed(e.target.checked)}
               className="w-4 h-4 rounded border-hover bg-control text-rose-500 focus:ring-rose-500 focus:ring-offset-0 cursor-pointer"
             />
-            <span className="text-sm font-medium text-primary group-hover:text-white transition select-none">
+            <span className="text-sm font-medium text-primary transition select-none">
               I have read and agree to the above terms
             </span>
           </label>
@@ -107,7 +107,7 @@ export function DonateConsentDialog({
       <ModalFooter>
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-sm text-muted hover:text-secondary border border-card hover:border-hover rounded-lg transition"
+          className="px-4 py-2 text-sm text-muted hover:text-secondary hover:bg-control-hover border border-card hover:border-hover rounded-lg transition"
         >
           Cancel
         </button>

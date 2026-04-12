@@ -217,7 +217,7 @@ export function SessionList({
 
   return (
     <div data-tour="session-list" className="flex flex-col flex-1 min-h-0">
-      <div className="p-3 space-y-2 border-b border-default">
+      <div className="p-3 space-y-2 border-b border-card">
         {/* Upload + Donate row */}
         {onUpload && onDonate ? (
           <div className="flex items-stretch gap-1.5">
@@ -252,8 +252,7 @@ export function SessionList({
           />
           <button
             onClick={() => setShowSearchOptions(true)}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-dimmed hover:text-secondary transition"
-            title="Search options"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-dimmed hover:text-secondary hover:bg-control-hover rounded transition"
           >
             <div className="relative">
               <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -285,7 +284,7 @@ export function SessionList({
         <div className="flex items-center justify-between">
           <button
             onClick={handleToggleAll}
-            className="flex items-center gap-1.5 text-xs text-secondary hover:text-primary transition"
+            className="flex items-center gap-1.5 text-xs text-secondary hover:text-primary hover:bg-control/50 rounded px-1.5 py-0.5 transition"
           >
             {allChecked ? (
               <CheckSquare className="w-3.5 h-3.5 text-accent-cyan" />
@@ -299,7 +298,7 @@ export function SessionList({
           <Tooltip text={viewMode === "project" ? "Switch to time view" : "Switch to project view"}>
             <button
               onClick={() => handleSetViewMode(viewMode === "project" ? "time" : "project")}
-              className="flex items-center justify-center gap-1 w-[90px] px-2 py-1 text-[11px] font-medium text-accent-cyan hover:text-cyan-200 bg-accent-cyan-muted hover:bg-cyan-800/40 border border-accent-cyan rounded-md transition"
+              className="flex items-center justify-center gap-1 w-[90px] px-2 py-1 text-[11px] font-medium text-accent-cyan hover:text-cyan-700 dark:hover:text-cyan-200 bg-accent-cyan-muted hover:bg-cyan-100 dark:hover:bg-cyan-800/40 border border-cyan-200 dark:border-cyan-700/30 rounded-md transition"
             >
               {viewMode === "project" ? (
                 <FolderOpen className="w-3 h-3 shrink-0" />
@@ -354,11 +353,10 @@ export function SessionList({
               };
               return (
               <div key={projectName}>
-                <div className="sticky top-0 z-10 w-full flex items-center gap-1 bg-panel border-b border-default text-sm text-secondary">
+                <div className="sticky top-0 z-10 w-full flex items-center gap-1 bg-panel border-b border-card text-sm text-secondary">
                   <button
                     onClick={handleToggleProject}
-                    className="shrink-0 pl-3 pr-1 py-2 text-dimmed hover:text-accent-cyan transition"
-                    title={allProjectChecked ? "Deselect project" : "Select project"}
+                    className="shrink-0 pl-3 pr-1 py-2 text-dimmed hover:text-accent-cyan hover:bg-control/40 rounded transition"
                   >
                     {allProjectChecked ? (
                       <CheckSquare className="w-3.5 h-3.5 text-accent-cyan" />
@@ -370,7 +368,7 @@ export function SessionList({
                   </button>
                   <button
                     onClick={() => toggleProjectExpanded(projectName)}
-                    className="flex-1 flex items-center gap-2 pr-3 py-2 hover:text-primary transition min-w-0"
+                    className="flex-1 flex items-center gap-2 pr-3 py-2 hover:text-primary hover:bg-zinc-200/50 dark:hover:bg-zinc-700/30 rounded transition min-w-0"
                   >
                     {expandedProjects.has(projectName) ? (
                       <ChevronDown className="w-3.5 h-3.5 shrink-0" />
@@ -406,40 +404,43 @@ export function SessionList({
       </div>
 
       {/* Footer: filtered count + pagination + download */}
-      <div className="shrink-0 border-t border-default px-3 py-2 flex items-center justify-between text-xs text-muted">
+      <div className="shrink-0 border-t border-card px-3 py-2 flex items-center justify-between text-xs text-muted">
         <span>{filtered.length} sessions</span>
         <div className="flex items-center gap-2">
           {viewMode === "time" && filtered.length > SESSIONS_PER_PAGE && (
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage(Math.max(0, page - 1))}
-                disabled={page === 0}
-                className="p-1 hover:bg-control disabled:opacity-50 disabled:cursor-not-allowed rounded transition"
-                title="Previous page"
-              >
-                <ChevronUp className="w-4 h-4" />
-              </button>
+              <Tooltip text="Previous page">
+                <button
+                  onClick={() => setPage(Math.max(0, page - 1))}
+                  disabled={page === 0}
+                  className="p-1 hover:bg-control-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </button>
+              </Tooltip>
               <span className="px-1 text-xs">{page + 1}</span>
-              <button
-                onClick={() => setPage(page + 1)}
-                disabled={(page + 1) * SESSIONS_PER_PAGE >= filtered.length}
-                className="p-1 hover:bg-control disabled:opacity-50 disabled:cursor-not-allowed rounded transition"
-                title="Next page"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </button>
+              <Tooltip text="Next page">
+                <button
+                  onClick={() => setPage(page + 1)}
+                  disabled={(page + 1) * SESSIONS_PER_PAGE >= filtered.length}
+                  className="p-1 hover:bg-control-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </Tooltip>
             </div>
           )}
           {onDownload && (
-            <button
-              onClick={onDownload}
-              disabled={downloadDisabled}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-cyan-600/80 hover:bg-cyan-500 text-white rounded transition disabled:opacity-40 disabled:cursor-not-allowed"
-              title={downloadDisabled ? "Select sessions to download" : `Download ${checkedCount} session${checkedCount !== 1 ? "s" : ""}`}
-            >
-              <Download className="w-3 h-3" />
-              {checkedCount > 0 ? checkedCount : "Download"}
-            </button>
+            <Tooltip text={downloadDisabled ? "Select sessions to download" : `Download ${checkedCount} session${checkedCount !== 1 ? "s" : ""}`}>
+              <button
+                onClick={onDownload}
+                disabled={downloadDisabled}
+                className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-cyan-600/80 hover:bg-cyan-500 text-white rounded transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Download className="w-3 h-3" />
+                {checkedCount > 0 ? checkedCount : "Download"}
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -466,10 +467,10 @@ function SessionRow({
 }) {
   return (
     <div
-      className={`flex items-center border-b border-default/50 transition-all duration-200 ${
+      className={`flex items-center border-b border-card transition-all duration-200 ${
         selectedId === session.session_id
           ? "bg-accent-cyan-subtle border-l-2 border-l-accent-cyan"
-          : "hover:bg-control/50 border-l-2 border-l-transparent"
+          : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border-l-2 border-l-transparent"
       }`}
     >
       {/* Checkbox — indented under project header chevron when nested */}
@@ -478,7 +479,7 @@ function SessionRow({
           e.stopPropagation();
           onToggle(session.session_id);
         }}
-        className={`shrink-0 pr-1 text-dimmed hover:text-accent-cyan transition ${
+        className={`shrink-0 pr-1 py-1 text-dimmed hover:text-accent-cyan hover:bg-control/40 rounded transition ${
           showProject ? "pl-3" : "pl-8"
         }`}
       >
@@ -575,7 +576,7 @@ function AgentFilterDropdown({ value, agents, onChange }: { value: string; agent
               onClick={() => { onChange(opt.value); setOpen(false); }}
               className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-sm transition ${
                 value === opt.value
-                  ? "bg-accent-cyan-subtle text-cyan-200"
+                  ? "bg-accent-cyan-subtle text-cyan-700 dark:text-cyan-200"
                   : "text-secondary hover:bg-control-hover hover:text-primary"
               }`}
             >
@@ -599,7 +600,7 @@ function DonateButton({ onClick, disabled, tooltip }: { onClick: () => void; dis
       onClick={disabled ? undefined : onClick}
       className={`w-full flex items-center justify-center gap-1.5 py-1.5 text-sm font-semibold rounded border transition ${
         disabled
-          ? "bg-rose-600/40 text-rose-200 border-rose-500/30 cursor-not-allowed opacity-60"
+          ? "bg-rose-600/40 text-rose-700 dark:text-rose-200 border-rose-500/30 cursor-not-allowed opacity-60"
           : "bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-900/40"
       }`}
     >

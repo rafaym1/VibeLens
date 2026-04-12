@@ -22,7 +22,7 @@ export function CostEstimateDialog({
         <div className="space-y-4">
           <div className="flex items-center gap-4 px-4 py-3 bg-subtle rounded-lg">
             <div className="flex items-center gap-2.5">
-              <Layers className="w-4 h-4 text-violet-400" />
+              <Layers className="w-4 h-4 text-violet-600 dark:text-violet-400" />
               <div className="flex flex-col">
                 <span className="text-[10px] text-dimmed">Sessions</span>
                 <span className="text-sm font-semibold text-primary">{sessionCount}</span>
@@ -30,22 +30,22 @@ export function CostEstimateDialog({
             </div>
             <div className="w-px h-8 bg-control-hover" />
             <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-amber-400" />
+              <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <div className="flex flex-col">
                 <span className="text-[10px] text-dimmed">Model</span>
                 <span className="text-sm font-medium text-secondary">{estimate.model}</span>
               </div>
             </div>
           </div>
-          <div className="bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg px-4 py-3">
             <div className="flex items-center gap-2">
-              <Coins className="w-4 h-4 text-amber-400" />
-              <span className="text-sm font-medium text-amber-200">
+              <Coins className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
                 Estimated cost: {estimate.formatted_cost}
               </span>
             </div>
             {!estimate.pricing_found && (
-              <p className="mt-1 text-xs text-amber-400/70">
+              <p className="mt-1 text-xs text-amber-600/70 dark:text-amber-400/70">
                 Model not in pricing table -- actual cost may vary.
               </p>
             )}

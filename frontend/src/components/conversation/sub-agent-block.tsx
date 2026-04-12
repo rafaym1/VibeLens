@@ -42,10 +42,10 @@ export function SubAgentBlock({ trajectory, allTrajectories, concise, index }: S
       icon={<Bot className="w-3.5 h-3.5" />}
       label={label}
       preview={preview}
-      className="bg-violet-500/10 border-violet-500/30 text-violet-300"
+      className="bg-violet-500/10 border-violet-500/30 text-violet-700 dark:text-violet-300"
     >
       <div className="ml-3 pl-3 py-2 space-y-2">
-        <div className="flex items-center gap-3 text-[10px] text-violet-300 px-1 pb-1">
+        <div className="flex items-center gap-3 text-[10px] text-violet-600 dark:text-violet-300 px-1 pb-1">
           <span className="flex items-center gap-1">
             <MessageSquare className="w-3 h-3" />
             {stepCount}

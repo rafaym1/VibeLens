@@ -85,7 +85,7 @@ export function SkillPreviewDialog({
       <ModalBody>
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 text-muted animate-spin" />
+            <Loader2 className="w-6 h-6 text-zinc-400 dark:text-cyan-400/60 animate-spin" />
           </div>
         ) : (
           <>
@@ -112,7 +112,7 @@ export function SkillPreviewDialog({
             </div>
 
             {/* Central store */}
-            <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-teal-900/15 border border-accent-teal">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-teal-50 dark:bg-teal-900/15 border border-teal-200 dark:border-teal-800/40">
               <Check className="w-4 h-4 text-accent-teal shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-secondary">Central Store</p>

@@ -135,22 +135,21 @@ export function ExploreSkillsTab({ onSwitchTab }: { onSwitchTab?: (tab: SkillTab
       </div>
 
       {/* Personalization CTA banner */}
-      <div className="relative mb-5 px-4 py-3.5 rounded-lg border border-teal-800/40 bg-gradient-to-r from-teal-950/40 via-teal-900/20 to-indigo-950/40 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.08),transparent_60%)]" />
-        <div className="relative flex items-center gap-3">
-          <div className="shrink-0 p-2 rounded-lg bg-teal-500/15 border border-teal-500/20">
-            <Zap className="w-4 h-4 text-teal-400" />
+      <div className="mb-5 px-4 py-3.5 rounded-lg border border-teal-300 dark:border-teal-800/40 bg-teal-50 dark:bg-teal-950/20 overflow-hidden">
+        <div className="flex items-center gap-3">
+          <div className="shrink-0 p-2 rounded-lg bg-teal-100 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/20">
+            <Zap className="w-4 h-4 text-teal-600 dark:text-teal-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-teal-300">Not sure which skills to add?</p>
-            <p className="text-sm text-teal-400/70 mt-0.5">
-              Switch to the <span className="font-semibold text-teal-300">Recommend</span> tab. It analyzes your sessions and recommends skills tailored to your workflow.
+            <p className="text-sm font-semibold text-primary">Not sure which skills to add?</p>
+            <p className="text-sm text-secondary mt-0.5">
+              Switch to the <span className="font-semibold text-primary">Recommend</span> tab. It analyzes your sessions and recommends skills tailored to your workflow.
             </p>
           </div>
           {onSwitchTab && (
             <button
               onClick={() => onSwitchTab("retrieve")}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-200 bg-teal-600/30 hover:bg-teal-600/50 border border-teal-500/30 rounded-md transition"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 dark:text-teal-200 bg-teal-100 dark:bg-teal-600/30 hover:bg-teal-200 dark:hover:bg-teal-600/50 border border-teal-300 dark:border-teal-500/30 rounded-md transition"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Recommend
@@ -224,8 +223,8 @@ function FeaturedSkillCard({
   return (
     <div className={`border rounded-lg transition ${
       isInstalled
-        ? "border-emerald-800/40 bg-emerald-950/20 hover:bg-emerald-950/30"
-        : "border-card bg-subtle hover:bg-control/80"
+        ? "border-emerald-300/40 bg-emerald-50 hover:bg-emerald-100/80 dark:border-emerald-800/40 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30"
+        : "border-card bg-panel hover:bg-control/80"
     }`}>
       <button
         onClick={() => onViewDetail(skill)}
@@ -240,14 +239,14 @@ function FeaturedSkillCard({
             <CategoryBadge category={skill.category} />
             {skill.stars > 0 && (
               <Tooltip text={`${skill.stars.toLocaleString()} GitHub stars`}>
-                <span className="flex items-center gap-0.5 text-[10px] text-amber-400/70">
+                <span className="flex items-center gap-0.5 text-[10px] text-amber-600/80 dark:text-amber-400/70">
                   <Star className="w-2.5 h-2.5" />
                   {skill.stars >= 1000 ? `${(skill.stars / 1000).toFixed(1)}k` : skill.stars}
                 </span>
               </Tooltip>
             )}
             {isInstalled && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/30 text-emerald-400 border border-emerald-700/30 font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700/30 font-medium">
                 Installed
               </span>
             )}
@@ -323,16 +322,16 @@ function FeaturedSkillDetailPopup({
             {installed ? <Check className="w-5 h-5 text-accent-emerald" /> : <Globe className="w-5 h-5 text-accent-teal" />}
           </div>
           <div>
-            <h2 className="text-lg font-bold font-mono text-white">{skill.name}</h2>
+            <h2 className="text-lg font-bold font-mono text-primary">{skill.name}</h2>
             <div className="flex items-center gap-2 mt-0.5">
               <CategoryBadge category={skill.category} />
               {skill.stars > 0 && (
-                <span className="flex items-center gap-0.5 text-xs text-amber-400/70">
+                <span className="flex items-center gap-0.5 text-xs text-amber-600/80 dark:text-amber-400/70">
                   <Star className="w-3 h-3" /> {skill.stars.toLocaleString()}
                 </span>
               )}
               {installed && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/30 text-emerald-400 border border-emerald-700/30 font-medium">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700/30 font-medium">
                   Installed
                 </span>
               )}
@@ -353,7 +352,7 @@ function FeaturedSkillDetailPopup({
 
         {/* Metadata grid: tags, stats, source */}
         {(skill.tags.length > 0 || skill.stars > 0 || skill.downloads > 0 || skill.source_url) && (
-          <div className="rounded-lg border border-card bg-subtle divide-y divide-card">
+          <div className="rounded-lg border border-card bg-panel divide-y divide-card">
             {/* Tags + Stats row */}
             <div className="px-4 py-3 flex flex-wrap gap-x-6 gap-y-2">
               {skill.tags.length > 0 && (
@@ -403,7 +402,7 @@ function FeaturedSkillDetailPopup({
 
         {/* Agent interface targets */}
         {!installed && agentSources.length > 0 && (
-          <div className="rounded-lg border border-accent-teal bg-teal-950/10 px-4 py-3">
+          <div className="rounded-lg border border-teal-200 dark:border-teal-800/40 bg-teal-50 dark:bg-teal-950/10 px-4 py-3">
             <DetailSectionTitle icon={<Share2 className="w-4 h-4" />} label="Install to Agent Interfaces" />
             <div className="flex flex-wrap gap-2">
               {agentSources.map((src) => (
@@ -413,7 +412,7 @@ function FeaturedSkillDetailPopup({
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition ${
                     selectedTargets.has(src.key)
                       ? SOURCE_COLORS[src.key] || "bg-control-hover text-secondary border-hover"
-                      : "bg-control/60 text-muted border-hover/60 hover:text-accent-teal hover:border-accent-teal-focus/50 hover:bg-teal-950/20"
+                      : "bg-control/60 text-muted border-hover/60 hover:text-accent-teal hover:border-accent-teal-focus/50 hover:bg-teal-50 dark:hover:bg-teal-950/20"
                   }`}
                 >
                   {selectedTargets.has(src.key) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
@@ -425,9 +424,9 @@ function FeaturedSkillDetailPopup({
         )}
 
         {installError && (
-          <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-900/20 border border-red-800/30">
-            <AlertCircle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-red-300">{installError}</p>
+          <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30">
+            <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-red-700 dark:text-red-300">{installError}</p>
           </div>
         )}
       </ModalBody>
@@ -459,7 +458,7 @@ function FeaturedSkillDetailPopup({
             {installing ? "Installing..." : "Install Skill"}
           </button>
         ) : (
-          <span className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-emerald-400 bg-emerald-900/20 border border-emerald-700/30 rounded">
+          <span className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-400 dark:bg-emerald-900/20 dark:border-emerald-700/30 rounded">
             <Check className="w-3.5 h-3.5" /> Installed
           </span>
         )}

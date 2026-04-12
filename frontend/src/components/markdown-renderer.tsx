@@ -44,7 +44,7 @@ function MarkdownRendererInner({ content, className = "" }: MarkdownRendererProp
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-accent-cyan hover:text-accent-cyan underline underline-offset-2"
+        className="text-accent-cyan hover:text-accent-cyan hover:bg-control/30 rounded px-0.5 -mx-0.5 underline underline-offset-2 transition"
       >
         {children}
       </a>
