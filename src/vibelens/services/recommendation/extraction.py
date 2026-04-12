@@ -43,10 +43,10 @@ def extract_lightweight_digest(
     signals: list[tuple[str, str, str, str]] = []
 
     for meta in metadata_list:
-        session_id = meta.get("session_id", "unknown")
-        project_path = meta.get("project_path", "unknown")
-        filepath = meta.get("filepath", "")
-        timestamp = meta.get("timestamp", meta.get("created_at", ""))
+        session_id = meta.get("session_id") or "unknown"
+        project_path = meta.get("project_path") or "unknown"
+        filepath = meta.get("filepath") or ""
+        timestamp = meta.get("timestamp") or meta.get("created_at") or ""
 
         compaction_text = _read_compaction_summary(filepath)
         if compaction_text:
@@ -175,10 +175,10 @@ def _format_metadata_signal(session_id: str, meta: dict) -> str:
     Returns:
         Formatted signal string.
     """
-    project_name = Path(meta.get("project_path", "unknown")).name
-    tool_count = meta.get("total_tool_calls", 0)
-    duration = meta.get("duration_seconds", 0)
-    model = meta.get("model", "unknown")
+    project_name = Path(meta.get("project_path") or "unknown").name
+    tool_count = meta.get("total_tool_calls") or 0
+    duration = meta.get("duration_seconds") or 0
+    model = meta.get("model") or "unknown"
     dur_min = round(duration / 60) if duration else 0
     return (
         f"--- SESSION {session_id} ---\n"
