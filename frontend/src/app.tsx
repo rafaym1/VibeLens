@@ -12,6 +12,7 @@ import { ResizeHandle } from "./components/resize-handle";
 import { SessionList, type ViewMode } from "./components/session-list";
 import { SessionView } from "./components/conversation/session-view";
 import { SharedSessionView } from "./components/conversation/shared-session-view";
+import { RecommendationView } from "./components/recommendations/recommendation-view";
 import { UploadDialog } from "./components/upload-dialog";
 import { DashboardView } from "./components/analysis/dashboard-view";
 import { FrictionPanel } from "./components/analysis/friction-panel";
@@ -91,6 +92,11 @@ export function App() {
   const [shareToken] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("share");
+  });
+
+  const [recommendationId, setRecommendationId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("recommendation") || null;
   });
 
 
@@ -361,13 +367,13 @@ export function App() {
     return (
       <AppContext.Provider value={contextValue}>
         <div className="flex flex-col h-full overflow-hidden bg-canvas text-primary">
-          <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-accent-violet-subtle border-b border-accent-violet">
+          <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-accent-violet-subtle border-b border-violet-200 dark:border-violet-700/40">
             <div className="flex items-center gap-2">
               <Share2 className="w-4 h-4 text-accent-violet" />
               <span className="text-sm text-accent-violet font-medium">Shared session</span>
             </div>
             <div className="flex items-center gap-2">
-              <a href="https://github.com/CHATS-lab/VibeLens" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-80 transition">
+              <a href="https://github.com/CHATS-lab/VibeLens" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:bg-control/30 rounded px-1 -mx-1 transition">
                 <img src="/icon.png" alt="VibeLens" className="w-6 h-6" />
                 <span className="text-sm font-bold text-accent-cyan">VibeLens</span>
               </a>
@@ -377,6 +383,22 @@ export function App() {
             <SharedSessionView shareToken={shareToken} />
           </div>
         </div>
+      </AppContext.Provider>
+    );
+  }
+
+  if (recommendationId) {
+    return (
+      <AppContext.Provider value={contextValue}>
+        <RecommendationView
+          analysisId={recommendationId}
+          onBack={() => {
+            setRecommendationId(null);
+            const url = new URL(window.location.href);
+            url.searchParams.delete("recommendation");
+            window.history.replaceState({}, "", url.toString());
+          }}
+        />
       </AppContext.Provider>
     );
   }
@@ -393,27 +415,29 @@ export function App() {
             <ResizeHandle side="left" onResize={handleSidebarResize} />
             <div data-tour="sidebar-header" className="flex items-center justify-between px-4 h-[75px] border-b border-default sticky top-0">
               <div className="flex items-center gap-3">
-                <a href="https://github.com/CHATS-lab/VibeLens" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:opacity-80 transition">
+                <a href="https://github.com/CHATS-lab/VibeLens" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:bg-control/30 rounded px-1 -mx-1 transition">
                   <img src="/icon.png" alt="VibeLens" className="w-12 h-12" />
                   <h1 className="text-2xl font-bold text-accent-cyan">VibeLens</h1>
                 </a>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setRefreshKey((k) => k + 1)}
-                  disabled={sessionsLoading}
-                  className="text-dimmed hover:text-secondary transition disabled:opacity-50"
-                  title="Refresh sessions"
-                >
-                  <RefreshCw className={`w-4 h-4 ${sessionsLoading ? "animate-spin" : ""}`} />
-                </button>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="text-dimmed hover:text-secondary transition"
-                  title="Collapse sidebar"
-                >
-                  <PanelLeftClose className="w-4 h-4" />
-                </button>
+              <div className="flex items-center gap-0.5">
+                <Tooltip text="Refresh sessions">
+                  <button
+                    onClick={() => setRefreshKey((k) => k + 1)}
+                    disabled={sessionsLoading}
+                    className="p-1.5 text-dimmed hover:text-secondary hover:bg-control-hover rounded transition disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${sessionsLoading ? "animate-spin" : ""}`} />
+                  </button>
+                </Tooltip>
+                <Tooltip text="Collapse sidebar">
+                  <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="p-1.5 text-dimmed hover:text-secondary hover:bg-control-hover rounded transition"
+                  >
+                    <PanelLeftClose className="w-4 h-4" />
+                  </button>
+                </Tooltip>
               </div>
             </div>
 
@@ -450,13 +474,12 @@ export function App() {
         {/* Main Content */}
         <main className="flex-1 flex flex-col min-w-0 bg-canvas">
           {/* View Toggle */}
-          <div className="flex items-center justify-between px-4 py-2 border-b-2 border-card bg-panel shadow-sm shadow-shadow">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-default bg-panel shadow-sm shadow-shadow">
             <div className="flex items-center gap-2">
               {!sidebarOpen && (
                 <button
                   onClick={() => setSidebarOpen(true)}
                   className="p-1.5 mr-1 text-dimmed hover:text-secondary bg-control hover:bg-control-hover border border-card rounded transition"
-                  title="Expand sidebar"
                 >
                   <Menu className="w-4 h-4" />
                 </button>
@@ -467,8 +490,8 @@ export function App() {
                   onClick={() => setMainView("browse")}
                   className={`min-w-[100px] text-center px-4 py-1.5 text-sm font-semibold rounded-md transition ${
                     mainView === "browse"
-                      ? "bg-accent-indigo-subtle text-indigo-200 border border-accent-indigo shadow-sm shadow-accent-indigo-shadow"
-                      : "text-muted hover:text-secondary hover:bg-control"
+                      ? "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary"
+                      : "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30"
                   }`}
                 >
                   Conversation
@@ -480,8 +503,8 @@ export function App() {
                   onClick={() => setMainView("analyze")}
                   className={`min-w-[100px] text-center px-4 py-1.5 text-sm font-semibold rounded-md transition ${
                     mainView === "analyze"
-                      ? "bg-accent-cyan-subtle text-cyan-200 border border-accent-cyan shadow-sm shadow-accent-cyan-shadow"
-                      : "text-muted hover:text-secondary hover:bg-control"
+                      ? "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary"
+                      : "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30"
                   }`}
                 >
                   Dashboard
@@ -493,8 +516,8 @@ export function App() {
                   onClick={() => setMainView("skills")}
                   className={`min-w-[100px] text-center px-4 py-1.5 text-sm font-semibold rounded-md transition ${
                     mainView === "skills"
-                      ? "bg-accent-teal-subtle text-teal-200 border border-accent-teal shadow-sm shadow-accent-teal-shadow"
-                      : "text-muted hover:text-secondary hover:bg-control"
+                      ? "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary"
+                      : "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30"
                   }`}
                 >
                   Personalization
@@ -506,22 +529,23 @@ export function App() {
                   onClick={() => setMainView("friction")}
                   className={`min-w-[100px] text-center px-4 py-1.5 text-sm font-semibold rounded-md transition ${
                     mainView === "friction"
-                      ? "bg-accent-amber-subtle text-amber-200 border border-accent-amber shadow-sm shadow-accent-amber-shadow"
-                      : "text-muted hover:text-secondary hover:bg-control"
+                      ? "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary"
+                      : "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30"
                   }`}
                 >
                   Productivity Tips
                 </button>
               </Tooltip>
             </div>
-            <button
-              data-tour="settings-button"
-              onClick={() => setShowSettingsDialog(true)}
-              className="p-1.5 text-dimmed hover:text-secondary hover:bg-control rounded transition"
-              title="Settings"
-            >
-              <Settings className="w-6 h-6" />
-            </button>
+            <Tooltip text="Settings">
+              <button
+                data-tour="settings-button"
+                onClick={() => setShowSettingsDialog(true)}
+                className="p-1.5 text-dimmed hover:text-secondary hover:bg-control-hover rounded transition"
+              >
+                <Settings className="w-6 h-6" />
+              </button>
+            </Tooltip>
           </div>
 
           {/* Content Area */}
