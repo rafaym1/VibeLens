@@ -123,6 +123,15 @@ def get_skill_analysis_store():
     )
 
 
+def get_recommendation_store():
+    """Return cached RecommendationStore singleton."""
+    from vibelens.services.recommendation.store import RecommendationStore
+
+    return _get_or_create(
+        "recommendation_store", lambda: RecommendationStore(get_settings().recommendation_dir)
+    )
+
+
 def get_llm_config() -> LLMConfig:
     """Return cached LLM configuration, lazy-loading from YAML/env."""
     return _get_or_create("llm_config", load_llm_config)
