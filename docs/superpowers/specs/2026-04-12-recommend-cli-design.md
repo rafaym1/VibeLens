@@ -98,13 +98,40 @@ Project: VibeLens | Tools: 45 | Duration: 35min | Model: claude-sonnet-4-2025051
 - New: When `session_ids` is empty or None, use all local sessions via lightweight extraction
 - Backward compatible: explicit session_ids still work (for web UI use case with selected sessions)
 
+### Diversity Sampling (Budget Overflow)
+
+Even with compaction summaries truncated to 300 chars each, 576 sessions could still exceed the 100K token budget (576 x ~100 tokens = ~57K tokens for summaries alone, plus overhead). If the digest exceeds the budget after extraction, apply a sampling algorithm to select a diverse, representative subset.
+
+**Sampling algorithm: project-stratified diverse sampling**
+
+1. Group sessions by `project_path`
+2. Within each project, sort sessions by timestamp (newest first)
+3. Select up to `max_per_project` sessions per project (e.g., 3), preferring the most recent
+4. If still over budget: rank projects by session count (most active first), keep top N projects until the digest fits within the token budget
+5. Always include at least 1 session per project (up to the budget)
+
+This ensures:
+- Coverage of all active projects (diverse signal)
+- Recency bias (recent work is more relevant to recommendations)
+- No single large project dominates the digest
+
+**Implementation**: `_sample_sessions()` function in `services/recommendation/extraction.py`
+
+```
+Input:  list of (session_id, signal_text, project_path, timestamp) tuples
+        token_budget: int (default 80_000, leaving room for system prompt overhead)
+Output: list of (session_id, signal_text) tuples that fit within budget
+```
+
+The function is called after extraction but before concatenation. The engine logs the sampling ratio: `"Sampled {selected}/{total} sessions across {projects} projects ({tokens} tokens)"`.
+
 ### Performance Target
 
 | Metric | Current (extract_all_contexts) | New (lightweight) |
 |--------|-------------------------------|-------------------|
 | I/O | 1.3 GB (all sessions) | ~25 MB (compaction files only) |
 | Parse time | Minutes | Seconds |
-| Output tokens | Exceeds budget | 30-50K tokens |
+| Output tokens | Exceeds budget | 30-50K tokens (sampled if needed) |
 
 ## 3. `vibelens recommend` CLI Command
 
@@ -121,16 +148,49 @@ Options:
 
 ### Flow
 
-1. Load settings and validate LLM backend is configured
+1. Load settings. If no LLM backend configured, run backend auto-discovery (see below)
 2. Get all session metadata from `LocalTrajectoryStore`
-3. Extract lightweight digest (compaction summaries + metadata)
-4. Print progress at each L1-L4 stage to stderr via `typer.echo()`
+3. Extract lightweight digest (compaction summaries + metadata, with sampling if needed)
+4. Print progress at each L1-L4 stage via `typer.echo()`
 5. Run L2 profile → L3 retrieval+scoring → L4 rationale
 6. Save result to `RecommendationStore`
 7. Unless `--no-open`: start VibeLens server and open browser to `http://{host}:{port}?recommendation={analysis_id}`
 
+### Backend Auto-Discovery
+
+When no `--config` is provided and no LLM backend is already configured (`BackendType.DISABLED`), the CLI scans the system for available agent CLI backends and lets the user pick one.
+
+**Discovery flow:**
+1. Iterate through `_CLI_BACKEND_REGISTRY` (9 CLI backends)
+2. For each, call `shutil.which(backend.cli_executable)` to check if the binary is in `$PATH`
+3. Collect available backends with their default models and pricing info
+4. If LiteLLM keys are set in environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`), include LiteLLM as an option
+
+**Interactive picker** (via `typer.prompt` with numbered choices):
+```
+No LLM backend configured. Found 3 available backends:
+
+  1. claude_code  (claude)   → claude-haiku-4-5     ~$0.04/run
+  2. gemini       (gemini)   → gemini-2.0-flash     free
+  3. codex        (codex)    → gpt-5.4-mini         ~$0.02/run
+
+Pick a backend [1-3]: 1
+
+Using claude_code with claude-haiku-4-5
+Saved to ~/.vibelens/settings.json
+```
+
+**Implementation**: New function `discover_and_select_backend()` in `cli.py`:
+- Uses `shutil.which()` for each CLI backend's executable
+- Presents numbered list via `typer.echo()` + `typer.prompt()`
+- On selection: creates `LLMConfig`, calls `set_llm_config()` to persist to `~/.vibelens/settings.json`
+- If zero backends found: print error message and exit 1
+
+**Pricing estimate**: Use `lookup_pricing(default_model)` to show approximate cost per run. The recommendation pipeline makes 2 LLM calls with ~50K input tokens and ~8K output tokens total. The per-run cost is `(50K * input_price + 8K * output_price) / 1M`.
+
 ### Terminal Output
 
+With backend already configured:
 ```
 VibeLens v0.10.0
 
@@ -147,9 +207,26 @@ Saved: rec-20260412-abc123 (2 LLM calls, $0.04, 38s)
 Opening http://localhost:5555?recommendation=rec-20260412-abc123
 ```
 
+With backend auto-discovery (first run):
+```
+VibeLens v0.10.0
+
+No LLM backend configured. Found 3 available backends:
+
+  1. claude_code  (claude)   → claude-haiku-4-5     ~$0.04/run
+  2. gemini       (gemini)   → gemini-2.0-flash     free
+  3. codex        (codex)    → gpt-5.4-mini         ~$0.02/run
+
+Pick a backend [1-3]: 1
+Using claude_code with claude-haiku-4-5
+
+Loading sessions... 576 found (469 with summaries)
+...
+```
+
 ### Error Handling
 
-- No LLM backend: `"Error: No LLM backend configured. Run 'vibelens serve' and configure in Settings."` → exit 1
+- No LLM backend AND no CLIs found: `"No LLM backend available. Install a supported agent CLI (claude, gemini, codex, etc.) or configure an API key."` → exit 1
 - No sessions found: `"No sessions found. VibeLens looks in ~/.claude/, ~/.codex/, ~/.gemini/, ~/.openclaw/"` → exit 1
 - No catalog: `"No catalog available. Place catalog.json in ~/.vibelens/catalog/ or ~/.vibelens/data/"` → exit 1
 - LLM call fails: Print error, exit 1
