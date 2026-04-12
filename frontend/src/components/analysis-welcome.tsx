@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { LLMStatus } from "../types";
 import { DemoBanner } from "./demo-banner";
 import { InstallLocallyDialog } from "./install-locally-dialog";
-import { LLMConfigForm } from "./llm-config";
+import { LLMConfigForm } from "./llm/llm-config";
 import { Tooltip } from "./tooltip";
 
 type AccentColor = "amber" | "teal" | "cyan";
