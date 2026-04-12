@@ -8,7 +8,7 @@
 For each candidate below, write a personalized rationale explaining why it matches this user's workflow.
 
 {% for candidate in candidates %}
-- **{{ candidate.name }}**: {{ candidate.description }}
+- **{{ candidate.name }}** (id: `{{ candidate.item_id }}`): {{ candidate.description }}
 {% endfor %}
 
-Produce the rationale JSON array with item_id, rationale, and confidence for each candidate.
+Produce the rationale JSON array with item_id, rationale, and confidence for each candidate. Use the exact item_id shown in backticks above.

@@ -18,7 +18,7 @@ export function RecommendationView({ analysisId, onBack }: RecommendationViewPro
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetchWithToken(`/recommendation/${analysisId}`)
+    fetchWithToken(`/api/recommendation/${analysisId}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to load recommendation: ${res.status}`);
         return res.json();
