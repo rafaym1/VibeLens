@@ -1,9 +1,10 @@
 """Context extraction parameters — configurable detail levels for LLM prompts.
 
-Defines ``ContextParams`` with three frozen presets controlling how session
+Defines ``ContextParams`` with four frozen presets controlling how session
 trajectories are compressed into LLM-ready text. Each analysis mode selects
 its own preset:
 
+- **PRESET_RECOMMENDATION** — maximum compression for recommendation profile generation
 - **PRESET_CONCISE** — tight truncation for quick overviews (skill retrieval)
 - **PRESET_MEDIUM** — balanced detail for skill creation and evolvement
 - **PRESET_DETAIL** — full detail for friction analysis (matches legacy defaults)
@@ -56,6 +57,23 @@ class ContextParams:
     # Keep only the last N path segments (0 = show full path)
     path_max_segments: int
 
+
+# Maximum compression for recommendation profile generation
+PRESET_RECOMMENDATION = ContextParams(
+    user_prompt_max_chars=500,
+    user_prompt_head_chars=400,
+    user_prompt_tail_chars=100,
+    bash_command_max_chars=0,
+    tool_arg_max_chars=0,
+    error_truncate_chars=200,
+    include_non_error_obs=False,
+    observation_max_chars=0,
+    agent_message_max_chars=0,
+    agent_message_head_chars=0,
+    agent_message_tail_chars=0,
+    shorten_home_prefix=True,
+    path_max_segments=2,
+)
 
 # Tight truncation for quick overviews (skill retrieval)
 PRESET_CONCISE = ContextParams(
