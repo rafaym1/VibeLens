@@ -1,6 +1,203 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap');
 @import 'highlight.js/styles/github-dark.css';
 
+:root {
+  /* Surfaces */
+  --color-bg-canvas: #ffffff;
+  --color-bg-panel: #f4f4f5;
+  --color-bg-control: #e4e4e7;
+  --color-bg-control-hover: #d4d4d8;
+  --color-bg-subtle: rgba(228, 228, 231, 0.5);
+  --color-bg-overlay: rgba(0, 0, 0, 0.4);
+
+  /* Text */
+  --color-text-primary: #18181b;
+  --color-text-secondary: #27272a;
+  --color-text-muted: #52525b;
+  --color-text-dimmed: #a1a1aa;
+  --color-text-faint: #71717a;
+  --color-text-on-accent: #ffffff;
+
+  /* Borders */
+  --color-border-default: #e4e4e7;
+  --color-border-card: rgba(212, 212, 216, 0.8);
+  --color-border-control: #d4d4d8;
+  --color-border-hover: #a1a1aa;
+
+  /* Accent: Cyan */
+  --color-accent-cyan: #0891b2;
+  --color-accent-cyan-bg: #0891b2;
+  --color-accent-cyan-subtle: rgba(8, 145, 178, 0.1);
+  --color-accent-cyan-muted: rgba(8, 145, 178, 0.15);
+  --color-accent-cyan-border: rgba(8, 145, 178, 0.25);
+  --color-accent-cyan-focus: #0891b2;
+  --color-accent-cyan-shadow: rgba(8, 145, 178, 0.15);
+
+  /* Accent: Violet */
+  --color-accent-violet: #7c3aed;
+  --color-accent-violet-bg: #7c3aed;
+  --color-accent-violet-subtle: rgba(124, 58, 237, 0.08);
+  --color-accent-violet-border: rgba(124, 58, 237, 0.25);
+
+  /* Accent: Teal */
+  --color-accent-teal: #0d9488;
+  --color-accent-teal-subtle: rgba(13, 148, 136, 0.1);
+  --color-accent-teal-border: rgba(13, 148, 136, 0.25);
+  --color-accent-teal-focus: #0d9488;
+  --color-accent-teal-shadow: rgba(13, 148, 136, 0.15);
+
+  /* Accent: Amber */
+  --color-accent-amber: #d97706;
+  --color-accent-amber-subtle: rgba(217, 119, 6, 0.08);
+  --color-accent-amber-border: rgba(217, 119, 6, 0.25);
+  --color-accent-amber-focus: #d97706;
+  --color-accent-amber-shadow: rgba(217, 119, 6, 0.15);
+
+  /* Accent: Rose */
+  --color-accent-rose: #e11d48;
+  --color-accent-rose-bg: #e11d48;
+  --color-accent-rose-subtle: rgba(225, 29, 72, 0.06);
+  --color-accent-rose-border: rgba(225, 29, 72, 0.2);
+
+  /* Accent: Emerald */
+  --color-accent-emerald: #059669;
+  --color-accent-emerald-subtle: rgba(5, 150, 105, 0.06);
+  --color-accent-emerald-border: rgba(5, 150, 105, 0.2);
+
+  /* Accent: Indigo */
+  --color-accent-indigo: #4f46e5;
+  --color-accent-indigo-subtle: rgba(79, 70, 229, 0.1);
+  --color-accent-indigo-border: rgba(79, 70, 229, 0.3);
+  --color-accent-indigo-shadow: rgba(79, 70, 229, 0.15);
+
+  /* Accent: Blue */
+  --color-accent-blue: #2563eb;
+
+  /* Chart */
+  --color-chart-line: rgb(8, 145, 178);
+  --color-chart-area-start: rgba(8, 145, 178, 0.2);
+  --color-chart-area-end: rgba(8, 145, 178, 0.02);
+  --color-chart-grid: rgba(0, 0, 0, 0.08);
+  --color-chart-axis: rgba(0, 0, 0, 0.12);
+  --color-chart-text: #52525b;
+  --color-chart-crosshair: rgba(8, 145, 178, 0.4);
+
+  /* Heatmap */
+  --color-heatmap-0: rgba(8, 145, 178, 0.06);
+  --color-heatmap-1: rgba(8, 145, 178, 0.15);
+  --color-heatmap-2: rgba(8, 145, 178, 0.3);
+  --color-heatmap-3: rgba(8, 145, 178, 0.5);
+  --color-heatmap-4: rgba(8, 145, 178, 0.7);
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(161, 161, 170, 0.5);
+  --color-scrollbar-hover: rgba(113, 113, 122, 0.7);
+
+  /* Inline code */
+  --color-bg-inline-code: rgba(0, 0, 0, 0.06);
+
+  /* Shadow */
+  --color-shadow: rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+  /* Surfaces */
+  --color-bg-canvas: #09090b;
+  --color-bg-panel: #18181b;
+  --color-bg-control: #27272a;
+  --color-bg-control-hover: #3f3f46;
+  --color-bg-subtle: rgba(39, 39, 42, 0.5);
+  --color-bg-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Text */
+  --color-text-primary: #f4f4f5;
+  --color-text-secondary: #e4e4e7;
+  --color-text-muted: #a1a1aa;
+  --color-text-dimmed: #71717a;
+  --color-text-faint: #52525b;
+
+  /* Borders */
+  --color-border-default: #27272a;
+  --color-border-card: rgba(63, 63, 70, 0.6);
+  --color-border-control: #3f3f46;
+  --color-border-hover: #52525b;
+
+  /* Accent: Cyan */
+  --color-accent-cyan: #22d3ee;
+  --color-accent-cyan-bg: #0891b2;
+  --color-accent-cyan-subtle: rgba(8, 145, 178, 0.2);
+  --color-accent-cyan-muted: rgba(8, 145, 178, 0.35);
+  --color-accent-cyan-border: rgba(6, 182, 212, 0.35);
+  --color-accent-cyan-focus: #0891b2;
+  --color-accent-cyan-shadow: rgba(22, 78, 99, 0.4);
+
+  /* Accent: Violet */
+  --color-accent-violet: #a78bfa;
+  --color-accent-violet-bg: #7c3aed;
+  --color-accent-violet-subtle: rgba(139, 92, 246, 0.2);
+  --color-accent-violet-border: rgba(167, 139, 250, 0.4);
+
+  /* Accent: Teal */
+  --color-accent-teal: #5eead4;
+  --color-accent-teal-subtle: rgba(20, 184, 166, 0.2);
+  --color-accent-teal-border: rgba(45, 212, 191, 0.3);
+  --color-accent-teal-focus: #0d9488;
+  --color-accent-teal-shadow: rgba(17, 94, 89, 0.4);
+
+  /* Accent: Amber */
+  --color-accent-amber: #fcd34d;
+  --color-accent-amber-subtle: rgba(245, 158, 11, 0.2);
+  --color-accent-amber-border: rgba(251, 191, 36, 0.4);
+  --color-accent-amber-focus: #d97706;
+  --color-accent-amber-shadow: rgba(120, 53, 15, 0.4);
+
+  /* Accent: Rose */
+  --color-accent-rose: #fda4af;
+  --color-accent-rose-bg: #e11d48;
+  --color-accent-rose-subtle: rgba(244, 63, 94, 0.15);
+  --color-accent-rose-border: rgba(251, 113, 133, 0.4);
+
+  /* Accent: Emerald */
+  --color-accent-emerald: #34d399;
+  --color-accent-emerald-subtle: rgba(16, 185, 129, 0.1);
+  --color-accent-emerald-border: rgba(52, 211, 153, 0.3);
+
+  /* Accent: Indigo */
+  --color-accent-indigo: #a5b4fc;
+  --color-accent-indigo-subtle: rgba(99, 102, 241, 0.3);
+  --color-accent-indigo-border: rgba(129, 140, 248, 0.4);
+  --color-accent-indigo-shadow: rgba(49, 46, 129, 0.4);
+
+  /* Accent: Blue */
+  --color-accent-blue: #60a5fa;
+
+  /* Chart */
+  --color-chart-line: rgb(34, 211, 238);
+  --color-chart-area-start: rgba(34, 211, 238, 0.3);
+  --color-chart-area-end: rgba(34, 211, 238, 0.02);
+  --color-chart-grid: rgba(255, 255, 255, 0.06);
+  --color-chart-axis: rgba(255, 255, 255, 0.08);
+  --color-chart-text: #a1a1aa;
+  --color-chart-crosshair: rgba(34, 211, 238, 0.4);
+
+  /* Heatmap */
+  --color-heatmap-0: rgba(34, 211, 238, 0.06);
+  --color-heatmap-1: rgba(34, 211, 238, 0.25);
+  --color-heatmap-2: rgba(34, 211, 238, 0.45);
+  --color-heatmap-3: rgba(34, 211, 238, 0.65);
+  --color-heatmap-4: rgba(34, 211, 238, 0.85);
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(63, 63, 70, 0.5);
+  --color-scrollbar-hover: rgba(82, 82, 91, 0.7);
+
+  /* Inline code */
+  --color-bg-inline-code: rgba(255, 255, 255, 0.15);
+
+  /* Shadow */
+  --color-shadow: rgba(0, 0, 0, 0.3);
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -33,12 +230,12 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgb(63 63 70 / 0.5);
+    background: var(--color-scrollbar-thumb);
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgb(82 82 91 / 0.7);
+    background: var(--color-scrollbar-hover);
   }
 }
 
@@ -61,7 +258,7 @@
 }
 
 .user-markdown code:not(pre code) {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-bg-inline-code);
   color: inherit;
 }
 
