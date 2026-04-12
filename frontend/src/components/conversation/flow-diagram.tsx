@@ -9,7 +9,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import type { Step, FlowData } from "../../types";
-import { useTooltip, Tooltip, type TooltipContent } from "../analysis/tooltip";
+import { useTooltip, Tooltip, type TooltipContent } from "../dashboard/chart-tooltip";
 import {
   computeFlow,
   type FlowPhaseGroup,

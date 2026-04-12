@@ -23,7 +23,7 @@ import { ModelDistribution } from "./model-distribution-chart";
 import { PeakHoursChart } from "./peak-hours-chart";
 import { StatCard } from "./stat-card";
 import { ToolDistribution, totalToolCalls } from "./tool-distribution-chart";
-import { Tooltip, useTooltip } from "./tooltip";
+import { Tooltip, useTooltip } from "./chart-tooltip";
 import { UsageOverTimeChart } from "./usage-over-time-chart";
 
 interface DashboardViewProps {

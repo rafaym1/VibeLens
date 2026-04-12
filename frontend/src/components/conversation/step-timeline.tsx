@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Step } from "../../types";
 import { formatElapsed, formatStepTime, formatFullDateTime } from "../../utils";
-import { Tooltip, useTooltip } from "../analysis/tooltip";
+import { Tooltip, useTooltip } from "../dashboard/chart-tooltip";
 
 interface TimelineEntry {
   step: Step;
