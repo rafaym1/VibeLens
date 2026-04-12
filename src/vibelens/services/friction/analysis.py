@@ -20,13 +20,13 @@ from vibelens.llm.prompts.friction_analysis import (
     FRICTION_SYNTHESIS_PROMPT,
 )
 from vibelens.llm.tokenizer import count_tokens
-from vibelens.models.analysis.friction import (
+from vibelens.models.context import SessionContextBatch
+from vibelens.models.friction import (
     FrictionAnalysisOutput,
     FrictionAnalysisResult,
     FrictionCost,
     FrictionType,
 )
-from vibelens.models.context import SessionContextBatch
 from vibelens.models.llm.inference import InferenceRequest
 from vibelens.models.step_ref import StepRef
 from vibelens.models.trajectories import Trajectory

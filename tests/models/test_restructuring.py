@@ -88,3 +88,37 @@ class TestSessionPackage:
         assert ToolDependencyGraph is not None
         assert ToolEdge is not None
         assert WorkflowPattern is not None
+
+
+class TestFrictionPackage:
+    """Verify models/friction/ package with moved models."""
+
+    def test_friction_type_import(self):
+        from vibelens.models.friction import FrictionType
+
+        ft = FrictionType(
+            type_name="changed-wrong-files",
+            description="Agent edited the wrong file",
+            severity=3,
+        )
+        assert ft.type_name == "changed-wrong-files"
+
+    def test_friction_analysis_result_import(self):
+        from vibelens.models.friction import FrictionAnalysisResult
+
+        assert FrictionAnalysisResult is not None
+
+    def test_friction_init_reexports(self):
+        from vibelens.models.friction import (
+            FrictionAnalysisOutput,
+            FrictionAnalysisResult,
+            FrictionCost,
+            FrictionType,
+            Mitigation,
+        )
+
+        assert FrictionAnalysisOutput is not None
+        assert FrictionAnalysisResult is not None
+        assert FrictionCost is not None
+        assert FrictionType is not None
+        assert Mitigation is not None

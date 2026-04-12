@@ -5,7 +5,7 @@ Two-phase pipeline:
 2. FRICTION_SYNTHESIS_PROMPT: Post-batch synthesis (merged title + summary + events + mitigations).
 """
 
-from vibelens.models.analysis.friction import FrictionAnalysisOutput
+from vibelens.models.friction import FrictionAnalysisOutput
 from vibelens.models.llm.prompts import AnalysisPrompt, load_template
 
 # Per-batch friction detection: identifies friction types and mitigations

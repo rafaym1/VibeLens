@@ -5,7 +5,7 @@ Thin subclass of AnalysisStore with friction-specific meta building.
 
 from pathlib import Path
 
-from vibelens.models.analysis.friction import FrictionAnalysisResult
+from vibelens.models.friction import FrictionAnalysisResult
 from vibelens.schemas.friction import FrictionMeta
 from vibelens.services.analysis_store import AnalysisStore
 

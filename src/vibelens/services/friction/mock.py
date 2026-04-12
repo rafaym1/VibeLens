@@ -6,7 +6,7 @@ covering all severity levels, spread across available sessions.
 
 from datetime import datetime, timezone
 
-from vibelens.models.analysis.friction import (
+from vibelens.models.friction import (
     FrictionAnalysisResult,
     FrictionCost,
     FrictionType,

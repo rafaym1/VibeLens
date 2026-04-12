@@ -1,12 +1,5 @@
 """Analysis result models for VibeLens dashboard and behavior analytics."""
 
-from vibelens.models.analysis.friction import (
-    FrictionAnalysisOutput,
-    FrictionAnalysisResult,
-    FrictionCost,
-    FrictionType,
-    Mitigation,
-)
 from vibelens.models.dashboard.dashboard import (
     AgentBehaviorResult,
     DailyStat,
@@ -16,6 +9,13 @@ from vibelens.models.dashboard.dashboard import (
     TimePattern,
     ToolUsageStat,
     UserPreferenceResult,
+)
+from vibelens.models.friction.models import (
+    FrictionAnalysisOutput,
+    FrictionAnalysisResult,
+    FrictionCost,
+    FrictionType,
+    Mitigation,
 )
 from vibelens.models.llm.pricing import ModelPricing
 from vibelens.models.session.correlator import CorrelatedGroup, CorrelatedSession

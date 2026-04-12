@@ -6,7 +6,7 @@ import secrets
 from fastapi import APIRouter, Header, HTTPException
 
 from vibelens.deps import get_friction_store, is_demo_mode, is_test_mode
-from vibelens.models.analysis.friction import FrictionAnalysisResult
+from vibelens.models.friction import FrictionAnalysisResult
 from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
 from vibelens.schemas.friction import FrictionAnalysisRequest, FrictionMeta
