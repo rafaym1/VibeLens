@@ -20,12 +20,12 @@ import {
   Check,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAppContext } from "../app";
-import type { Trajectory } from "../types";
-import { formatTime, truncate, baseProjectName } from "../utils";
+import { useAppContext } from "../../app";
+import type { Trajectory } from "../../types";
+import { formatTime, truncate, baseProjectName } from "../../utils";
 import { SearchOptionsDialog } from "./search-options-dialog";
-import { Tooltip } from "./tooltip";
-import { SESSIONS_PER_PAGE, SEARCH_DEBOUNCE_MS } from "../constants";
+import { Tooltip } from "../tooltip";
+import { SESSIONS_PER_PAGE, SEARCH_DEBOUNCE_MS } from "../../constants";
 
 export type ViewMode = "time" | "project";
 

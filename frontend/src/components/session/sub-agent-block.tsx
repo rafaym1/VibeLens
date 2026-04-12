@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import type { Trajectory } from "../../types";
 import { SESSION_ID_MEDIUM } from "../../constants";
 import { CollapsiblePill } from "../collapsible-pill";
-import { StepBlock } from "./message-block";
+import { StepBlock } from "./step-block";
 
 interface SubAgentBlockProps {
   trajectory: Trajectory;

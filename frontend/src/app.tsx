@@ -9,9 +9,9 @@ import { useEffect, useRef, useState, useCallback, useMemo, createContext, useCo
 import { ConfirmDialog } from "./components/confirm-dialog";
 import { DonateConsentDialog } from "./components/donate-consent-dialog";
 import { ResizeHandle } from "./components/resize-handle";
-import { SessionList, type ViewMode } from "./components/session-list";
-import { SessionView } from "./components/conversation/session-view";
-import { SharedSessionView } from "./components/conversation/shared-session-view";
+import { SessionList, type ViewMode } from "./components/session/session-list";
+import { SessionView } from "./components/session/session-view";
+import { SharedSessionView } from "./components/session/shared-session-view";
 import { RecommendationView } from "./components/recommendations/recommendation-view";
 import { UploadDialog } from "./components/upload-dialog";
 import { DashboardView } from "./components/dashboard/dashboard-view";

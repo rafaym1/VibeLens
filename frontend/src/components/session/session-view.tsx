@@ -31,7 +31,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../app";
 import type { Step, Trajectory, FlowData } from "../../types";
-import { StepBlock } from "./message-block";
+import { StepBlock } from "./step-block";
 import { SubAgentBlock } from "./sub-agent-block";
 import { StepTimeline } from "./step-timeline";
 import { PromptNavPanel, type NavMode } from "./prompt-nav-panel";
