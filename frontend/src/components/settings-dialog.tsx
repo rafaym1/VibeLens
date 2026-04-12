@@ -1,9 +1,9 @@
 import { X, Bug, Lightbulb, Sparkles, Compass } from "lucide-react";
 import { TOUR_STORAGE_KEY } from "./tutorial/tour-steps";
 import { useSettings } from "../settings-context";
-import type { FontScale } from "../settings-context";
+import type { FontScale, ThemePreference } from "../settings-context";
 
-const GITHUB_ISSUES_URL = "https://github.com/yejh123/VibeLens/issues/new";
+const GITHUB_ISSUES_URL = "https://github.com/CHATS-lab/VibeLens/issues/new";
 
 const FEEDBACK_TEMPLATES: Record<string, { title: string; body: string }> = {
   bug: {
@@ -70,7 +70,7 @@ function openFeedback(label: string): void {
 }
 
 export function SettingsDialog({ onClose, onShowOnboarding }: SettingsDialogProps) {
-  const { fontScale, setFontScale, fontScaleOptions } = useSettings();
+  const { fontScale, setFontScale, fontScaleOptions, theme, setTheme, themeOptions } = useSettings();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -95,6 +95,28 @@ export function SettingsDialog({ onClose, onShowOnboarding }: SettingsDialogProp
 
         {/* Body */}
         <div className="px-5 py-4 space-y-5">
+          {/* Theme */}
+          <div>
+            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+              Theme
+            </h3>
+            <div className="flex gap-2">
+              {themeOptions.map((option: ThemePreference) => (
+                <button
+                  key={option}
+                  onClick={() => setTheme(option)}
+                  className={`flex-1 py-2 text-sm font-medium rounded-md border transition ${
+                    theme === option
+                      ? "bg-cyan-600/20 text-cyan-300 border-cyan-500/40"
+                      : "text-zinc-400 border-zinc-700 hover:text-zinc-200 hover:border-zinc-600"
+                  }`}
+                >
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Display Scale */}
           <div>
             <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
