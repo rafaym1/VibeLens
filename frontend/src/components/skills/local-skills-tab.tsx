@@ -204,12 +204,12 @@ export function LocalSkillsTab() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-teal-600/20">
-            <Code2 className="w-5 h-5 text-teal-400" />
+          <div className="p-2 rounded-lg bg-accent-teal-subtle">
+            <Code2 className="w-5 h-5 text-accent-teal" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-zinc-100">Skills</h2>
-            <p className="text-sm text-zinc-200">Manage and sync skills across agent interfaces</p>
+            <h2 className="text-lg font-bold text-primary">Skills</h2>
+            <p className="text-sm text-secondary">Manage and sync skills across agent interfaces</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export function LocalSkillsTab() {
           <button
             onClick={() => { fetchSkills(true); fetchSources(); }}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-md transition disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary hover:text-primary bg-control hover:bg-control-hover border border-card rounded-md transition disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -367,13 +367,13 @@ function PaginationBar({
   if (total <= PAGE_SIZE_OPTIONS[0]) return null;
 
   return (
-    <div className="flex items-center justify-between pt-4 border-t border-zinc-800 text-xs text-zinc-500">
+    <div className="flex items-center justify-between pt-4 border-t border-default text-xs text-dimmed">
       <div className="flex items-center gap-2">
         <span>Show</span>
         <select
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-zinc-300 text-xs"
+          className="bg-control border border-card rounded px-1.5 py-0.5 text-secondary text-xs"
         >
           {PAGE_SIZE_OPTIONS.map((opt) => (
             <option key={opt} value={opt}>{opt}</option>
@@ -386,14 +386,14 @@ function PaginationBar({
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="p-1 rounded hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+          className="p-1 rounded hover:bg-control-hover disabled:opacity-30 disabled:cursor-not-allowed transition"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="p-1 rounded hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+          className="p-1 rounded hover:bg-control-hover disabled:opacity-30 disabled:cursor-not-allowed transition"
         >
           <ChevronRight className="w-3.5 h-3.5" />
         </button>

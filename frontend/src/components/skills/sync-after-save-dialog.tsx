@@ -58,20 +58,20 @@ export function SyncAfterSaveDialog({
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-md">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 shrink-0">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-default shrink-0">
         <div className="flex items-center gap-2.5">
-          <Share2 className="w-4 h-4 text-teal-400" />
-          <h2 className="text-sm font-semibold text-zinc-100">
+          <Share2 className="w-4 h-4 text-accent-teal" />
+          <h2 className="text-sm font-semibold text-primary">
             Sync changes to agent interfaces?
           </h2>
         </div>
-        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 transition">
+        <button onClick={onClose} className="text-dimmed hover:text-secondary transition">
           <X className="w-4 h-4" />
         </button>
       </div>
       <ModalBody>
-        <p className="text-sm text-zinc-400 leading-relaxed">
-          You updated <span className="font-mono text-zinc-200">{skillName}</span>.
+        <p className="text-sm text-muted leading-relaxed">
+          You updated <span className="font-mono text-secondary">{skillName}</span>.
           Would you like to sync the changes to your agent interfaces?
         </p>
 
@@ -86,23 +86,23 @@ export function SyncAfterSaveDialog({
                   disabled={syncing || syncDone}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition text-left ${
                     isSelected
-                      ? "bg-zinc-800 border-teal-600/40"
-                      : "bg-zinc-800/50 border-zinc-700/50 hover:border-zinc-600"
+                      ? "bg-control border-teal-600/40"
+                      : "bg-subtle border-card hover:border-hover"
                   } disabled:opacity-60`}
                 >
                   <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition ${
                     isSelected
                       ? "bg-teal-600 border-teal-500"
-                      : "border-zinc-600"
+                      : "border-hover"
                   }`}>
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
-                  <Monitor className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <Monitor className="w-4 h-4 text-muted shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-200">
+                    <p className="text-sm font-medium text-secondary">
                       {SOURCE_LABELS[src.key] || src.label}
                     </p>
-                    <p className="text-xs text-zinc-500 truncate">{src.skills_dir}</p>
+                    <p className="text-xs text-dimmed truncate">{src.skills_dir}</p>
                   </div>
                 </button>
               );
@@ -114,7 +114,7 @@ export function SyncAfterSaveDialog({
         <button
           onClick={onClose}
           disabled={syncing}
-          className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded transition disabled:opacity-50"
+          className="px-3 py-1.5 text-xs text-muted hover:text-secondary border border-card hover:border-hover rounded transition disabled:opacity-50"
         >
           Skip
         </button>

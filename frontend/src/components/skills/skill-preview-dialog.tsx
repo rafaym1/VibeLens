@@ -85,7 +85,7 @@ export function SkillPreviewDialog({
       <ModalBody>
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
+            <Loader2 className="w-6 h-6 text-muted animate-spin" />
           </div>
         ) : (
           <>
@@ -94,17 +94,17 @@ export function SkillPreviewDialog({
                 value={localContent}
                 onChange={isEditable ? (e) => handleContentChange(e.target.value) : undefined}
                 readOnly={!isEditable}
-                className={`w-full min-h-[300px] max-h-[50vh] bg-zinc-950 text-zinc-200 text-xs font-mono p-4 rounded-lg border focus:outline-none resize-y leading-relaxed ${
+                className={`w-full min-h-[300px] max-h-[50vh] bg-canvas text-secondary text-xs font-mono p-4 rounded-lg border focus:outline-none resize-y leading-relaxed ${
                   isEditable
-                    ? `border-zinc-700/50 focus:border-${accentClass}-600/50`
-                    : "border-zinc-800/50 cursor-default"
+                    ? `border-card focus:border-${accentClass}-600/50`
+                    : "border-default/50 cursor-default"
                 }`}
                 spellCheck={false}
               />
               {isEditable && isModified && (
                 <button
                   onClick={handleReset}
-                  className="absolute top-2 right-2 flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300 px-2 py-1 rounded bg-zinc-800/80 border border-zinc-700/30 transition"
+                  className="absolute top-2 right-2 flex items-center gap-1 text-[10px] text-dimmed hover:text-secondary px-2 py-1 rounded bg-control/80 border border-card transition"
                 >
                   <RotateCcw className="w-2.5 h-2.5" /> Reset
                 </button>
@@ -112,13 +112,13 @@ export function SkillPreviewDialog({
             </div>
 
             {/* Central store */}
-            <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-teal-900/15 border border-teal-700/30">
-              <Check className="w-4 h-4 text-teal-400 shrink-0" />
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-teal-900/15 border border-accent-teal">
+              <Check className="w-4 h-4 text-accent-teal shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-zinc-200">Central Store</p>
-                <p className="text-xs text-zinc-500">~/.vibelens/skills/</p>
+                <p className="text-sm font-medium text-secondary">Central Store</p>
+                <p className="text-xs text-dimmed">~/.vibelens/skills/</p>
               </div>
-              <span className="text-[10px] text-teal-400 font-medium px-1.5 py-0.5 rounded bg-teal-900/30">Always</span>
+              <span className="text-[10px] text-accent-teal font-medium px-1.5 py-0.5 rounded bg-accent-teal-subtle">Always</span>
             </div>
 
             {/* Agent interface checkboxes */}
@@ -132,25 +132,25 @@ export function SkillPreviewDialog({
                       onClick={() => toggleTarget(src.key)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition text-left ${
                         isSelected
-                          ? `bg-zinc-800 ${accentBorder}`
-                          : "bg-zinc-800/50 border-zinc-700/50 hover:border-zinc-600"
+                          ? `bg-control ${accentBorder}`
+                          : "bg-subtle border-card hover:border-hover"
                       }`}
                     >
                       <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition ${
                         isSelected
                           ? `${accentBg.split(" ")[0]} border-${accentClass}-500`
-                          : "border-zinc-600"
+                          : "border-hover"
                       }`}>
                         {isSelected && <Check className="w-3 h-3 text-white" />}
                       </div>
-                      <Monitor className="w-4 h-4 text-zinc-400 shrink-0" />
+                      <Monitor className="w-4 h-4 text-muted shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-200">
+                        <p className="text-sm font-medium text-secondary">
                           {SOURCE_LABELS[src.key] || src.label}
                         </p>
-                        <p className="text-xs text-zinc-500 truncate">{src.skills_dir}</p>
+                        <p className="text-xs text-dimmed truncate">{src.skills_dir}</p>
                       </div>
-                      <span className="text-[10px] text-zinc-500">
+                      <span className="text-[10px] text-dimmed">
                         {src.skill_count} skill{src.skill_count !== 1 ? "s" : ""}
                       </span>
                     </button>
@@ -165,7 +165,7 @@ export function SkillPreviewDialog({
         <button
           onClick={onCancel}
           disabled={installing}
-          className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded transition disabled:opacity-50"
+          className="px-3 py-1.5 text-xs text-muted hover:text-secondary border border-card hover:border-hover rounded transition disabled:opacity-50"
         >
           Cancel
         </button>

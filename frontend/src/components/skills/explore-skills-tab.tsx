@@ -110,15 +110,15 @@ export function ExploreSkillsTab({ onSwitchTab }: { onSwitchTab?: (tab: SkillTab
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-teal-600/20">
-            <Compass className="w-5 h-5 text-teal-400" />
+          <div className="p-2 rounded-lg bg-accent-teal-subtle">
+            <Compass className="w-5 h-5 text-accent-teal" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-zinc-100">Explore Skills</h2>
-            <p className="text-xs text-zinc-300">
+            <h2 className="text-lg font-bold text-primary">Explore Skills</h2>
+            <p className="text-xs text-secondary">
               {allSkills.length} community skills from the Anthropic registry
               {updatedAt && (
-                <span className="ml-1 text-zinc-400">
+                <span className="ml-1 text-muted">
                   · updated {new Date(updatedAt).toLocaleDateString()}
                 </span>
               )}
@@ -128,7 +128,7 @@ export function ExploreSkillsTab({ onSwitchTab }: { onSwitchTab?: (tab: SkillTab
         <button
           onClick={fetchFeatured}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-md transition disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted hover:text-secondary bg-control hover:bg-control-hover border border-card rounded-md transition disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
         </button>
@@ -225,18 +225,18 @@ function FeaturedSkillCard({
     <div className={`border rounded-lg transition ${
       isInstalled
         ? "border-emerald-800/40 bg-emerald-950/20 hover:bg-emerald-950/30"
-        : "border-zinc-700/50 bg-zinc-800/50 hover:bg-zinc-800/80"
+        : "border-card bg-subtle hover:bg-control/80"
     }`}>
       <button
         onClick={() => onViewDetail(skill)}
         className="w-full text-left px-4 py-3 flex items-start gap-3 min-w-0"
       >
-        <div className={`shrink-0 mt-0.5 p-1.5 rounded-md ${isInstalled ? "bg-emerald-600/20" : "bg-teal-600/20"}`}>
-          {isInstalled ? <Check className="w-4 h-4 text-emerald-400" /> : <Globe className="w-4 h-4 text-teal-400" />}
+        <div className={`shrink-0 mt-0.5 p-1.5 rounded-md ${isInstalled ? "bg-accent-emerald-subtle" : "bg-accent-teal-subtle"}`}>
+          {isInstalled ? <Check className="w-4 h-4 text-accent-emerald" /> : <Globe className="w-4 h-4 text-accent-teal" />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-sm font-semibold text-zinc-100">{skill.name}</span>
+            <span className="font-mono text-sm font-semibold text-primary">{skill.name}</span>
             <CategoryBadge category={skill.category} />
             {skill.stars > 0 && (
               <Tooltip text={`${skill.stars.toLocaleString()} GitHub stars`}>
@@ -252,11 +252,11 @@ function FeaturedSkillCard({
               </span>
             )}
           </div>
-          <p className="text-sm text-zinc-300 mt-1 line-clamp-2">{skill.summary}</p>
+          <p className="text-sm text-secondary mt-1 line-clamp-2">{skill.summary}</p>
           <TagList tags={skill.tags} />
         </div>
         <div className="shrink-0 mt-1">
-          <ExternalLink className="w-3.5 h-3.5 text-zinc-600" />
+          <ExternalLink className="w-3.5 h-3.5 text-faint" />
         </div>
       </button>
     </div>
@@ -319,8 +319,8 @@ function FeaturedSkillDetailPopup({
     <Modal onClose={onClose}>
       <ModalHeader onClose={onClose}>
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${installed ? "bg-emerald-600/20" : "bg-teal-600/20"}`}>
-            {installed ? <Check className="w-5 h-5 text-emerald-400" /> : <Globe className="w-5 h-5 text-teal-400" />}
+          <div className={`p-2 rounded-lg ${installed ? "bg-accent-emerald-subtle" : "bg-accent-teal-subtle"}`}>
+            {installed ? <Check className="w-5 h-5 text-accent-emerald" /> : <Globe className="w-5 h-5 text-accent-teal" />}
           </div>
           <div>
             <h2 className="text-lg font-bold font-mono text-white">{skill.name}</h2>
@@ -336,7 +336,7 @@ function FeaturedSkillDetailPopup({
                   Installed
                 </span>
               )}
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-muted">
                 Updated {new Date(skill.updated_at).toLocaleDateString()}
               </span>
             </div>
@@ -348,17 +348,17 @@ function FeaturedSkillDetailPopup({
         {/* Skill Description */}
         <div>
           <DetailSectionTitle icon={<FileText className="w-4 h-4" />} label="Skill Description" />
-          <p className="text-sm text-zinc-200 leading-relaxed">{skill.summary}</p>
+          <p className="text-sm text-secondary leading-relaxed">{skill.summary}</p>
         </div>
 
         {/* Metadata grid: tags, stats, source */}
         {(skill.tags.length > 0 || skill.stars > 0 || skill.downloads > 0 || skill.source_url) && (
-          <div className="rounded-lg border border-zinc-700/40 bg-zinc-800/30 divide-y divide-zinc-700/30">
+          <div className="rounded-lg border border-card bg-subtle divide-y divide-card">
             {/* Tags + Stats row */}
             <div className="px-4 py-3 flex flex-wrap gap-x-6 gap-y-2">
               {skill.tags.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-400 shrink-0">
+                  <div className="flex items-center gap-1.5 text-xs text-muted shrink-0">
                     <Tag className="w-3 h-3" /> <span>Tags</span>
                   </div>
                   {skill.tags.map((tag) => <TagPill key={tag} tag={tag} />)}
@@ -367,14 +367,14 @@ function FeaturedSkillDetailPopup({
               {(skill.stars > 0 || skill.downloads > 0) && (
                 <div className="flex items-center gap-4">
                   {skill.stars > 0 && (
-                    <div className="flex items-center gap-1.5 text-sm text-zinc-300">
-                      <Star className="w-3.5 h-3.5 text-amber-400" />
+                    <div className="flex items-center gap-1.5 text-sm text-secondary">
+                      <Star className="w-3.5 h-3.5 text-accent-amber" />
                       <span>{skill.stars.toLocaleString()} stars</span>
                     </div>
                   )}
                   {skill.downloads > 0 && (
-                    <div className="flex items-center gap-1.5 text-sm text-zinc-300">
-                      <Download className="w-3.5 h-3.5 text-zinc-400" />
+                    <div className="flex items-center gap-1.5 text-sm text-secondary">
+                      <Download className="w-3.5 h-3.5 text-muted" />
                       <span>{skill.downloads.toLocaleString()} downloads</span>
                     </div>
                   )}
@@ -385,14 +385,14 @@ function FeaturedSkillDetailPopup({
             {/* Source link row */}
             {skill.source_url && (
               <div className="px-4 py-3 flex items-center gap-2">
-                <div className="flex items-center gap-1.5 text-xs text-zinc-400 shrink-0">
+                <div className="flex items-center gap-1.5 text-xs text-muted shrink-0">
                   <ExternalLink className="w-3 h-3" /> <span>Source</span>
                 </div>
                 <a
                   href={skill.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-teal-400 hover:text-teal-300 underline underline-offset-2 transition truncate"
+                  className="inline-flex items-center gap-1.5 text-sm text-accent-teal hover:text-accent-teal underline underline-offset-2 transition truncate"
                 >
                   {skill.source_url} <ExternalLink className="w-3 h-3 shrink-0" />
                 </a>
@@ -403,7 +403,7 @@ function FeaturedSkillDetailPopup({
 
         {/* Agent interface targets */}
         {!installed && agentSources.length > 0 && (
-          <div className="rounded-lg border border-teal-700/30 bg-teal-950/10 px-4 py-3">
+          <div className="rounded-lg border border-accent-teal bg-teal-950/10 px-4 py-3">
             <DetailSectionTitle icon={<Share2 className="w-4 h-4" />} label="Install to Agent Interfaces" />
             <div className="flex flex-wrap gap-2">
               {agentSources.map((src) => (
@@ -412,8 +412,8 @@ function FeaturedSkillDetailPopup({
                   onClick={() => toggleTarget(src.key)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition ${
                     selectedTargets.has(src.key)
-                      ? SOURCE_COLORS[src.key] || "bg-zinc-700 text-zinc-300 border-zinc-600"
-                      : "bg-zinc-800/60 text-zinc-400 border-zinc-600/50 hover:text-teal-300 hover:border-teal-600/50 hover:bg-teal-950/20"
+                      ? SOURCE_COLORS[src.key] || "bg-control-hover text-secondary border-hover"
+                      : "bg-control/60 text-muted border-hover/60 hover:text-accent-teal hover:border-accent-teal-focus/50 hover:bg-teal-950/20"
                   }`}
                 >
                   {selectedTargets.has(src.key) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
@@ -435,7 +435,7 @@ function FeaturedSkillDetailPopup({
       <ModalFooter>
         <button
           onClick={onClose}
-          className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded transition"
+          className="px-3 py-1.5 text-xs text-muted hover:text-secondary border border-card hover:border-hover rounded transition"
         >
           Close
         </button>
@@ -444,7 +444,7 @@ function FeaturedSkillDetailPopup({
             href={skill.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-secondary bg-control hover:bg-control-hover border border-card rounded transition"
           >
             <ExternalLink className="w-3.5 h-3.5" /> GitHub
           </a>
@@ -476,8 +476,8 @@ function FeaturedSkillDetailPopup({
 function DetailSectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-2 mb-2.5">
-      <span className="text-teal-400">{icon}</span>
-      <span className="text-sm font-semibold text-zinc-100">{label}</span>
+      <span className="text-accent-teal">{icon}</span>
+      <span className="text-sm font-semibold text-primary">{label}</span>
     </div>
   );
 }

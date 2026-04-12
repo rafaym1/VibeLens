@@ -19,7 +19,7 @@ export function EvolutionDiffView({ skillName, edits, originalContent }: Evoluti
   const rows = buildDiffRows(edits, originalContent);
 
   return (
-    <div className="rounded-lg border border-zinc-700/60 overflow-hidden bg-zinc-900/60">
+    <div className="rounded-lg border border-card overflow-hidden bg-panel/60">
       <DiffFileHeader skillName={skillName} editCount={edits.length} />
       <div className="font-mono text-xs">
         {rows.map((row, i) => {
@@ -43,10 +43,10 @@ export function EvolutionDiffView({ skillName, edits, originalContent }: Evoluti
 
 function DiffFileHeader({ skillName, editCount }: { skillName: string; editCount: number }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-zinc-800/80 border-b border-zinc-700/50 text-xs">
-      <FileText className="w-3.5 h-3.5 text-zinc-400" />
-      <span className="font-mono text-zinc-300">{skillName}/SKILL.md</span>
-      <span className="text-zinc-500 ml-auto">
+    <div className="flex items-center gap-2 px-3 py-2 bg-control/80 border-b border-card text-xs">
+      <FileText className="w-3.5 h-3.5 text-muted" />
+      <span className="font-mono text-secondary">{skillName}/SKILL.md</span>
+      <span className="text-dimmed ml-auto">
         {editCount} edit{editCount !== 1 ? "s" : ""}
       </span>
     </div>
@@ -55,8 +55,8 @@ function DiffFileHeader({ skillName, editCount }: { skillName: string; editCount
 
 function HunkHeader({ index }: { index: number }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/50 text-[10px] flex-wrap border-b border-zinc-800/40">
-      <span className="text-zinc-500 ml-auto">hunk {index + 1}</span>
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-subtle text-[10px] flex-wrap border-b border-default/40">
+      <span className="text-dimmed ml-auto">hunk {index + 1}</span>
     </div>
   );
 }
@@ -64,11 +64,11 @@ function HunkHeader({ index }: { index: number }) {
 function ContextLine({ lineNum, text }: { lineNum: number; text: string }) {
   return (
     <div className="flex">
-      <span className="w-10 shrink-0 text-right pr-1.5 text-[10px] leading-5 select-none text-zinc-600">
+      <span className="w-10 shrink-0 text-right pr-1.5 text-[10px] leading-5 select-none text-faint">
         {lineNum}
       </span>
       <span className="w-5 shrink-0 leading-5 select-none" />
-      <span className="flex-1 px-2 leading-5 whitespace-pre-wrap break-words text-zinc-400">
+      <span className="flex-1 px-2 leading-5 whitespace-pre-wrap break-words text-muted">
         {text}
       </span>
     </div>
@@ -105,7 +105,7 @@ function AddedLine({ lineNum, text }: { lineNum: number; text: string }) {
 
 function HunkSeparator() {
   return (
-    <div className="flex items-center py-0.5 bg-zinc-800/30 text-zinc-600 text-[10px] select-none border-y border-zinc-800/40">
+    <div className="flex items-center py-0.5 bg-subtle text-faint text-[10px] select-none border-y border-default/40">
       <span className="w-10 shrink-0" />
       <span className="px-2">&middot;&middot;&middot;</span>
     </div>

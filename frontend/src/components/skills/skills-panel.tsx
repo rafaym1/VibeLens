@@ -24,8 +24,8 @@ const TAB_CONFIG: { id: SkillTab; label: string; tooltip: string }[] = [
   { id: "evolve", label: "Evolve", tooltip: "Improve existing skills from usage" },
 ];
 
-const ACTIVE_TAB_STYLE = "bg-teal-600/20 text-teal-300 border border-teal-500/30";
-const INACTIVE_TAB_STYLE = "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-transparent";
+const ACTIVE_TAB_STYLE = "bg-accent-teal-subtle text-accent-teal border border-accent-teal";
+const INACTIVE_TAB_STYLE = "text-muted hover:text-secondary hover:bg-control border border-transparent";
 
 const MODE_MAP: Record<string, SkillMode> = {
   retrieve: "retrieval",
@@ -345,7 +345,7 @@ export function SkillsPanel({ checkedIds, activeJobId, onJobIdChange }: SkillsPa
   return (
     <div className="h-full flex flex-col">
       {/* Sub-tab bar — unified teal accent, enlarged text */}
-      <div className="flex items-center gap-1 px-4 py-2 border-b border-zinc-800 shrink-0">
+      <div className="flex items-center gap-1 px-4 py-2 border-b border-default shrink-0">
         {TAB_CONFIG.map((tab) => (
           <Tooltip key={tab.id} text={tab.tooltip} className="flex-1 min-w-0">
             <button
@@ -390,8 +390,8 @@ export function SkillsPanel({ checkedIds, activeJobId, onJobIdChange }: SkillsPa
                       Stop
                     </button>
                     <div className="text-center space-y-1">
-                      <p className="text-sm text-zinc-400">Usually takes 2-5 minutes</p>
-                      <p className="text-sm text-zinc-400">Running in background — you can switch tabs</p>
+                      <p className="text-sm text-muted">Usually takes 2-5 minutes</p>
+                      <p className="text-sm text-muted">Running in background — you can switch tabs</p>
                     </div>
                   </div>
                 )}
@@ -430,20 +430,20 @@ export function SkillsPanel({ checkedIds, activeJobId, onJobIdChange }: SkillsPa
           <>
             <div
               onMouseDown={handleDragStart}
-              className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-zinc-600 transition-colors"
+              className="w-1 shrink-0 cursor-col-resize bg-control hover:bg-control-hover transition-colors"
             />
             <div
-              className="shrink-0 border-l border-zinc-800 bg-zinc-900/50 flex flex-col"
+              className="shrink-0 border-l border-default bg-panel/50 flex flex-col"
               style={{ width: sidebarWidth }}
             >
               <div className="shrink-0 flex items-center justify-between px-3 pt-3 pb-1">
                 <div className="flex items-center gap-1.5">
-                  <History className="w-3.5 h-3.5 text-zinc-500" />
-                  <span className="text-xs font-medium text-zinc-400">History</span>
+                  <History className="w-3.5 h-3.5 text-dimmed" />
+                  <span className="text-xs font-medium text-muted">History</span>
                 </div>
                 <button
                   onClick={() => setShowHistory(false)}
-                  className="p-0.5 text-zinc-500 hover:text-zinc-300 transition"
+                  className="p-0.5 text-dimmed hover:text-secondary transition"
                   title="Hide history"
                 >
                   <PanelRightClose className="w-3.5 h-3.5" />
@@ -456,10 +456,10 @@ export function SkillsPanel({ checkedIds, activeJobId, onJobIdChange }: SkillsPa
           </>
         )}
         {isAnalysisTab && !showHistory && (
-          <div className="shrink-0 border-l border-zinc-800 bg-zinc-900/50 flex flex-col items-center pt-3 px-1">
+          <div className="shrink-0 border-l border-default bg-panel/50 flex flex-col items-center pt-3 px-1">
             <button
               onClick={() => setShowHistory(true)}
-              className="p-1 text-zinc-500 hover:text-zinc-300 transition"
+              className="p-1 text-dimmed hover:text-secondary transition"
               title="Show history"
             >
               <PanelRightOpen className="w-4 h-4" />
@@ -538,46 +538,46 @@ function SkillSelectionDialog({
       <ModalBody>
         <div className="flex items-start gap-2 px-3 py-2 bg-teal-950/20 border border-teal-700/30 rounded-lg mb-4">
           <Info className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-zinc-300 leading-relaxed">
+          <p className="text-xs text-secondary leading-relaxed">
             Choose the skills that are relevant to the selected sessions. Only selected skills will be analyzed for improvements.
           </p>
         </div>
-        {loading && <p className="text-sm text-zinc-400 text-center py-8">Loading installed skills...</p>}
+        {loading && <p className="text-sm text-muted text-center py-8">Loading installed skills...</p>}
         {error && <p className="text-sm text-rose-400 text-center py-4">{error}</p>}
         {!loading && skills.length === 0 && (
-          <p className="text-sm text-zinc-400 text-center py-8">No installed skills found. Install skills first.</p>
+          <p className="text-sm text-muted text-center py-8">No installed skills found. Install skills first.</p>
         )}
         {!loading && skills.length > 0 && (
           <div className="space-y-1">
             <button
               onClick={toggleAll}
-              className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg hover:bg-zinc-800/50 transition text-left"
+              className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg hover:bg-control/50 transition text-left"
             >
               <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                allSelected ? "bg-teal-600 border-teal-500" : "border-zinc-600"
+                allSelected ? "bg-teal-600 border-teal-500" : "border-hover"
               }`}>
                 {allSelected && <Check className="w-3 h-3 text-white" />}
               </span>
-              <span className="text-sm font-semibold text-zinc-200">Select all</span>
-              <span className="text-xs text-zinc-500 ml-auto">{selected.size}/{skills.length}</span>
+              <span className="text-sm font-semibold text-secondary">Select all</span>
+              <span className="text-xs text-dimmed ml-auto">{selected.size}/{skills.length}</span>
             </button>
-            <div className="border-t border-zinc-800 my-1" />
+            <div className="border-t border-default my-1" />
             <div className="max-h-64 overflow-y-auto space-y-0.5">
               {skills.map((skill) => (
                 <button
                   key={skill.name}
                   onClick={() => toggleSkill(skill.name)}
-                  className="flex items-start gap-2.5 w-full px-3 py-2 rounded-lg hover:bg-zinc-800/50 transition text-left"
+                  className="flex items-start gap-2.5 w-full px-3 py-2 rounded-lg hover:bg-control/50 transition text-left"
                 >
                   <span className={`w-4 h-4 mt-0.5 rounded border flex items-center justify-center shrink-0 ${
-                    selected.has(skill.name) ? "bg-teal-600 border-teal-500" : "border-zinc-600"
+                    selected.has(skill.name) ? "bg-teal-600 border-teal-500" : "border-hover"
                   }`}>
                     {selected.has(skill.name) && <Check className="w-3 h-3 text-white" />}
                   </span>
                   <div className="min-w-0">
-                    <span className="text-sm font-mono font-semibold text-zinc-100">{skill.name}</span>
+                    <span className="text-sm font-mono font-semibold text-primary">{skill.name}</span>
                     {skill.description && (
-                      <p className="text-xs text-zinc-400 mt-0.5 line-clamp-2">{skill.description}</p>
+                      <p className="text-xs text-muted mt-0.5 line-clamp-2">{skill.description}</p>
                     )}
                   </div>
                 </button>
@@ -589,7 +589,7 @@ function SkillSelectionDialog({
       <ModalFooter>
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-sm text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-md transition"
+          className="px-4 py-2 text-sm text-secondary hover:text-white bg-control hover:bg-control-hover border border-card rounded-md transition"
         >
           Cancel
         </button>

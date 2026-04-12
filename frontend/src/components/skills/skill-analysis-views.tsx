@@ -72,7 +72,7 @@ export function AnalysisLoadingState({ mode, sessionCount }: { mode: SkillMode; 
         <p className="text-base font-semibold text-white">
           Analyzing {sessionCount} session{sessionCount !== 1 ? "s" : ""}
         </p>
-        <p className="text-sm text-zinc-300">{MODE_SUBLABELS[mode]}</p>
+        <p className="text-sm text-secondary">{MODE_SUBLABELS[mode]}</p>
       </div>
     </div>
   );
@@ -177,22 +177,22 @@ function ResultHeader({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <BarChart3 className="w-6 h-6 text-teal-400" />
+        <BarChart3 className="w-6 h-6 text-accent-teal" />
         <div>
           <div className="flex items-center gap-2.5">
             {(result.is_example || result.backend_id === "mock") && (
-              <span className="px-2 py-0.5 rounded border text-[11px] font-semibold bg-amber-900/30 border-amber-700/30 text-amber-400">
+              <span className="px-2 py-0.5 rounded border text-[11px] font-semibold bg-accent-amber-subtle border-accent-amber text-accent-amber">
                 Example
               </span>
             )}
-            <h2 className="text-xl font-bold text-zinc-100">
+            <h2 className="text-xl font-bold text-primary">
               {result.title || MODE_TITLES[mode]}
             </h2>
           </div>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-muted">
             {itemCount} {itemLabel}{itemCount !== 1 ? "s" : ""} across {sessionCount} session{sessionCount !== 1 ? "s" : ""}
             {result.skipped_session_ids.length > 0 && (
-              <span className="text-zinc-500">
+              <span className="text-dimmed">
                 {" "}&middot; {result.skipped_session_ids.length} skipped
               </span>
             )}
@@ -202,7 +202,7 @@ function ResultHeader({
       <Tooltip text="Analyze your own sessions">
         <button
           onClick={onNew}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-200 hover:text-white bg-teal-600/20 hover:bg-teal-600/40 border border-teal-500/40 rounded-lg transition"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-teal hover:text-white bg-accent-teal-subtle hover:bg-teal-600/40 border border-accent-teal rounded-lg transition"
         >
           <Plus className="w-3.5 h-3.5" /> New
         </button>
@@ -215,7 +215,7 @@ function SectionHeader({
   icon,
   title,
   tooltip,
-  accentColor = "text-teal-400",
+  accentColor = "text-accent-teal",
 }: {
   icon: React.ReactNode;
   title: string;
@@ -226,7 +226,7 @@ function SectionHeader({
     <Tooltip text={tooltip}>
       <div className="flex items-center gap-2 mb-3 cursor-help">
         <span className={accentColor}>{icon}</span>
-        <h3 className="text-lg font-semibold text-zinc-100">{title}</h3>
+        <h3 className="text-lg font-semibold text-primary">{title}</h3>
       </div>
     </Tooltip>
   );
@@ -244,16 +244,16 @@ function MetadataFooter({ result }: { result: SkillAnalysisResult }) {
 
   return (
     <Tooltip text="Backend, model, and API cost">
-      <div className="border-t border-zinc-800 pt-4 text-xs text-zinc-500 flex items-center justify-between gap-4 w-full cursor-help">
+      <div className="border-t border-default pt-4 text-xs text-dimmed flex items-center justify-between gap-4 w-full cursor-help">
         <div className="flex items-center gap-2 flex-wrap">
           <span>{result.backend_id}/{result.model}</span>
           {result.metrics.cost_usd != null && (
-            <span className="border-l border-zinc-700 pl-2">
+            <span className="border-l border-card pl-2">
               ${result.metrics.cost_usd.toFixed(4)}
             </span>
           )}
           {result.duration_seconds != null && (
-            <span className="inline-flex items-center gap-1 border-l border-zinc-700 pl-2">
+            <span className="inline-flex items-center gap-1 border-l border-card pl-2">
               <Timer className="w-3 h-3" />
               {formatDuration(result.duration_seconds)}
             </span>
@@ -288,27 +288,27 @@ function PatternCard({ pattern, index }: { pattern: WorkflowPattern; index: numb
   return (
     <div
       onClick={() => setExpanded(!expanded)}
-      className="border border-zinc-700/60 rounded-xl overflow-hidden cursor-pointer hover:border-zinc-600/60 transition-all"
+      className="border border-card/60 rounded-xl overflow-hidden cursor-pointer hover:border-hover/60 transition-all"
     >
       <div className="px-4 py-3 space-y-2.5">
         <div className="flex items-center gap-2.5 flex-wrap">
           <Tooltip text={`Seen ${pattern.frequency}x across sessions`}>
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-900/30 text-teal-300 border border-teal-700/20">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-accent-teal-subtle text-accent-teal border border-accent-teal">
               <Repeat className="w-2.5 h-2.5" />
               {pattern.frequency}x
             </span>
           </Tooltip>
-          <h6 className="text-base font-semibold text-zinc-100">{pattern.title}</h6>
+          <h6 className="text-base font-semibold text-primary">{pattern.title}</h6>
           <div className="ml-auto shrink-0">
             {expanded
-              ? <ChevronDown className="w-4 h-4 text-zinc-500" />
-              : <ChevronRight className="w-4 h-4 text-zinc-500" />}
+              ? <ChevronDown className="w-4 h-4 text-dimmed" />
+              : <ChevronRight className="w-4 h-4 text-dimmed" />}
           </div>
         </div>
-        <BulletText text={pattern.description} className="text-sm text-zinc-300 leading-relaxed" />
+        <BulletText text={pattern.description} className="text-sm text-secondary leading-relaxed" />
       </div>
       {expanded && (
-        <div className="px-4 pb-3.5 space-y-2.5 border-t border-zinc-700/30 pt-3 mx-3 mb-1">
+        <div className="px-4 pb-3.5 space-y-2.5 border-t border-card/30 pt-3 mx-3 mb-1">
           <StepRefList refs={pattern.example_refs} />
         </div>
       )}
@@ -321,8 +321,8 @@ function StepRefList({ refs }: { refs: StepRef[] }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <div className="flex items-center gap-1.5 text-sm">
-        <BookOpen className="w-4 h-4 text-cyan-400" />
-        <span className="font-semibold text-cyan-400">Reference:</span>
+        <BookOpen className="w-4 h-4 text-accent-cyan" />
+        <span className="font-semibold text-accent-cyan">Reference:</span>
       </div>
       {refs.map((stepRef, i) => (
         <JumpToStepButton key={i} stepRef={stepRef} />
@@ -345,7 +345,7 @@ function JumpToStepButton({ stepRef }: { stepRef: StepRef }) {
     <Tooltip text="Open step in session viewer">
       <button
         onClick={handleClick}
-        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-zinc-700/50 text-zinc-300 hover:bg-teal-900/40 hover:text-teal-300 transition font-mono border border-zinc-600/30 hover:border-teal-700/30"
+        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-control-hover/50 text-secondary hover:bg-teal-900/40 hover:text-accent-teal transition font-mono border border-hover/30 hover:border-accent-teal"
       >
         {stepRef.start_step_id.slice(0, 8)}
         <ArrowUpRight className="w-3 h-3" />
@@ -446,17 +446,17 @@ function RecommendationCard({
   }, [fetchWithToken, rec.skill_name]);
 
   return (
-    <div className="border border-teal-700/30 rounded-xl bg-teal-950/10 overflow-hidden">
+    <div className="border border-accent-teal rounded-xl bg-teal-950/10 overflow-hidden">
       {/* Header: Name + Confidence + Action */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="font-mono text-base font-bold text-zinc-100">{rec.skill_name}</span>
+            <span className="font-mono text-base font-bold text-primary">{rec.skill_name}</span>
             {rec.confidence > 0 && <ConfidenceBar confidence={rec.confidence} accentColor="teal" />}
           </div>
           <div className="flex items-center gap-2.5">
             {installed ? (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-300 bg-teal-900/30 rounded-lg border border-teal-700/20">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-teal bg-accent-teal-subtle rounded-lg border border-accent-teal">
                 <Check className="w-3.5 h-3.5" /> Installed
               </span>
             ) : (
@@ -473,50 +473,50 @@ function RecommendationCard({
           </div>
         </div>
         {rec.description && (
-          <p className="text-sm text-zinc-300 leading-relaxed mt-1.5">
-            <span className="font-semibold text-zinc-200">Skill Description: </span>
+          <p className="text-sm text-secondary leading-relaxed mt-1.5">
+            <span className="font-semibold text-secondary">Skill Description: </span>
             {rec.description}
           </p>
         )}
       </div>
 
       {/* Why this helps */}
-      <div className="px-5 py-3 border-t border-teal-700/20">
+      <div className="px-5 py-3 border-t border-accent-teal">
         <button
           onClick={() => setRationaleExpanded(!rationaleExpanded)}
           className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
         >
           {rationaleExpanded
-            ? <ChevronDown className="w-3.5 h-3.5 text-teal-400" />
-            : <ChevronRight className="w-3.5 h-3.5 text-teal-400" />}
-          <Lightbulb className="w-3.5 h-3.5 text-teal-400" />
-          <span className="text-sm font-semibold text-teal-300 uppercase tracking-wide">Why this helps</span>
+            ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
+            : <ChevronRight className="w-3.5 h-3.5 text-accent-teal" />}
+          <Lightbulb className="w-3.5 h-3.5 text-accent-teal" />
+          <span className="text-sm font-semibold text-accent-teal uppercase tracking-wide">Why this helps</span>
         </button>
         {rationaleExpanded && (
-          <BulletText text={rec.rationale} className="text-sm text-zinc-200 leading-relaxed mt-1.5" />
+          <BulletText text={rec.rationale} className="text-sm text-secondary leading-relaxed mt-1.5" />
         )}
       </div>
 
       {/* Toggleable What this covers */}
       {matchedPatterns.length > 0 && (
-        <div className="px-5 py-3 border-t border-teal-700/20">
+        <div className="px-5 py-3 border-t border-accent-teal">
           <button
             onClick={() => setPatternsExpanded(!patternsExpanded)}
             className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
           >
             {patternsExpanded
-              ? <ChevronDown className="w-3.5 h-3.5 text-teal-400" />
-              : <ChevronRight className="w-3.5 h-3.5 text-teal-400" />}
-            <Target className="w-3.5 h-3.5 text-teal-400" />
-            <span className="text-sm font-semibold text-teal-300 uppercase tracking-wide">What this covers</span>
-            <span className="text-zinc-500">({matchedPatterns.length})</span>
+              ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
+              : <ChevronRight className="w-3.5 h-3.5 text-accent-teal" />}
+            <Target className="w-3.5 h-3.5 text-accent-teal" />
+            <span className="text-sm font-semibold text-accent-teal uppercase tracking-wide">What this covers</span>
+            <span className="text-dimmed">({matchedPatterns.length})</span>
           </button>
           {patternsExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedPatterns.map((p, i) => (
-                <div key={i} className="border-l-2 border-teal-700/30 pl-3 space-y-1.5">
-                  <h6 className="text-sm font-semibold text-zinc-100">{p.title}</h6>
-                  <BulletText text={p.description} className="text-sm text-zinc-300 leading-relaxed" />
+                <div key={i} className="border-l-2 border-accent-teal pl-3 space-y-1.5">
+                  <h6 className="text-sm font-semibold text-primary">{p.title}</h6>
+                  <BulletText text={p.description} className="text-sm text-secondary leading-relaxed" />
                   <StepRefList refs={p.example_refs} />
                 </div>
               ))}
@@ -560,7 +560,7 @@ function CreationSection({
         icon={<Sparkles className="w-5 h-5" />}
         title="Custom Skills"
         tooltip="Generated skills from your patterns"
-        accentColor="text-emerald-400"
+        accentColor="text-accent-emerald"
       />
       <div className="space-y-3">
         {skills.map((skill) => (
@@ -583,18 +583,18 @@ function ConfidenceBar({ confidence, accentColor = "emerald" }: { confidence: nu
   const isMedium = confidence >= CONFIDENCE_THRESHOLDS.MEDIUM;
 
   const HIGH_COLORS: Record<string, { bar: string; text: string }> = {
-    emerald: { bar: "bg-emerald-500", text: "text-emerald-400" },
+    emerald: { bar: "bg-emerald-500", text: "text-accent-emerald" },
     amber: { bar: "bg-amber-500", text: "text-amber-400" },
-    teal: { bar: "bg-teal-500", text: "text-teal-400" },
+    teal: { bar: "bg-teal-500", text: "text-accent-teal" },
   };
   const high = HIGH_COLORS[accentColor];
   const barColor = isHigh ? high.bar : isMedium ? "bg-amber-500" : "bg-zinc-600";
-  const textColor = isHigh ? high.text : isMedium ? "text-amber-400" : "text-zinc-500";
+  const textColor = isHigh ? high.text : isMedium ? "text-amber-400" : "text-dimmed";
 
   return (
     <Tooltip text={`${pct}% confidence`}>
       <div className="flex items-center gap-2 cursor-help">
-        <div className="w-16 h-1.5 rounded-full bg-zinc-700/60 overflow-hidden">
+        <div className="w-16 h-1.5 rounded-full bg-control-hover/60 overflow-hidden">
           <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
         </div>
         <span className={`text-xs font-semibold ${textColor} tabular-nums`}>{pct}%</span>
@@ -652,17 +652,17 @@ function CreatedSkillCard({
   );
 
   return (
-    <div className="border border-emerald-700/30 rounded-xl bg-emerald-950/15 overflow-hidden">
+    <div className="border border-accent-emerald rounded-xl bg-emerald-950/15 overflow-hidden">
       {/* Header: Name + Confidence + Action */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="font-mono text-sm font-bold text-zinc-100">{skill.name}</span>
+            <span className="font-mono text-sm font-bold text-primary">{skill.name}</span>
             {skill.confidence > 0 && <ConfidenceBar confidence={skill.confidence} />}
           </div>
           <div className="flex items-center gap-2">
             {installed ? (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-300 bg-emerald-900/30 rounded-lg border border-emerald-700/20">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-emerald bg-accent-emerald-subtle rounded-lg border border-accent-emerald">
                 <Check className="w-3.5 h-3.5" /> Installed
               </span>
             ) : (
@@ -678,49 +678,49 @@ function CreatedSkillCard({
             )}
           </div>
         </div>
-        <p className="text-sm text-zinc-300 leading-relaxed mt-1.5">
-          <span className="font-semibold text-zinc-200">Skill Description: </span>
+        <p className="text-sm text-secondary leading-relaxed mt-1.5">
+          <span className="font-semibold text-secondary">Skill Description: </span>
           {skill.description}
         </p>
       </div>
 
       {/* Why this helps */}
-      <div className="px-5 py-3 border-t border-emerald-700/20">
+      <div className="px-5 py-3 border-t border-accent-emerald">
         <button
           onClick={() => setRationaleExpanded(!rationaleExpanded)}
           className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
         >
           {rationaleExpanded
-            ? <ChevronDown className="w-3.5 h-3.5 text-emerald-400" />
-            : <ChevronRight className="w-3.5 h-3.5 text-emerald-400" />}
-          <Lightbulb className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-sm font-semibold text-emerald-300 uppercase tracking-wide">Why this helps</span>
+            ? <ChevronDown className="w-3.5 h-3.5 text-accent-emerald" />
+            : <ChevronRight className="w-3.5 h-3.5 text-accent-emerald" />}
+          <Lightbulb className="w-3.5 h-3.5 text-accent-emerald" />
+          <span className="text-sm font-semibold text-accent-emerald uppercase tracking-wide">Why this helps</span>
         </button>
         {rationaleExpanded && (
-          <BulletText text={skill.rationale} className="text-sm text-zinc-200 leading-relaxed mt-1.5" />
+          <BulletText text={skill.rationale} className="text-sm text-secondary leading-relaxed mt-1.5" />
         )}
       </div>
 
       {/* Toggleable What this covers */}
       {matchedPatterns.length > 0 && (
-        <div className="px-5 py-3 border-t border-emerald-700/20">
+        <div className="px-5 py-3 border-t border-accent-emerald">
           <button
             onClick={() => setPatternsExpanded(!patternsExpanded)}
             className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
           >
             {patternsExpanded
-              ? <ChevronDown className="w-3.5 h-3.5 text-emerald-400" />
-              : <ChevronRight className="w-3.5 h-3.5 text-emerald-400" />}
-            <Target className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-sm font-semibold text-emerald-300 uppercase tracking-wide">What this covers</span>
-            <span className="text-zinc-500">({matchedPatterns.length})</span>
+              ? <ChevronDown className="w-3.5 h-3.5 text-accent-emerald" />
+              : <ChevronRight className="w-3.5 h-3.5 text-accent-emerald" />}
+            <Target className="w-3.5 h-3.5 text-accent-emerald" />
+            <span className="text-sm font-semibold text-accent-emerald uppercase tracking-wide">What this covers</span>
+            <span className="text-dimmed">({matchedPatterns.length})</span>
           </button>
           {patternsExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedPatterns.map((p, i) => (
-                <div key={i} className="border-l-2 border-emerald-700/30 pl-3 space-y-1.5">
-                  <h6 className="text-sm font-semibold text-zinc-100">{p.title}</h6>
-                  <BulletText text={p.description} className="text-sm text-zinc-300 leading-relaxed" />
+                <div key={i} className="border-l-2 border-accent-emerald pl-3 space-y-1.5">
+                  <h6 className="text-sm font-semibold text-primary">{p.title}</h6>
+                  <BulletText text={p.description} className="text-sm text-secondary leading-relaxed" />
                   <StepRefList refs={p.example_refs} />
                 </div>
               ))}
@@ -764,7 +764,7 @@ function EvolutionSection({
         icon={<TrendingUp className="w-5 h-5" />}
         title="Evolution Suggestions"
         tooltip="Targeted improvements for your installed skills based on real usage"
-        accentColor="text-teal-400"
+        accentColor="text-accent-teal"
       />
       <div className="space-y-3">
         {suggestions.map((sug) => (
@@ -872,14 +872,14 @@ function EvolutionCard({
   }, [fetchWithToken, suggestion.skill_name]);
 
   return (
-    <div className="border border-teal-700/30 rounded-xl bg-teal-950/10 overflow-hidden">
+    <div className="border border-accent-teal rounded-xl bg-teal-950/10 overflow-hidden">
       {/* Header: Name + Badges + Confidence + Action */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="font-mono text-base font-bold text-zinc-100">{suggestion.skill_name}</span>
+            <span className="font-mono text-base font-bold text-primary">{suggestion.skill_name}</span>
             <Tooltip text={`${suggestion.edits.length} edit${suggestion.edits.length !== 1 ? "s" : ""} suggested`}>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-900/30 text-teal-300 border border-teal-700/20 cursor-help">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent-teal-subtle text-accent-teal border border-accent-teal cursor-help">
                 <Pencil className="w-2.5 h-2.5" />
                 {suggestion.edits.length} edit{suggestion.edits.length !== 1 ? "s" : ""}
               </span>
@@ -888,7 +888,7 @@ function EvolutionCard({
           </div>
           <div className="flex items-center gap-2.5">
             {updated ? (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-300 bg-teal-900/30 rounded-lg border border-teal-700/20">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-teal bg-accent-teal-subtle rounded-lg border border-accent-teal">
                 <Check className="w-3.5 h-3.5" /> Updated
               </span>
             ) : (
@@ -909,50 +909,50 @@ function EvolutionCard({
           </div>
         </div>
         {suggestion.description && (
-          <p className="text-sm text-zinc-300 leading-relaxed mt-1.5">
-            <span className="font-semibold text-zinc-200">Skill Description: </span>
+          <p className="text-sm text-secondary leading-relaxed mt-1.5">
+            <span className="font-semibold text-secondary">Skill Description: </span>
             {suggestion.description}
           </p>
         )}
       </div>
 
       {/* Why this helps */}
-      <div className="px-5 py-3 border-t border-teal-700/20">
+      <div className="px-5 py-3 border-t border-accent-teal">
         <button
           onClick={() => setRationaleExpanded(!rationaleExpanded)}
           className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
         >
           {rationaleExpanded
-            ? <ChevronDown className="w-3.5 h-3.5 text-teal-400" />
-            : <ChevronRight className="w-3.5 h-3.5 text-teal-400" />}
-          <Lightbulb className="w-3.5 h-3.5 text-teal-400" />
-          <span className="text-sm font-semibold text-teal-300 uppercase tracking-wide">Why this helps</span>
+            ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
+            : <ChevronRight className="w-3.5 h-3.5 text-accent-teal" />}
+          <Lightbulb className="w-3.5 h-3.5 text-accent-teal" />
+          <span className="text-sm font-semibold text-accent-teal uppercase tracking-wide">Why this helps</span>
         </button>
         {rationaleExpanded && (
-          <BulletText text={suggestion.rationale} className="text-sm text-zinc-200 leading-relaxed mt-1.5" />
+          <BulletText text={suggestion.rationale} className="text-sm text-secondary leading-relaxed mt-1.5" />
         )}
       </div>
 
       {/* Toggleable What this covers */}
       {matchedPatterns.length > 0 && (
-        <div className="px-5 py-3 border-t border-teal-700/20">
+        <div className="px-5 py-3 border-t border-accent-teal">
           <button
             onClick={() => setPatternsExpanded(!patternsExpanded)}
             className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
           >
             {patternsExpanded
-              ? <ChevronDown className="w-3.5 h-3.5 text-teal-400" />
-              : <ChevronRight className="w-3.5 h-3.5 text-teal-400" />}
-            <Target className="w-3.5 h-3.5 text-teal-400" />
-            <span className="text-sm font-semibold text-teal-300 uppercase tracking-wide">What this covers</span>
-            <span className="text-zinc-500">({matchedPatterns.length})</span>
+              ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
+              : <ChevronRight className="w-3.5 h-3.5 text-accent-teal" />}
+            <Target className="w-3.5 h-3.5 text-accent-teal" />
+            <span className="text-sm font-semibold text-accent-teal uppercase tracking-wide">What this covers</span>
+            <span className="text-dimmed">({matchedPatterns.length})</span>
           </button>
           {patternsExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedPatterns.map((p, i) => (
-                <div key={i} className="border-l-2 border-teal-700/30 pl-3 space-y-1.5">
-                  <h6 className="text-sm font-semibold text-zinc-100">{p.title}</h6>
-                  <BulletText text={p.description} className="text-sm text-zinc-300 leading-relaxed" />
+                <div key={i} className="border-l-2 border-accent-teal pl-3 space-y-1.5">
+                  <h6 className="text-sm font-semibold text-primary">{p.title}</h6>
+                  <BulletText text={p.description} className="text-sm text-secondary leading-relaxed" />
                   <StepRefList refs={p.example_refs} />
                 </div>
               ))}
@@ -962,17 +962,17 @@ function EvolutionCard({
       )}
 
       {/* Toggleable Proposed Edits */}
-      <div className="px-5 py-3 border-t border-teal-700/20">
+      <div className="px-5 py-3 border-t border-accent-teal">
         <button
           onClick={handleExpand}
           className="flex items-center gap-1.5 text-xs hover:opacity-80 transition"
         >
           {expanded
-            ? <ChevronDown className="w-3.5 h-3.5 text-teal-400" />
-            : <ChevronRight className="w-3.5 h-3.5 text-teal-400" />}
-          <Pencil className="w-3.5 h-3.5 text-teal-400" />
-          <span className="text-sm font-semibold text-teal-300 uppercase tracking-wide">Proposed Edits</span>
-          <span className="text-zinc-500">({suggestion.edits.length})</span>
+            ? <ChevronDown className="w-3.5 h-3.5 text-accent-teal" />
+            : <ChevronRight className="w-3.5 h-3.5 text-accent-teal" />}
+          <Pencil className="w-3.5 h-3.5 text-accent-teal" />
+          <span className="text-sm font-semibold text-accent-teal uppercase tracking-wide">Proposed Edits</span>
+          <span className="text-dimmed">({suggestion.edits.length})</span>
         </button>
         {expanded && suggestion.edits.length > 0 && (
           <div className="mt-2.5">

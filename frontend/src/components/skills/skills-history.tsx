@@ -56,37 +56,37 @@ function HistoryCard({
   return (
     <div
       onClick={onSelect}
-      className="group relative px-3 py-2.5 rounded-lg bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-700/40 hover:border-zinc-600/50 cursor-pointer transition"
+      className="group relative px-3 py-2.5 rounded-lg bg-control/40 hover:bg-control/80 border border-card hover:border-hover/50 cursor-pointer transition"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0 space-y-1.5">
-          <p className="text-xs text-zinc-200 font-semibold truncate">
+          <p className="text-xs text-secondary font-semibold truncate">
             {meta.title || "Untitled"}
           </p>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium bg-teal-900/30 border-teal-700/30 text-teal-400">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium bg-accent-teal-subtle border-accent-teal text-accent-teal">
               <Layers className="w-2.5 h-2.5" />
               {meta.session_ids.length} session{meta.session_ids.length !== 1 ? "s" : ""}
             </span>
             {(meta.is_example || meta.model.startsWith("mock/")) && (
-              <span className="px-1.5 py-0.5 rounded border text-[10px] font-medium bg-amber-900/30 border-amber-700/30 text-amber-400">
+              <span className="px-1.5 py-0.5 rounded border text-[10px] font-medium bg-accent-amber-subtle border-accent-amber text-accent-amber">
                 Example
               </span>
             )}
             {meta.cost_usd != null && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-zinc-300">
-                <Coins className="w-2.5 h-2.5 text-amber-400" />
+              <span className="inline-flex items-center gap-1 text-[10px] text-secondary">
+                <Coins className="w-2.5 h-2.5 text-accent-amber" />
                 ${meta.cost_usd.toFixed(3)}
               </span>
             )}
             {meta.duration_seconds != null && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-zinc-400">
+              <span className="inline-flex items-center gap-1 text-[10px] text-muted">
                 <Timer className="w-2.5 h-2.5" />
                 {formatDuration(meta.duration_seconds)}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-zinc-400">
+          <div className="flex items-center gap-2 text-[10px] text-muted">
             <span className="inline-flex items-center gap-1">
               <Calendar className="w-2.5 h-2.5" />
               {dateStr}
@@ -100,7 +100,7 @@ function HistoryCard({
         <button
           onClick={handleDeleteClick}
           disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-rose-400 rounded transition"
+          className="opacity-0 group-hover:opacity-100 p-1 text-dimmed hover:text-rose-400 rounded transition"
           title="Delete analysis"
         >
           {deleting ? (
@@ -199,7 +199,7 @@ export function SkillsHistory({
   if (loading && analyses.length === 0) {
     return (
       <div className="flex items-center justify-center py-6">
-        <Loader2 className="w-4 h-4 text-zinc-500 animate-spin" />
+        <Loader2 className="w-4 h-4 text-dimmed animate-spin" />
       </div>
     );
   }
@@ -207,8 +207,8 @@ export function SkillsHistory({
   if (!loading && filteredAnalyses.length === 0) {
     return (
       <div className="px-3 py-4 text-center">
-        <Workflow className="w-5 h-5 mx-auto mb-2 text-zinc-600" />
-        <p className="text-xs text-zinc-500">
+        <Workflow className="w-5 h-5 mx-auto mb-2 text-faint" />
+        <p className="text-xs text-dimmed">
           {modeLabel ? `No ${modeLabel.toLowerCase()} analyses yet` : "No analyses yet"}
         </p>
       </div>
@@ -218,10 +218,10 @@ export function SkillsHistory({
   return (
     <div className="space-y-1.5">
       {activeJobId && (
-        <div className="px-3 py-2.5 rounded-lg bg-teal-900/20 border border-teal-700/30 animate-pulse">
+        <div className="px-3 py-2.5 rounded-lg bg-accent-teal-subtle border border-accent-teal animate-pulse">
           <div className="flex items-center gap-2">
-            <Loader2 className="w-3 h-3 text-teal-400 animate-spin" />
-            <span className="text-xs text-teal-300 font-medium">Analysis running...</span>
+            <Loader2 className="w-3 h-3 text-accent-teal animate-spin" />
+            <span className="text-xs text-accent-teal font-medium">Analysis running...</span>
           </div>
         </div>
       )}

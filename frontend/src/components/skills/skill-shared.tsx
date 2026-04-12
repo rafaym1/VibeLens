@@ -16,18 +16,18 @@ export function SkillSearchBar({
 }) {
   return (
     <div className="relative mb-4">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dimmed" />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full pl-9 pr-3 py-2 text-sm rounded-md bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder:text-zinc-600 outline-none focus:ring-1 transition ${focusRingColor}`}
+        className={`w-full pl-9 pr-3 py-2 text-sm rounded-md bg-control border border-card text-primary placeholder:text-faint outline-none focus:ring-1 transition ${focusRingColor}`}
       />
       {value && (
         <button
           onClick={() => onChange("")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-dimmed hover:text-secondary"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -58,20 +58,20 @@ export function SourceFilterBar({
 
   return (
     <div className="flex items-center gap-2 mb-4">
-      <Filter className="w-3.5 h-3.5 text-zinc-500" />
+      <Filter className="w-3.5 h-3.5 text-dimmed" />
       <button
         onClick={() => onSelect(null)}
         className={`px-2.5 py-1 text-[11px] font-medium rounded-md border transition ${
           activeKey === null
-            ? "bg-zinc-700 text-zinc-200 border-zinc-600"
-            : "text-zinc-300 border-zinc-700/50 hover:text-zinc-100 hover:border-zinc-600"
+            ? "bg-control-hover text-secondary border-hover"
+            : "text-secondary border-card/50 hover:text-primary hover:border-hover"
         }`}
       >
         All ({totalCount})
       </button>
       {items.map((key) => {
         const count = countByKey(key);
-        const colorClass = colorMap[key] || "bg-zinc-800 text-zinc-400 border-zinc-700/50";
+        const colorClass = colorMap[key] || "bg-control text-muted border-card/50";
         return (
           <button
             key={key}
@@ -79,7 +79,7 @@ export function SourceFilterBar({
             className={`px-2.5 py-1 text-[11px] font-medium rounded-md border transition ${
               activeKey === key
                 ? colorClass
-                : "text-zinc-300 border-zinc-700/50 hover:text-zinc-100 hover:border-zinc-600"
+                : "text-secondary border-card/50 hover:text-primary hover:border-hover"
             }`}
           >
             {labelMap[key] || key} ({count})
@@ -107,8 +107,8 @@ export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss
 export function LoadingState({ label = "Loading..." }: { label?: string }) {
   return (
     <div className="flex items-center justify-center py-16">
-      <Loader2 className="w-6 h-6 text-zinc-500 animate-spin" />
-      <span className="ml-2 text-sm text-zinc-500">{label}</span>
+      <Loader2 className="w-6 h-6 text-dimmed animate-spin" />
+      <span className="ml-2 text-sm text-dimmed">{label}</span>
     </div>
   );
 }
@@ -127,9 +127,9 @@ export function EmptyState({
 }) {
   return (
     <div className="text-center py-16">
-      <Icon className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
-      <p className="text-sm font-medium text-zinc-400 mb-1">{title}</p>
-      {subtitle && <p className="text-xs text-zinc-600 mb-4">{subtitle}</p>}
+      <Icon className="w-10 h-10 text-faint mx-auto mb-3" />
+      <p className="text-sm font-medium text-muted mb-1">{title}</p>
+      {subtitle && <p className="text-xs text-faint mb-4">{subtitle}</p>}
       {children}
     </div>
   );
@@ -139,8 +139,8 @@ export function EmptyState({
 export function NoResultsState() {
   return (
     <div className="text-center py-12">
-      <Search className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-      <p className="text-sm text-zinc-400">No skills matching current filters</p>
+      <Search className="w-8 h-8 text-faint mx-auto mb-2" />
+      <p className="text-sm text-muted">No skills matching current filters</p>
     </div>
   );
 }
@@ -148,7 +148,7 @@ export function NoResultsState() {
 /** Small counter showing "X of Y skills". */
 export function SkillCount({ filtered, total }: { filtered: number; total: number }) {
   return (
-    <div className="text-sm text-zinc-200 mb-3">
+    <div className="text-sm text-secondary mb-3">
       {filtered} of {total} skill{total !== 1 ? "s" : ""}
     </div>
   );

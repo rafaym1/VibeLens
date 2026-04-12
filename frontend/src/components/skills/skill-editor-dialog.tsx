@@ -33,29 +33,29 @@ export function SkillEditorDialog({
 
   return (
     <Modal onClose={onCancel} maxWidth="max-w-3xl">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 shrink-0">
-        <h2 className="text-sm font-semibold text-zinc-100">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-default shrink-0">
+        <h2 className="text-sm font-semibold text-primary">
           {isCreate ? "Create New Skill" : `Edit: ${initialName}`}
         </h2>
-        <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-300 transition">
+        <button onClick={onCancel} className="text-dimmed hover:text-secondary transition">
           <X className="w-4 h-4" />
         </button>
       </div>
       <div className="px-5 py-4 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
         {isCreate && (
           <div>
-            <label className="block text-xs text-zinc-400 mb-1">
-              Skill name <span className="text-zinc-600">(kebab-case)</span>
+            <label className="block text-xs text-muted mb-1">
+              Skill name <span className="text-faint">(kebab-case)</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value.toLowerCase())}
               placeholder="my-new-skill"
-              className={`w-full px-3 py-1.5 text-sm font-mono rounded bg-zinc-800 border text-zinc-100 outline-none focus:ring-1 transition ${
+              className={`w-full px-3 py-1.5 text-sm font-mono rounded bg-control border text-primary outline-none focus:ring-1 transition ${
                 name && !nameValid
                   ? "border-red-500/50 focus:ring-red-500/30"
-                  : "border-zinc-700 focus:ring-teal-500/30 focus:border-teal-600"
+                  : "border-card focus:ring-teal-500/30 focus:border-accent-teal-focus"
               }`}
             />
             {name && !nameValid && (
@@ -66,22 +66,22 @@ export function SkillEditorDialog({
           </div>
         )}
         <div className="flex-1 min-h-0 flex flex-col">
-          <label className="block text-xs text-zinc-400 mb-1">SKILL.md content</label>
+          <label className="block text-xs text-muted mb-1">SKILL.md content</label>
           <textarea
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={`---\ndescription: What this skill does\nallowed-tools: Read, Edit, Bash\ntags: [development, automation]\n---\n\n# Instructions\n\n...`}
-            className="flex-1 min-h-[300px] w-full px-3 py-2 text-sm font-mono rounded bg-zinc-800 border border-zinc-700 text-zinc-100 outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-600 resize-none transition"
+            className="flex-1 min-h-[300px] w-full px-3 py-2 text-sm font-mono rounded bg-control border border-card text-primary outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-accent-teal-focus resize-none transition"
             spellCheck={false}
           />
         </div>
       </div>
-      <div className="flex justify-end gap-2 px-5 py-3 border-t border-zinc-800 shrink-0">
+      <div className="flex justify-end gap-2 px-5 py-3 border-t border-default shrink-0">
         <button
           onClick={onCancel}
           disabled={saving}
-          className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded transition disabled:opacity-50"
+          className="px-3 py-1.5 text-xs text-muted hover:text-secondary border border-card hover:border-hover rounded transition disabled:opacity-50"
         >
           Cancel
         </button>

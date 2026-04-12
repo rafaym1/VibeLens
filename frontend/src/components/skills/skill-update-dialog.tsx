@@ -52,18 +52,18 @@ export function SkillUpdateDialog({
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full min-h-[300px] bg-zinc-950 text-zinc-200 text-xs font-mono p-4 rounded-lg border border-zinc-700/50 focus:border-amber-600/50 focus:outline-none resize-y leading-relaxed"
+          className="w-full min-h-[300px] bg-canvas text-secondary text-xs font-mono p-4 rounded-lg border border-card focus:border-amber-600/50 focus:outline-none resize-y leading-relaxed"
           spellCheck={false}
         />
 
         {/* Central store — always selected */}
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-teal-900/15 border border-teal-700/30">
-          <Check className="w-4 h-4 text-teal-400 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-teal-900/15 border border-accent-teal">
+          <Check className="w-4 h-4 text-accent-teal shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-zinc-200">Central Store</p>
-            <p className="text-xs text-zinc-500">~/.vibelens/skills/</p>
+            <p className="text-sm font-medium text-secondary">Central Store</p>
+            <p className="text-xs text-dimmed">~/.vibelens/skills/</p>
           </div>
-          <span className="text-[10px] text-teal-400 font-medium px-1.5 py-0.5 rounded bg-teal-900/30">Always</span>
+          <span className="text-[10px] text-accent-teal font-medium px-1.5 py-0.5 rounded bg-accent-teal-subtle">Always</span>
         </div>
 
         {/* Agent interface checkboxes */}
@@ -77,25 +77,25 @@ export function SkillUpdateDialog({
                   onClick={() => toggleTarget(src.key)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition text-left ${
                     isSelected
-                      ? "bg-zinc-800 border-amber-600/40"
-                      : "bg-zinc-800/50 border-zinc-700/50 hover:border-zinc-600"
+                      ? "bg-control border-amber-600/40"
+                      : "bg-subtle border-card hover:border-hover"
                   }`}
                 >
                   <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition ${
                     isSelected
                       ? "bg-amber-600 border-amber-500"
-                      : "border-zinc-600"
+                      : "border-hover"
                   }`}>
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
-                  <Monitor className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <Monitor className="w-4 h-4 text-muted shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-200">
+                    <p className="text-sm font-medium text-secondary">
                       {SOURCE_LABELS[src.key] || src.label}
                     </p>
-                    <p className="text-xs text-zinc-500 truncate">{src.skills_dir}</p>
+                    <p className="text-xs text-dimmed truncate">{src.skills_dir}</p>
                   </div>
-                  <span className="text-[10px] text-zinc-500">
+                  <span className="text-[10px] text-dimmed">
                     {src.skill_count} skill{src.skill_count !== 1 ? "s" : ""}
                   </span>
                 </button>
@@ -108,7 +108,7 @@ export function SkillUpdateDialog({
         <button
           onClick={onCancel}
           disabled={updating}
-          className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded transition disabled:opacity-50"
+          className="px-3 py-1.5 text-xs text-muted hover:text-secondary border border-card hover:border-hover rounded transition disabled:opacity-50"
         >
           Cancel
         </button>

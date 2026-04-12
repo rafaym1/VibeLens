@@ -37,28 +37,28 @@ export function SkillCard({
   const allowedTools = (skill.metadata?.allowed_tools as string[]) || [];
 
   return (
-    <div className="border border-zinc-700/50 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/80 transition">
+    <div className="border border-card rounded-lg bg-subtle hover:bg-control/80 transition">
       <div className="flex items-start">
         <button
           onClick={() => onViewDetail(skill)}
           className="flex-1 text-left px-4 py-3 flex items-start gap-3 min-w-0"
         >
-          <div className="shrink-0 mt-0.5 p-1.5 rounded-md bg-teal-600/20">
-            <Package className="w-4 h-4 text-teal-400" />
+          <div className="shrink-0 mt-0.5 p-1.5 rounded-md bg-accent-teal-subtle">
+            <Package className="w-4 h-4 text-accent-teal" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-sm font-semibold text-zinc-100">{skill.name}</span>
+              <span className="font-mono text-sm font-semibold text-primary">{skill.name}</span>
               {skill.sources
                 .filter((s) => s.source_type !== "central")
                 .map((src) => (
                   <SourceBadge key={src.source_type} sourceType={src.source_type} sourcePath={src.source_path} />
                 ))}
               {lineCount > 0 && (
-                <span className="text-xs text-zinc-400">{lineCount} lines</span>
+                <span className="text-xs text-muted">{lineCount} lines</span>
               )}
             </div>
-            <p className="text-sm text-zinc-200 mt-1 line-clamp-2">
+            <p className="text-sm text-secondary mt-1 line-clamp-2">
               {skill.description || "No description"}
             </p>
             <TagList tags={tags} />
@@ -68,14 +68,14 @@ export function SkillCard({
         <div className="flex items-center gap-1 px-2 py-3 shrink-0">
           <button
             onClick={() => onEdit(skill)}
-            className="p-1.5 text-zinc-500 hover:text-teal-400 hover:bg-zinc-700 rounded transition"
+            className="p-1.5 text-dimmed hover:text-accent-teal hover:bg-control-hover rounded transition"
             title="Edit skill"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => onDelete(skill.name)}
-            className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-700 rounded transition"
+            className="p-1.5 text-dimmed hover:text-red-400 hover:bg-control-hover rounded transition"
             title="Delete skill"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -162,13 +162,13 @@ export function SkillDetailPopup({
     <Modal onClose={onClose} maxWidth="max-w-3xl">
       <ModalHeader onClose={onClose}>
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-teal-600/20">
-            <Package className="w-5 h-5 text-teal-400" />
+          <div className="p-2 rounded-lg bg-accent-teal-subtle">
+            <Package className="w-5 h-5 text-accent-teal" />
           </div>
           <div>
             <h2 className="text-lg font-bold font-mono text-white">{skill.name}</h2>
             {lineCount > 0 && (
-              <span className="text-xs text-zinc-300">{lineCount} lines in SKILL.md</span>
+              <span className="text-xs text-secondary">{lineCount} lines in SKILL.md</span>
             )}
           </div>
         </div>
@@ -178,14 +178,14 @@ export function SkillDetailPopup({
         {/* Skill Description */}
         <div>
           <SectionTitle icon={<FileText className="w-4 h-4" />} label="Skill Description" />
-          <p className="text-sm text-zinc-200 leading-relaxed">
+          <p className="text-sm text-secondary leading-relaxed">
             {skill.description || "No description"}
           </p>
         </div>
 
         {/* Metadata grid: tags, tools, subdirs */}
         {(tags.length > 0 || allowedTools.length > 0 || subdirs.length > 0) && (
-          <div className="rounded-lg border border-zinc-700/40 bg-zinc-800/30 divide-y divide-zinc-700/30">
+          <div className="rounded-lg border border-card bg-subtle divide-y divide-card">
             {/* Tags + Tools row */}
             {(tags.length > 0 || allowedTools.length > 0) && (
               <div className="px-4 py-3 flex flex-wrap gap-x-6 gap-y-2">
@@ -216,7 +216,7 @@ export function SkillDetailPopup({
 
         {/* Sync to agent interfaces — show all agents from backend */}
         {agentSources.length > 0 && (
-          <div className="rounded-lg border border-teal-700/30 bg-teal-950/10 px-4 py-3">
+          <div className="rounded-lg border border-accent-teal bg-teal-950/10 px-4 py-3">
             <SectionTitle icon={<Share2 className="w-4 h-4" />} label="Sync to Agent Interfaces" />
             <div className="flex flex-wrap gap-2">
               {agentSources.map((src) => {
@@ -237,8 +237,8 @@ export function SkillDetailPopup({
                         isSynced
                           ? "bg-emerald-900/20 text-emerald-400 border-emerald-700/30"
                           : hasDir
-                            ? "bg-zinc-800/60 text-zinc-400 border-zinc-600/50 hover:text-teal-300 hover:border-teal-600/50 hover:bg-teal-950/20"
-                            : "bg-zinc-800/30 text-zinc-600 border-zinc-700/30 cursor-not-allowed"
+                            ? "bg-control/60 text-muted border-hover/60 hover:text-accent-teal hover:border-accent-teal-focus/50 hover:bg-teal-950/20"
+                            : "bg-subtle text-faint border-card cursor-not-allowed"
                       } disabled:opacity-50`}
                     >
                       {syncing === src.key ? (
@@ -265,15 +265,15 @@ export function SkillDetailPopup({
           <SectionTitle icon={<Code2 className="w-4 h-4" />} label="Skill Content" />
           {loadingContent ? (
             <div className="flex items-center gap-2 py-4">
-              <Loader2 className="w-4 h-4 text-zinc-500 animate-spin" />
-              <span className="text-xs text-zinc-500">Loading...</span>
+              <Loader2 className="w-4 h-4 text-dimmed animate-spin" />
+              <span className="text-xs text-dimmed">Loading...</span>
             </div>
           ) : content ? (
-            <div className="bg-zinc-800/80 rounded-lg p-4 max-h-80 overflow-y-auto border border-zinc-700/30">
+            <div className="bg-control/80 rounded-lg p-4 max-h-80 overflow-y-auto border border-card">
               <MarkdownRenderer content={_stripFrontmatter(content)} />
             </div>
           ) : (
-            <p className="text-xs text-zinc-500 italic">No content</p>
+            <p className="text-xs text-dimmed italic">No content</p>
           )}
         </div>
       </ModalBody>
@@ -289,8 +289,8 @@ export function SkillDetailPopup({
 function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-2 mb-2.5">
-      <span className="text-teal-400">{icon}</span>
-      <span className="text-sm font-semibold text-zinc-100">{label}</span>
+      <span className="text-accent-teal">{icon}</span>
+      <span className="text-sm font-semibold text-primary">{label}</span>
     </div>
   );
 }
@@ -298,7 +298,7 @@ function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string })
 /** Small label used as section header or inline label inside detail popups. */
 function SectionLabel({ icon, label, inline }: { icon?: React.ReactNode; label: string; inline?: boolean }) {
   return (
-    <div className={`flex items-center gap-1.5 text-xs text-zinc-400 shrink-0 ${inline ? "" : "mb-2"}`}>
+    <div className={`flex items-center gap-1.5 text-xs text-muted shrink-0 ${inline ? "" : "mb-2"}`}>
       {icon}
       <span>{label}</span>
     </div>
