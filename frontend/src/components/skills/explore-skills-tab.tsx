@@ -24,10 +24,10 @@ import { Tooltip } from "../tooltip";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "../modal";
 import { CategoryBadge, TagList, TagPill } from "./skill-badges";
 import { CATEGORY_COLORS, CATEGORY_LABELS, SOURCE_COLORS } from "./skill-constants";
+import { EmptyState } from "../empty-state";
+import { ErrorBanner } from "../error-banner";
+import { LoadingState } from "../loading-state";
 import {
-  EmptyState,
-  ErrorBanner,
-  LoadingState,
   NoResultsState,
   SkillCount,
   SkillSearchBar,

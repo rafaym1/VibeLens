@@ -1,5 +1,4 @@
-import { AlertCircle, Filter, Loader2, Search, X } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Filter, Search, X } from "lucide-react";
 import { SOURCE_COLORS, SOURCE_LABELS } from "./skill-constants";
 
 /** Search input with icon and clear button. */
@@ -86,51 +85,6 @@ export function SourceFilterBar({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-/** Dismissible error banner with a red alert icon. */
-export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
-  return (
-    <div className="flex items-start gap-2 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 mb-4">
-      <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-      <p className="text-sm text-red-700 dark:text-red-300">{message}</p>
-      <button onClick={onDismiss} className="ml-auto shrink-0 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
-        <X className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
-}
-
-/** Centered spinner with a label, shown while data is loading. */
-export function LoadingState({ label = "Loading..." }: { label?: string }) {
-  return (
-    <div className="flex items-center justify-center py-16">
-      <Loader2 className="w-6 h-6 text-zinc-400 dark:text-cyan-400/60 animate-spin" />
-      <span className="ml-2 text-sm text-dimmed">{label}</span>
-    </div>
-  );
-}
-
-/** Centered empty state with an icon and message. */
-export function EmptyState({
-  icon: Icon,
-  title,
-  subtitle,
-  children,
-}: {
-  icon: LucideIcon;
-  title: string;
-  subtitle?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="text-center py-16">
-      <Icon className="w-10 h-10 text-faint mx-auto mb-3" />
-      <p className="text-sm font-medium text-muted mb-1">{title}</p>
-      {subtitle && <p className="text-xs text-faint mb-4">{subtitle}</p>}
-      {children}
     </div>
   );
 }

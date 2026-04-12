@@ -9,10 +9,10 @@ import { InstallLocallyDialog } from "../install-locally-dialog";
 import { SkillCard, SkillDetailPopup } from "./skill-cards";
 import { SkillEditorDialog } from "./skill-editor-dialog";
 import { SyncAfterSaveDialog } from "./sync-after-save-dialog";
+import { EmptyState } from "../empty-state";
+import { ErrorBanner } from "../error-banner";
+import { LoadingState } from "../loading-state";
 import {
-  EmptyState,
-  ErrorBanner,
-  LoadingState,
   NoResultsState,
   SkillCount,
   SkillSearchBar,
