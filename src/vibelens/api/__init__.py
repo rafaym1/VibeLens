@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from vibelens.api.catalog import router as catalog_router
 from vibelens.api.dashboard import router as dashboard_router
 from vibelens.api.donation import router as donation_router
 from vibelens.api.friction import router as friction_router
@@ -27,4 +28,5 @@ def build_router() -> APIRouter:
     router.include_router(skills_router)
     router.include_router(skill_analysis_router)
     router.include_router(recommendation_router)
+    router.include_router(catalog_router)
     return router
