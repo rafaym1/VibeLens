@@ -505,3 +505,33 @@ export interface RecommendationResult {
   metrics: { cost_usd: number | null };
   catalog_version: string;
 }
+
+export interface CatalogItemSummary {
+  item_id: string;
+  item_type: string;
+  name: string;
+  description: string;
+  tags: string[];
+  category: string;
+  platforms: string[];
+  quality_score: number;
+  popularity: number;
+  updated_at: string;
+  source_url: string;
+  install_method: string;
+  install_command: string | null;
+  is_file_based: boolean;
+}
+
+export interface CatalogListResponse {
+  items: CatalogItemSummary[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export interface CatalogInstallResponse {
+  success: boolean;
+  installed_path: string;
+  message: string;
+}
