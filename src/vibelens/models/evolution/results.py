@@ -2,13 +2,13 @@
 
 from pydantic import BaseModel, Field
 
-from vibelens.models.evolution.models import ElementEvolution
+from vibelens.models.evolution.evolution import ElementEvolution
 from vibelens.models.llm.inference import BackendType
 from vibelens.models.session.patterns import WorkflowPattern
 from vibelens.models.trajectories.metrics import Metrics
 
 
-class EvolutionResult(BaseModel):
+class EvolutionAnalysisResult(BaseModel):
     """Complete evolution analysis result across all batches.
 
     Contains detected workflow patterns and proposed element edits.
@@ -16,7 +16,9 @@ class EvolutionResult(BaseModel):
 
     analysis_id: str | None = Field(default=None, description="Set on persistence.")
     session_ids: list[str] = Field(description="Sessions analyzed.")
-    skipped_session_ids: list[str] = Field(default_factory=list, description="Sessions not found.")
+    skipped_session_ids: list[str] = Field(
+        default_factory=list, description="Sessions not found."
+    )
     title: str = Field(description="Main finding, max 10 words.")
     workflow_patterns: list[WorkflowPattern] = Field(
         default_factory=list, description="Detected workflow patterns."

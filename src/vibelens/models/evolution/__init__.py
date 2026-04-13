@@ -1,15 +1,19 @@
 """Element evolution domain models."""
 
-from vibelens.models.evolution.models import (
+from vibelens.models.evolution.evolution import (
     ElementEdit,
     ElementEvolution,
     ElementEvolutionProposal,
+    ElementEvolutionProposalOutput,
+    ElementEvolutionProposalResult,
 )
-from vibelens.models.evolution.results import EvolutionResult
+from vibelens.models.evolution.results import EvolutionAnalysisResult
 
 __all__ = [
     "ElementEdit",
     "ElementEvolution",
     "ElementEvolutionProposal",
-    "EvolutionResult",
+    "ElementEvolutionProposalOutput",
+    "ElementEvolutionProposalResult",
+    "EvolutionAnalysisResult",
 ]

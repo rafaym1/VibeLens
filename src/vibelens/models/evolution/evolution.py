@@ -1,8 +1,11 @@
-"""Generalized element evolution models for any file-based element type."""
+"""Element evolution models for any file-based element type."""
 
 from pydantic import BaseModel, Field
 
 from vibelens.models.enums import ElementType
+from vibelens.models.llm.inference import BackendType
+from vibelens.models.session.patterns import WorkflowPattern
+from vibelens.models.trajectories.metrics import Metrics
 
 
 class ElementEdit(BaseModel):
@@ -45,6 +48,54 @@ class ElementEvolutionProposal(BaseModel):
     )
     confidence: float = Field(
         default=0.0, description="Confidence this evolution is needed. 0.0-1.0."
+    )
+
+
+class ElementEvolutionProposalOutput(BaseModel):
+    """LLM output from the evolution proposal step."""
+
+    title: str = Field(
+        default="",
+        description=(
+            "Self-explanatory title describing the main finding. "
+            "Understandable without reading the rest. Max 10 words."
+        ),
+    )
+    workflow_patterns: list[WorkflowPattern] = Field(
+        default_factory=list, description="Detected workflow patterns from trajectory analysis."
+    )
+    proposals: list[ElementEvolutionProposal] = Field(
+        default_factory=list, description="Evolution proposals for existing elements."
+    )
+
+
+class ElementEvolutionProposalResult(BaseModel):
+    """Service result wrapping evolution proposals with metadata."""
+
+    proposal_id: str | None = Field(
+        default=None, description="Persistence ID. Set when saved to disk."
+    )
+    session_ids: list[str] = Field(
+        description="Session IDs that were successfully loaded and analyzed."
+    )
+    skipped_session_ids: list[str] = Field(
+        default_factory=list, description="Session IDs that could not be loaded."
+    )
+    backend_id: BackendType = Field(description="Inference backend used.")
+    created_at: str = Field(description="ISO timestamp of analysis completion.")
+    model: str = Field(description="Model identifier.")
+    metrics: Metrics = Field(
+        default_factory=Metrics, description="Token usage and cost from the inference step."
+    )
+    duration_seconds: float | None = Field(
+        default=None, description="Wall-clock analysis duration in seconds."
+    )
+    batch_count: int = Field(default=1, description="Number of LLM batches used.")
+    warnings: list[str] = Field(
+        default_factory=list, description="Non-fatal issues encountered during analysis."
+    )
+    proposal_output: ElementEvolutionProposalOutput = Field(
+        description="LLM-generated proposal output with patterns and proposals."
     )
 
 
