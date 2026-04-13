@@ -1,10 +1,17 @@
 """Element creation domain models."""
 
-from vibelens.models.creation.models import ElementCreation, ElementCreationProposal
-from vibelens.models.creation.results import CreationResult
+from vibelens.models.creation.creation import (
+    ElementCreation,
+    ElementCreationProposal,
+    ElementCreationProposalOutput,
+    ElementCreationProposalResult,
+)
+from vibelens.models.creation.results import CreationAnalysisResult
 
 __all__ = [
-    "CreationResult",
+    "CreationAnalysisResult",
     "ElementCreation",
     "ElementCreationProposal",
+    "ElementCreationProposalOutput",
+    "ElementCreationProposalResult",
 ]
