@@ -1,5 +1,5 @@
 """Tests for YAML frontmatter parser."""
-from vibelens.catalog.frontmatter import parse_frontmatter
+from vibelens.catalog.frontmatter import extract_tags, parse_frontmatter
 
 
 def test_parse_standard_frontmatter():
@@ -71,3 +71,40 @@ description: Generate database migrations
     assert meta["allowed-tools"] == "Read, Write, Edit, Bash"
     assert meta["description"] == "Generate database migrations"
     print(f"Command meta: {meta}")
+
+
+def test_parse_dashes_in_value():
+    """Closing delimiter must be on its own line, not inside a value."""
+    text = "---\ndescription: Use --- to separate sections\n---\nBody here."
+    meta, body = parse_frontmatter(text)
+    assert meta["description"] == "Use --- to separate sections"
+    assert "Body here." in body
+    print(f"Dashes in value: meta={meta}")
+
+
+def test_extract_tags_with_category():
+    """Extract category as a tag."""
+    tags = extract_tags({"category": "testing", "name": "foo"})
+    assert tags == ["testing"]
+    print(f"Category tags: {tags}")
+
+
+def test_extract_tags_with_list_keywords():
+    """Extract list-style keywords with dedup."""
+    tags = extract_tags({"category": "dev", "keywords": ["dev", "python", "cli"]})
+    assert tags == ["dev", "python", "cli"]
+    print(f"List keyword tags: {tags}")
+
+
+def test_extract_tags_with_comma_string():
+    """Extract comma-separated keyword string."""
+    tags = extract_tags({"tags": "api, testing, web"})
+    assert tags == ["api", "testing", "web"]
+    print(f"Comma string tags: {tags}")
+
+
+def test_extract_tags_empty():
+    """Return empty list when no tag fields present."""
+    tags = extract_tags({"name": "foo"})
+    assert tags == []
+    print(f"Empty tags: {tags}")
