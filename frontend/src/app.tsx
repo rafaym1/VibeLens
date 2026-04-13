@@ -16,7 +16,7 @@ import { RecommendationView } from "./components/recommendations/recommendation-
 import { UploadDialog } from "./components/upload/upload-dialog";
 import { DashboardView } from "./components/dashboard/dashboard-view";
 import { FrictionPanel } from "./components/friction/friction-panel";
-import { SkillsPanel } from "./components/skills/skills-panel";
+import { PersonalizationPanel } from "./components/personalization/personalization-panel";
 import { SettingsDialog } from "./components/settings-dialog";
 import { Tooltip } from "./components/tooltip";
 import { SpotlightTour } from "./components/tutorial/spotlight-tour";
@@ -557,7 +557,7 @@ export function App() {
           {/* Content Area */}
           <div className="flex-1 min-h-0 relative">
             {mainView === "skills" ? (
-              <SkillsPanel checkedIds={checkedIds} activeJobId={skillJobId} onJobIdChange={setSkillJobId} />
+              <PersonalizationPanel checkedIds={checkedIds} activeJobId={skillJobId} onJobIdChange={setSkillJobId} />
             ) : mainView === "friction" ? (
               <FrictionPanel checkedIds={checkedIds} activeJobId={frictionJobId} onJobIdChange={setFrictionJobId} />
             ) : mainView === "analyze" ? (

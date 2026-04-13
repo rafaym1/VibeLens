@@ -14,7 +14,7 @@ import {
   AnalysisResultView,
   type SkillTab,
 } from "./skill-analysis-view";
-import { SkillsHistory } from "./skills-history";
+import { PersonalizationHistory } from "./personalization-history";
 
 const TAB_CONFIG: { id: SkillTab; label: string; tooltip: string }[] = [
   { id: "local", label: "Local Skills", tooltip: "Manage installed SKILL.md files" },
@@ -70,13 +70,13 @@ const MODE_DESCRIPTIONS: Record<SkillMode, {
 
 const POLL_INTERVAL_MS = 3000;
 
-interface SkillsPanelProps {
+interface PersonalizationPanelProps {
   checkedIds: Set<string>;
   activeJobId: string | null;
   onJobIdChange: (id: string | null) => void;
 }
 
-export function SkillsPanel({ checkedIds, activeJobId, onJobIdChange }: SkillsPanelProps) {
+export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }: PersonalizationPanelProps) {
   const { fetchWithToken, appMode, maxAnalysisSessions } = useAppContext();
   const [activeTab, setActiveTab] = useState<SkillTab>(() => {
     const stored = localStorage.getItem("vibelens-skills-tab");
@@ -451,7 +451,7 @@ export function SkillsPanel({ checkedIds, activeJobId, onJobIdChange }: SkillsPa
                 </Tooltip>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto p-3 pt-1">
-                <SkillsHistory onSelect={handleHistorySelect} refreshTrigger={historyRefresh} filterMode={currentMode} activeJobId={activeJobId} />
+                <PersonalizationHistory onSelect={handleHistorySelect} refreshTrigger={historyRefresh} filterMode={currentMode} activeJobId={activeJobId} />
               </div>
             </div>
           </>

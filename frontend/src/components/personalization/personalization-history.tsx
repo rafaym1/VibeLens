@@ -141,7 +141,7 @@ function HistoryCard({
   );
 }
 
-export function SkillsHistory({
+export function PersonalizationHistory({
   onSelect,
   refreshTrigger,
   filterMode,
