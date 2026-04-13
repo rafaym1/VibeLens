@@ -34,7 +34,7 @@ def test_parse_empty_frontmatter():
     """Handle empty frontmatter block."""
     text = "---\n---\nBody only."
     meta, body = parse_frontmatter(text)
-    assert meta == {} or meta is not None
+    assert meta == {}
     assert "Body only." in body
     print(f"Empty frontmatter: meta={meta}")
 
