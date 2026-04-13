@@ -12,7 +12,7 @@ import { ResizeHandle } from "./components/resize-handle";
 import { SessionList, type ViewMode } from "./components/session/session-list";
 import { SessionView } from "./components/session/session-view";
 import { SharedSessionView } from "./components/session/shared-session-view";
-import { RecommendationView } from "./components/recommendations/recommendation-view";
+import { RecommendationView } from "./components/personalization/recommendation-results-view";
 import { UploadDialog } from "./components/upload/upload-dialog";
 import { DashboardView } from "./components/dashboard/dashboard-view";
 import { FrictionPanel } from "./components/friction/friction-panel";
@@ -394,17 +394,25 @@ export function App() {
   }
 
   if (recommendationId) {
+    const handleRecBack = () => {
+      setRecommendationId(null);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("recommendation");
+      window.history.replaceState({}, "", url.toString());
+    };
     return (
       <AppContext.Provider value={contextValue}>
-        <RecommendationView
-          analysisId={recommendationId}
-          onBack={() => {
-            setRecommendationId(null);
-            const url = new URL(window.location.href);
-            url.searchParams.delete("recommendation");
-            window.history.replaceState({}, "", url.toString());
-          }}
-        />
+        <div className="flex flex-col h-full overflow-hidden bg-canvas text-primary">
+          <div className="px-6 pt-4 shrink-0">
+            <button
+              onClick={handleRecBack}
+              className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+            >
+              <span>&larr;</span> Back to sessions
+            </button>
+          </div>
+          <RecommendationView analysisId={recommendationId} fetchWithToken={fetchWithToken} />
+        </div>
       </AppContext.Provider>
     );
   }
