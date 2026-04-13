@@ -1,4 +1,5 @@
-import { Check, Download, ExternalLink, Loader2 } from "lucide-react";
+import { Check, Download, ExternalLink, Loader2, Star } from "lucide-react";
+import { formatCount } from "./catalog-format";
 import { useCallback, useState } from "react";
 import { useAppContext } from "../../app";
 import type { CatalogItemSummary } from "../../types";
@@ -153,7 +154,16 @@ export function CatalogCard({
           <TagList tags={item.tags} max={CARD_VIEW_MAX_TAGS} />
           {error && <p className="text-[10px] text-red-500 mt-1">{error}</p>}
           <div className="flex items-center justify-between mt-auto pt-3 text-[10px] text-muted">
-            <span>{item.category}</span>
+            <div className="flex items-center gap-2">
+              <span>{item.category}</span>
+              {item.stars > 0 && (
+                <span className="flex items-center gap-0.5">
+                  <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                  {formatCount(item.stars)}
+                </span>
+              )}
+              {item.language && <span>{item.language}</span>}
+            </div>
             <div className="flex items-center gap-2">
               <QualityBar score={item.quality_score} />
               {item.source_url && (
@@ -203,6 +213,13 @@ export function CatalogCard({
           <div className="flex items-center gap-3 mt-2 text-[10px] text-muted">
             <span>{item.category}</span>
             <QualityBar score={item.quality_score} />
+            {item.stars > 0 && (
+              <span className="flex items-center gap-0.5">
+                <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                {formatCount(item.stars)}
+              </span>
+            )}
+            {item.language && <span>{item.language}</span>}
           </div>
           {error && <p className="text-[10px] text-red-500 mt-1">{error}</p>}
         </div>
