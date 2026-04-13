@@ -29,7 +29,6 @@ config/redteam.yaml
 
 # Docs (internal reference only, except specs)
 docs/*
-!docs/spec/
 
 # Datasets
 datasets/

@@ -213,17 +213,23 @@ export function App() {
     if (sessions.length === 0 || dashboardPreloaded.current) return;
     dashboardPreloaded.current = true;
 
-    Promise.all([
-      fetchWithToken("/api/analysis/dashboard")
-        .then((r) => (r.ok ? r.json() : null)),
-      fetchWithToken("/api/analysis/tool-usage")
-        .then((r) => (r.ok ? r.json() : []))
-        .catch(() => []),
-    ])
-      .then(([stats, toolUsage]: [DashboardStats | null, ToolUsageStat[]]) => {
-        if (stats) setDashboardCache({ stats, toolUsage });
+    // Fetch stats first (fast, from metadata) so dashboard renders immediately.
+    // Tool usage loads all sessions and arrives later.
+    fetchWithToken("/api/analysis/dashboard")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((stats: DashboardStats | null) => {
+        if (stats) setDashboardCache({ stats, toolUsage: [] });
       })
       .catch((err) => console.error("Failed to preload dashboard:", err));
+
+    fetchWithToken("/api/analysis/tool-usage")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((toolUsage: ToolUsageStat[]) => {
+        setDashboardCache((prev) =>
+          prev ? { ...prev, toolUsage } : null
+        );
+      })
+      .catch(() => {});
   }, [fetchWithToken, sessions]);
 
   const handleSelectSession = useCallback((id: string | null) => {

@@ -156,9 +156,12 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
         if not stale_sids and not removed_paths:
             # Perfect cache hit — restore everything from cache
             self._remap_index(cached_path_map)
-            self._metadata_cache = {
-                sid: cached_entries[sid] for sid in self._index if sid in cached_entries
-            }
+            self._metadata_cache = {}
+            for sid in self._index:
+                if sid in cached_entries:
+                    meta = cached_entries[sid]
+                    meta["filepath"] = str(self._index[sid][0])
+                    self._metadata_cache[sid] = meta
             logger.info("Loaded %d sessions from index cache", len(self._metadata_cache))
             return True
 
@@ -210,7 +213,9 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
         self._metadata_cache = {}
         for sid in self._index:
             if sid not in stale_sids and sid in cached_entries:
-                self._metadata_cache[sid] = cached_entries[sid]
+                meta = cached_entries[sid]
+                meta["filepath"] = str(self._index[sid][0])
+                self._metadata_cache[sid] = meta
 
         # Re-parse stale files and enrich with fast metrics
         reparsed = 0
@@ -238,7 +243,9 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
                     self._index.pop(sid, None)
                     self._index[real_sid] = (fpath, parser)
 
-                self._metadata_cache[real_sid] = traj.model_dump(exclude={"steps"}, mode="json")
+                meta = traj.model_dump(exclude={"steps"}, mode="json")
+                meta["filepath"] = str(fpath)
+                self._metadata_cache[real_sid] = meta
                 reparsed += 1
             except Exception:
                 logger.debug("Failed to re-parse stale file %s", fpath)
@@ -283,9 +290,13 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
         # Enrich skeletons with fast-scanned metrics for dashboard stats
         _enrich_skeleton_metrics(trajectories, self._index)
 
-        self._metadata_cache = {
-            t.session_id: t.model_dump(exclude={"steps"}, mode="json") for t in trajectories
-        }
+        self._metadata_cache = {}
+        for t in trajectories:
+            meta = t.model_dump(exclude={"steps"}, mode="json")
+            entry = self._index.get(t.session_id)
+            if entry:
+                meta["filepath"] = str(entry[0])
+            self._metadata_cache[t.session_id] = meta
         logger.info(
             "Indexed %d sessions across %d agents", len(self._metadata_cache), len(self._parsers)
         )

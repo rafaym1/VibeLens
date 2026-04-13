@@ -17,6 +17,19 @@ WEIGHT_COMPOSABILITY = 0.05
 # Maximum quality score from catalog
 MAX_QUALITY_SCORE = 100.0
 
+# Normalize LLM-generated platform names to canonical catalog values.
+# Profile may use "claude-code" (hyphen) while catalog uses "claude_code" (underscore).
+PLATFORM_ALIASES: dict[str, str] = {
+    "claude-code": "claude_code",
+    "claude_code": "claude_code",
+    "codex": "codex",
+    "gemini": "gemini",
+    "gemini-cli": "gemini",
+    "gemini_cli": "gemini",
+    "openclaw": "openclaw",
+    "dataclaw": "dataclaw",
+}
+
 
 def _score_quality(item: CatalogItem) -> float:
     """Normalize quality score to 0.0-1.0 range.
@@ -30,8 +43,23 @@ def _score_quality(item: CatalogItem) -> float:
     return min(item.quality_score / MAX_QUALITY_SCORE, 1.0)
 
 
+def _normalize_platform(name: str) -> str:
+    """Normalize a platform name to its canonical catalog form.
+
+    Args:
+        name: Raw platform name from profile or catalog.
+
+    Returns:
+        Canonical platform name, or original lowercased if no alias exists.
+    """
+    return PLATFORM_ALIASES.get(name.lower(), name.lower())
+
+
 def _score_platform_match(item: CatalogItem, profile: UserProfile) -> float:
     """Binary platform match: 1.0 if any user platform matches, else 0.0.
+
+    Normalizes both profile and catalog platform names to handle
+    naming variants (e.g. "claude-code" vs "claude_code").
 
     Args:
         item: Catalog item with platforms list.
@@ -40,8 +68,8 @@ def _score_platform_match(item: CatalogItem, profile: UserProfile) -> float:
     Returns:
         1.0 or 0.0.
     """
-    user_platforms = set(profile.agent_platforms)
-    item_platforms = set(item.platforms)
+    user_platforms = {_normalize_platform(p) for p in profile.agent_platforms}
+    item_platforms = {_normalize_platform(p) for p in item.platforms}
     return 1.0 if user_platforms & item_platforms else 0.0
 
 

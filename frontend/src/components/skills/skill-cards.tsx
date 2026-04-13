@@ -1,12 +1,11 @@
 import {
   Check,
   Code2,
+  FolderOpen,
   Loader2,
   Package,
   Pencil,
   Share2,
-  FileText,
-  Tag,
   Trash2,
   Wrench,
 } from "lucide-react";
@@ -17,7 +16,7 @@ import { InstallLocallyDialog } from "../install-locally-dialog";
 import { MarkdownRenderer } from "../markdown-renderer";
 import { Modal, ModalHeader, ModalBody } from "../modal";
 import { Tooltip } from "../tooltip";
-import { SourceBadge, SubdirList, TagList, TagPill, ToolBadge, ToolList } from "./skill-badges";
+import { SourceBadge, SubdirBadge, TagList, TagPill, ToolBadge, ToolList } from "./skill-badges";
 import { SOURCE_LABELS } from "./skill-constants";
 
 /** Compact card for a locally installed skill in the list view. */
@@ -161,7 +160,7 @@ export function SkillDetailPopup({
   );
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-3xl">
+    <Modal onClose={onClose} maxWidth="max-w-2xl">
       <ModalHeader onClose={onClose}>
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-accent-teal-subtle">
@@ -169,58 +168,57 @@ export function SkillDetailPopup({
           </div>
           <div>
             <h2 className="text-lg font-bold font-mono text-primary">{skill.name}</h2>
-            {lineCount > 0 && (
-              <span className="text-xs text-secondary">{lineCount} lines in SKILL.md</span>
-            )}
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {lineCount > 0 && (
+                <span className="text-[11px] text-muted">{lineCount} lines</span>
+              )}
+              {skill.sources
+                .filter((s) => s.source_type !== "central")
+                .map((src) => (
+                  <SourceBadge key={src.source_type} sourceType={src.source_type} sourcePath={src.source_path} />
+                ))}
+              {tags.map((tag) => <TagPill key={tag} tag={tag} />)}
+            </div>
           </div>
         </div>
       </ModalHeader>
 
       <ModalBody>
-        {/* Skill Description */}
-        <div>
-          <SectionTitle icon={<FileText className="w-4 h-4" />} label="Skill Description" />
-          <p className="text-sm text-secondary leading-relaxed">
-            {skill.description || "No description"}
-          </p>
-        </div>
+        {/* Description */}
+        <p className="text-sm text-secondary leading-relaxed">
+          {skill.description || "No description"}
+        </p>
 
-        {/* Metadata grid: tags, tools, subdirs */}
-        {(tags.length > 0 || allowedTools.length > 0 || subdirs.length > 0) && (
-          <div className="rounded-lg border border-card bg-panel divide-y divide-card">
-            {/* Tags + Tools row */}
-            {(tags.length > 0 || allowedTools.length > 0) && (
-              <div className="px-4 py-3 flex flex-wrap gap-x-6 gap-y-2">
-                {tags.length > 0 && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <SectionLabel icon={<Tag className="w-3 h-3" />} label="Tags" inline />
-                    {tags.map((tag) => <TagPill key={tag} tag={tag} />)}
-                  </div>
-                )}
-                {allowedTools.length > 0 && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <SectionLabel icon={<Wrench className="w-3 h-3" />} label="Tools" inline />
-                    {allowedTools.map((tool) => <ToolBadge key={tool} tool={tool} />)}
-                  </div>
-                )}
+        {/* Metadata chips */}
+        {(allowedTools.length > 0 || subdirs.length > 0) && (
+          <div className="space-y-3">
+            {allowedTools.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted shrink-0">
+                  <Wrench className="w-3 h-3" /> Tools
+                </span>
+                {allowedTools.map((tool) => <ToolBadge key={tool} tool={tool} />)}
               </div>
             )}
-
-            {/* Subdirectories */}
             {subdirs.length > 0 && (
-              <div className="px-4 py-3">
-                <SectionLabel label="Directories" inline />
-                <SubdirList dirs={subdirs} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted shrink-0">
+                  <FolderOpen className="w-3 h-3" /> Dirs
+                </span>
+                {subdirs.map((dir) => <SubdirBadge key={dir} dir={dir} />)}
               </div>
             )}
           </div>
         )}
 
-        {/* Sync to agent interfaces — show all agents from backend */}
+        {/* Sync to agent interfaces */}
         {agentSources.length > 0 && (
-          <div className="rounded-lg border border-teal-200 dark:border-teal-800/40 bg-teal-50 dark:bg-teal-950/10 px-4 py-3">
-            <SectionTitle icon={<Share2 className="w-4 h-4" />} label="Sync to Agent Interfaces" />
-            <div className="flex flex-wrap gap-2">
+          <div>
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Share2 className="w-3.5 h-3.5 text-accent-teal" />
+              <span className="text-xs font-semibold text-secondary">Sync to Agents</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
               {agentSources.map((src) => {
                 const installedSource = skill.sources.find((s) => s.source_type === src.key);
                 const isSynced = !!installedSource || skill.skill_targets.includes(src.key);
@@ -235,20 +233,20 @@ export function SkillDetailPopup({
                     <button
                       onClick={() => guardAction(() => handleSync(src.key))}
                       disabled={syncing === src.key || (!isSynced && !hasDir)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition ${
                         isSynced
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-700/30"
+                          ? "bg-emerald-600 text-white dark:bg-emerald-500"
                           : hasDir
-                            ? "bg-control/60 text-muted border-hover/60 hover:text-accent-teal hover:border-accent-teal-focus/50 hover:bg-teal-50 dark:hover:bg-teal-950/20"
-                            : "bg-subtle text-faint border-card cursor-not-allowed"
-                      } disabled:opacity-50`}
+                            ? "bg-control text-secondary border border-card hover:border-accent-teal/40 hover:text-accent-teal"
+                            : "bg-subtle text-faint border border-card cursor-not-allowed opacity-50"
+                      }`}
                     >
                       {syncing === src.key ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       ) : isSynced ? (
                         <Check className="w-3 h-3" />
                       ) : (
-                        <Share2 className="w-3 h-3" />
+                        <Share2 className="w-3 h-3 opacity-50" />
                       )}
                       {src.label}
                     </button>
@@ -257,25 +255,28 @@ export function SkillDetailPopup({
               })}
             </div>
             {syncMessage && (
-              <p className="text-xs text-emerald-600/80 dark:text-emerald-400/70 mt-1.5">{syncMessage}</p>
+              <p className="text-xs text-emerald-600/80 dark:text-emerald-400/70 mt-2">{syncMessage}</p>
             )}
           </div>
         )}
 
-        {/* Skill Content */}
+        {/* Skill content */}
         <div>
-          <SectionTitle icon={<Code2 className="w-4 h-4" />} label="Skill Content" />
+          <div className="flex items-center gap-1.5 mb-2">
+            <Code2 className="w-3.5 h-3.5 text-accent-teal" />
+            <span className="text-xs font-semibold text-secondary">SKILL.md</span>
+          </div>
           {loadingContent ? (
-            <div className="flex items-center gap-2 py-4">
-              <Loader2 className="w-4 h-4 text-zinc-400 dark:text-cyan-400/60 animate-spin" />
-              <span className="text-xs text-dimmed">Loading...</span>
+            <div className="flex items-center gap-2 py-6 justify-center">
+              <Loader2 className="w-4 h-4 text-accent-teal/60 animate-spin" />
+              <span className="text-xs text-dimmed">Loading content...</span>
             </div>
           ) : content ? (
-            <div className="bg-control/80 rounded-lg p-4 max-h-80 overflow-y-auto border border-card">
+            <div className="rounded-lg border border-card bg-control/40 p-4 max-h-80 overflow-y-auto text-xs">
               <MarkdownRenderer content={_stripFrontmatter(content)} />
             </div>
           ) : (
-            <p className="text-xs text-dimmed italic">No content</p>
+            <p className="text-xs text-dimmed italic py-4 text-center">No content available</p>
           )}
         </div>
       </ModalBody>
@@ -284,26 +285,6 @@ export function SkillDetailPopup({
         <InstallLocallyDialog onClose={() => setShowInstallDialog(false)} />
       )}
     </Modal>
-  );
-}
-
-/** Prominent section title with icon for major sections in detail popups. */
-function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <div className="flex items-center gap-2 mb-2.5">
-      <span className="text-accent-teal">{icon}</span>
-      <span className="text-sm font-semibold text-primary">{label}</span>
-    </div>
-  );
-}
-
-/** Small label used as section header or inline label inside detail popups. */
-function SectionLabel({ icon, label, inline }: { icon?: React.ReactNode; label: string; inline?: boolean }) {
-  return (
-    <div className={`flex items-center gap-1.5 text-xs text-muted shrink-0 ${inline ? "" : "mb-2"}`}>
-      {icon}
-      <span>{label}</span>
-    </div>
   );
 }
 

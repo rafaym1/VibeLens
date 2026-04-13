@@ -20,6 +20,9 @@ SUMMARY_MAX_CHARS = 300
 DIGEST_TOKEN_BUDGET = 80_000
 # Max sessions per project in diversity sampling
 MAX_PER_PROJECT = 3
+# Minimum first_message length to be worth including as a metadata signal.
+# Sessions with shorter messages ("pwd", "ls", "hi") carry no semantic value.
+MIN_FIRST_MESSAGE_CHARS = 15
 
 
 def extract_lightweight_digest(
@@ -52,6 +55,10 @@ def extract_lightweight_digest(
         if compaction_text:
             signal = _format_compaction_signal(session_id, project_path, compaction_text)
         else:
+            # Skip metadata-only sessions with trivial first messages
+            first_message = (meta.get("first_message") or "").strip()
+            if len(first_message) < MIN_FIRST_MESSAGE_CHARS:
+                continue
             signal = _format_metadata_signal(session_id, meta)
 
         signals.append((session_id, signal, project_path, str(timestamp)))
@@ -178,6 +185,9 @@ def _format_compaction_signal(session_id: str, project_path: str, summary: str) 
 def _format_metadata_signal(session_id: str, meta: dict) -> str:
     """Format a session signal from metadata only (no compaction available).
 
+    Includes the first user message as the primary semantic signal — it
+    captures what the user was trying to accomplish in the session.
+
     Args:
         session_id: Session identifier.
         meta: Session metadata dict.
@@ -186,14 +196,25 @@ def _format_metadata_signal(session_id: str, meta: dict) -> str:
         Formatted signal string.
     """
     project_name = Path(meta.get("project_path") or "unknown").name
-    tool_count = meta.get("total_tool_calls") or 0
-    duration = meta.get("duration_seconds") or 0
-    model = meta.get("model") or "unknown"
+    fm = meta.get("final_metrics") or {}
+    agent = meta.get("agent") or {}
+    tool_count = fm.get("tool_call_count") or 0
+    duration = fm.get("duration") or 0
+    model = agent.get("model_name") or "unknown"
+    first_message = (meta.get("first_message") or "").strip()
     dur_min = round(duration / 60) if duration else 0
-    return (
+
+    header = (
         f"--- SESSION {session_id} ---\n"
         f"Project: {project_name} | Tools: {tool_count} | Duration: {dur_min}min | Model: {model}"
     )
+    if first_message:
+        # Truncate long messages to keep token budget manageable
+        truncated = first_message[:200]
+        if len(first_message) > 200:
+            truncated += "..."
+        header += f"\nTask: {truncated}"
+    return header
 
 
 def _sample_sessions(

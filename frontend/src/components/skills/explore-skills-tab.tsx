@@ -4,7 +4,6 @@ import {
   Compass,
   Download,
   ExternalLink,
-  FileText,
   Globe,
   Loader2,
   Plus,
@@ -12,7 +11,6 @@ import {
   Share2,
   Sparkles,
   Star,
-  Tag,
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -23,7 +21,7 @@ import { InstallLocallyDialog } from "../install-locally-dialog";
 import { Tooltip } from "../tooltip";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "../modal";
 import { CategoryBadge, TagList, TagPill } from "./skill-badges";
-import { CATEGORY_COLORS, CATEGORY_LABELS, SOURCE_COLORS } from "./skill-constants";
+import { CATEGORY_COLORS, CATEGORY_LABELS } from "./skill-constants";
 import { EmptyState } from "../empty-state";
 import { ErrorBanner } from "../error-banner";
 import { LoadingState } from "../loading-state";
@@ -323,11 +321,12 @@ function FeaturedSkillDetailPopup({
           </div>
           <div>
             <h2 className="text-lg font-bold font-mono text-primary">{skill.name}</h2>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <CategoryBadge category={skill.category} />
+              {skill.tags.map((tag) => <TagPill key={tag} tag={tag} />)}
               {skill.stars > 0 && (
                 <span className="flex items-center gap-0.5 text-xs text-amber-600/80 dark:text-amber-400/70">
-                  <Star className="w-3 h-3" /> {skill.stars.toLocaleString()}
+                  <Star className="w-3 h-3 fill-current" /> {skill.stars.toLocaleString()}
                 </span>
               )}
               {installed && (
@@ -344,81 +343,51 @@ function FeaturedSkillDetailPopup({
       </ModalHeader>
 
       <ModalBody>
-        {/* Skill Description */}
-        <div>
-          <DetailSectionTitle icon={<FileText className="w-4 h-4" />} label="Skill Description" />
-          <p className="text-sm text-secondary leading-relaxed">{skill.summary}</p>
-        </div>
+        {/* Description */}
+        <p className="text-sm text-secondary leading-relaxed">{skill.summary}</p>
 
-        {/* Metadata grid: tags, stats, source */}
-        {(skill.tags.length > 0 || skill.stars > 0 || skill.downloads > 0 || skill.source_url) && (
-          <div className="rounded-lg border border-card bg-panel divide-y divide-card">
-            {/* Tags + Stats row */}
-            <div className="px-4 py-3 flex flex-wrap gap-x-6 gap-y-2">
-              {skill.tags.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5 text-xs text-muted shrink-0">
-                    <Tag className="w-3 h-3" /> <span>Tags</span>
-                  </div>
-                  {skill.tags.map((tag) => <TagPill key={tag} tag={tag} />)}
-                </div>
-              )}
-              {(skill.stars > 0 || skill.downloads > 0) && (
-                <div className="flex items-center gap-4">
-                  {skill.stars > 0 && (
-                    <div className="flex items-center gap-1.5 text-sm text-secondary">
-                      <Star className="w-3.5 h-3.5 text-accent-amber" />
-                      <span>{skill.stars.toLocaleString()} stars</span>
-                    </div>
-                  )}
-                  {skill.downloads > 0 && (
-                    <div className="flex items-center gap-1.5 text-sm text-secondary">
-                      <Download className="w-3.5 h-3.5 text-muted" />
-                      <span>{skill.downloads.toLocaleString()} downloads</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Source link row */}
-            {skill.source_url && (
-              <div className="px-4 py-3 flex items-center gap-2">
-                <div className="flex items-center gap-1.5 text-xs text-muted shrink-0">
-                  <ExternalLink className="w-3 h-3" /> <span>Source</span>
-                </div>
-                <a
-                  href={skill.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-accent-teal hover:text-accent-teal underline underline-offset-2 transition truncate"
-                >
-                  {skill.source_url} <ExternalLink className="w-3 h-3 shrink-0" />
-                </a>
-              </div>
-            )}
+        {/* Source link */}
+        {skill.source_url && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted shrink-0">
+              <ExternalLink className="w-3 h-3" /> Source
+            </span>
+            <a
+              href={skill.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-accent-teal hover:underline underline-offset-2 transition truncate"
+            >
+              {skill.source_url} <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-60" />
+            </a>
           </div>
         )}
 
         {/* Agent interface targets */}
         {!installed && agentSources.length > 0 && (
-          <div className="rounded-lg border border-teal-200 dark:border-teal-800/40 bg-teal-50 dark:bg-teal-950/10 px-4 py-3">
-            <DetailSectionTitle icon={<Share2 className="w-4 h-4" />} label="Install to Agent Interfaces" />
-            <div className="flex flex-wrap gap-2">
-              {agentSources.map((src) => (
-                <button
-                  key={src.key}
-                  onClick={() => toggleTarget(src.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition ${
-                    selectedTargets.has(src.key)
-                      ? SOURCE_COLORS[src.key] || "bg-control-hover text-secondary border-hover"
-                      : "bg-control/60 text-muted border-hover/60 hover:text-accent-teal hover:border-accent-teal-focus/50 hover:bg-teal-50 dark:hover:bg-teal-950/20"
-                  }`}
-                >
-                  {selectedTargets.has(src.key) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                  {src.label}
-                </button>
-              ))}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Share2 className="w-3.5 h-3.5 text-accent-teal" />
+              <span className="text-xs font-semibold text-secondary">Install to Agent Interfaces</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {agentSources.map((src) => {
+                const isSelected = selectedTargets.has(src.key);
+                return (
+                  <button
+                    key={src.key}
+                    onClick={() => toggleTarget(src.key)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition ${
+                      isSelected
+                        ? "bg-teal-600 text-white dark:bg-teal-500"
+                        : "bg-control text-secondary border border-card hover:border-accent-teal/40 hover:text-accent-teal"
+                    }`}
+                  >
+                    {isSelected ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3 opacity-50" />}
+                    {src.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -468,15 +437,5 @@ function FeaturedSkillDetailPopup({
         <InstallLocallyDialog onClose={() => setShowInstallDialog(false)} />
       )}
     </Modal>
-  );
-}
-
-/** Prominent section title with icon, matching the local skill detail popup style. */
-function DetailSectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <div className="flex items-center gap-2 mb-2.5">
-      <span className="text-accent-teal">{icon}</span>
-      <span className="text-sm font-semibold text-primary">{label}</span>
-    </div>
   );
 }

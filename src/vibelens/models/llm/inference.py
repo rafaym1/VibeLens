@@ -21,6 +21,31 @@ class BackendType(StrEnum):
     MOCK = "mock"
     DISABLED = "disabled"
 
+    @classmethod
+    def _missing_(cls, value: object) -> "BackendType | None":
+        """Resolve legacy backend names from persisted analysis results."""
+        if isinstance(value, str):
+            resolved = _BACKEND_LEGACY_ALIASES.get(value)
+            if resolved:
+                return cls(resolved)
+        return None
+
+
+_BACKEND_LEGACY_ALIASES: dict[str, str] = {
+    "anthropic-api": "litellm",
+    "openai-api": "litellm",
+    "claude-cli": "claude_code",
+    "codex-cli": "codex",
+    "gemini-cli": "gemini",
+    "gemini_cli": "gemini",
+    "cursor-cli": "cursor",
+    "kimi-cli": "kimi",
+    "openclaw-cli": "openclaw",
+    "opencode-cli": "opencode",
+    "aider-cli": "aider",
+    "amp-cli": "amp",
+}
+
 
 class TokenUsage(BaseModel):
     """Token counts for an inference request."""

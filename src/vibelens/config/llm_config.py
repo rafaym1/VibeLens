@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
-from vibelens.models.llm.inference import BackendType
+from vibelens.models.llm.inference import _BACKEND_LEGACY_ALIASES, BackendType
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -59,21 +59,7 @@ API_KEY_MASK_SUFFIX_LEN = 4
 # Characters replacing the hidden portion of an API key
 API_KEY_MASK = "***"
 
-# Old backend names that map to current values
-LEGACY_BACKEND_ALIASES: dict[str, str] = {
-    "anthropic-api": "litellm",
-    "openai-api": "litellm",
-    "claude-cli": "claude_code",
-    "codex-cli": "codex",
-    "gemini-cli": "gemini",
-    "gemini_cli": "gemini",
-    "cursor-cli": "cursor",
-    "kimi-cli": "kimi",
-    "openclaw-cli": "openclaw",
-    "opencode-cli": "opencode",
-    "aider-cli": "aider",
-    "amp-cli": "amp",
-}
+LEGACY_BACKEND_ALIASES = _BACKEND_LEGACY_ALIASES
 
 
 class LLMConfig(BaseModel):

@@ -56,7 +56,7 @@ function UserStep({ step }: { step: Step }) {
 
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] bg-blue-100 dark:bg-gradient-to-br dark:from-slate-600/70 dark:to-slate-700/60 text-primary rounded-2xl rounded-br-md px-4 py-2.5 text-sm overflow-hidden break-words">
+      <div className="max-w-[85%] bg-blue-50/80 dark:bg-white/[0.06] text-primary rounded-2xl rounded-br-md px-4 py-2.5 text-sm overflow-hidden break-words">
         {!expanded ? (
           <>
             <div className="line-clamp-4">
@@ -107,8 +107,8 @@ function SystemStep({ step }: { step: Step }) {
         )}
       </button>
       {open && (
-        <div className="mt-1 bg-panel/60 border border-card rounded-lg p-3">
-          <pre className="text-xs text-dimmed whitespace-pre-wrap break-words overflow-x-auto max-h-96 overflow-y-auto">
+        <div className="mt-1 bg-panel/30 border border-card rounded-lg p-3">
+          <pre className="text-xs text-secondary whitespace-pre-wrap break-words overflow-x-auto max-h-96 overflow-y-auto">
             {text}
           </pre>
         </div>
@@ -140,8 +140,8 @@ function SkillStep({ step }: { step: Step }) {
         {skillName && <span className="text-amber-600 dark:text-amber-400 ml-0.5">/{skillName}</span>}
       </button>
       {open && (
-        <div className="mt-1 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
-          <pre className="text-xs text-amber-600 dark:text-amber-200/70 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+        <div className="mt-1 bg-amber-50/50 dark:bg-amber-500/[0.04] border border-amber-500/20 rounded-lg p-3">
+          <pre className="text-xs text-amber-800 dark:text-amber-200 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
             {text}
           </pre>
         </div>
@@ -170,8 +170,8 @@ function AutoPromptStep({ step }: { step: Step }) {
         )}
       </button>
       {open && (
-        <div className="mt-1 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/50 dark:border-teal-500/25 rounded-lg p-3">
-          <pre className="text-xs text-teal-800/80 dark:text-teal-100/80 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+        <div className="mt-1 bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/50 dark:border-teal-500/25 rounded-lg p-3">
+          <pre className="text-xs text-teal-800 dark:text-teal-100 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
             {text}
           </pre>
         </div>
@@ -316,8 +316,8 @@ function ThinkingBlock({ text }: { text: string }) {
         <span className="font-medium">Thinking</span>
       </button>
       {open && (
-        <div className="mt-1 bg-panel/80 border border-default rounded-lg p-3">
-          <pre className="text-xs text-amber-600 dark:text-amber-200/80 whitespace-pre-wrap overflow-x-auto">
+        <div className="mt-1 bg-amber-50/40 dark:bg-white/[0.03] border border-default rounded-lg p-3">
+          <pre className="text-xs text-amber-700 dark:text-amber-200 whitespace-pre-wrap overflow-x-auto">
             {text}
           </pre>
         </div>

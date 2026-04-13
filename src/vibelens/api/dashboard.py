@@ -11,6 +11,7 @@ from vibelens.services.dashboard.loader import (
     get_dashboard_stats,
     get_session_analytics,
     get_tool_usage,
+    invalidate_cache,
 )
 
 router = APIRouter(tags=["analysis"])
@@ -22,9 +23,16 @@ def dashboard_stats(
     date_from: str | None = None,
     date_to: str | None = None,
     agent_name: str | None = None,
+    refresh: bool = False,
     x_session_token: str | None = Header(None),
 ) -> DashboardStats:
-    """Compute aggregate dashboard statistics from full trajectories."""
+    """Compute aggregate dashboard statistics from full trajectories.
+
+    Args:
+        refresh: If True, invalidate cached stats to recompute from scratch.
+    """
+    if refresh:
+        invalidate_cache()
     return get_dashboard_stats(project_path, date_from, date_to, x_session_token, agent_name)
 
 

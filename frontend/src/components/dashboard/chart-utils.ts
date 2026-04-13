@@ -57,7 +57,8 @@ export function displayModelName(name: string): string {
 
 export function getHeatmapColor(count: number, maxVal: number): string {
   if (count === 0) return HEATMAP_COLORS[0];
-  const ratio = count / maxVal;
+  // Log scale: spreads low counts across more color levels
+  const ratio = Math.log(count + 1) / Math.log(maxVal + 1);
   if (ratio <= 0.25) return HEATMAP_COLORS[1];
   if (ratio <= 0.5) return HEATMAP_COLORS[2];
   if (ratio <= 0.75) return HEATMAP_COLORS[3];

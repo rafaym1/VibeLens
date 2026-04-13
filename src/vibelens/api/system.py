@@ -18,6 +18,7 @@ from vibelens.llm.backends import _CLI_BACKEND_REGISTRY
 from vibelens.llm.pricing import lookup_pricing
 from vibelens.models.llm.inference import BackendType
 from vibelens.schemas.llm import LLMConfigureRequest
+from vibelens.services.dashboard.loader import get_warming_status
 from vibelens.utils.log import get_logger
 
 router = APIRouter(tags=["system"])
@@ -52,6 +53,16 @@ async def list_sources() -> list:
     # Upload source is always available
     sources.append({"type": "upload", "name": "File Upload"})
     return sources
+
+
+@router.get("/warming-status")
+async def warming_status() -> dict:
+    """Return current cache warming progress.
+
+    Returns:
+        Dict with total, loaded, and done fields.
+    """
+    return get_warming_status()
 
 
 @router.get("/llm/status")

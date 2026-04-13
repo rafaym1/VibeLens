@@ -67,19 +67,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if settings.app_mode == AppMode.DEMO:
         reconstruct_upload_registry()
 
-    # Lightweight startup tasks in a thread (no heavy I/O)
+    # All heavy work runs in background so the server accepts connections immediately
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, _run_background_startup)
 
-    # Tier 1: instant metadata-based search index (no disk I/O, <100ms)
+    # Tier 1 search index runs synchronously — triggers lazy session indexing
+    # which the dashboard and session list APIs depend on at first request
     build_search_index()
 
-    # Tier 2: full-text search index built in background thread
-    asyncio.create_task(_async_build_full_search_index())
-
-    # Dashboard cache warming as an async background task so it yields
-    # the event loop between session batches instead of holding the GIL
+    # Dashboard cache warming and full-text search run in background
     asyncio.create_task(_async_warm_cache())
+    asyncio.create_task(_async_build_full_search_index())
 
     # Periodic incremental search index refresh (diff-based, <1s typical)
     search_refresh_task = asyncio.create_task(_periodic_search_refresh())
@@ -103,6 +101,14 @@ async def _periodic_job_cleanup() -> None:
             raise
         except Exception:
             logger.warning("Job cleanup failed", exc_info=True)
+
+
+async def _async_warm_cache() -> None:
+    """Warm the dashboard cache in a background thread."""
+    try:
+        await asyncio.to_thread(warm_cache)
+    except Exception:
+        logger.warning("Dashboard cache warming failed", exc_info=True)
 
 
 async def _async_build_full_search_index() -> None:
@@ -132,19 +138,6 @@ async def _periodic_search_refresh() -> None:
         except Exception:
             logger.warning("Search index refresh failed", exc_info=True)
 
-
-async def _async_warm_cache() -> None:
-    """Run dashboard cache warming in the background, yielding periodically.
-
-    Wraps the synchronous warm_cache() in asyncio.to_thread so it runs
-    in the default thread pool. Unlike run_in_executor fire-and-forget,
-    this is a proper task that can be awaited and doesn't silently swallow
-    exceptions.
-    """
-    try:
-        await asyncio.to_thread(warm_cache)
-    except Exception:
-        logger.warning("Dashboard cache warming failed", exc_info=True)
 
 
 def _run_background_startup() -> None:

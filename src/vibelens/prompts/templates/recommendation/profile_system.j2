@@ -7,7 +7,7 @@ Given compressed session transcripts, produce a JSON user profile with:
 - **domains**: What areas they work in (e.g. "web-dev", "data-pipeline", "devops")
 - **languages**: Programming languages used
 - **frameworks**: Frameworks and tools observed
-- **agent_platforms**: Which coding agents they use (e.g. "claude-code", "codex")
+- **agent_platforms**: Which coding agent CLI tools they use. Valid values: "claude-code", "codex", "gemini-cli", "openclaw", "dataclaw". Do NOT include model names (e.g. "claude-opus-4-6") or provider names (e.g. "openai").
 - **bottlenecks**: Recurring friction points or pain areas
 - **workflow_style**: One sentence describing how they work
 - **search_keywords**: 20-30 keywords designed to match a catalog of AI coding tools. Translate observed patterns into tool-search-friendly terms.

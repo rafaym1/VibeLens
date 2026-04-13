@@ -17,7 +17,7 @@ export function ToolResultBlock({ result }: { result: ObservationResult }) {
   // Handle multimodal content (images in tool results)
   if (Array.isArray(rawContent)) {
     return (
-      <div className="max-w-[85%] mt-1 bg-panel/60 border border-default rounded-lg overflow-hidden p-3">
+      <div className="max-w-[85%] mt-1 bg-panel/30 border border-default rounded-lg overflow-hidden p-3">
         <ContentRenderer content={rawContent} />
       </div>
     );
@@ -33,7 +33,7 @@ export function ToolResultBlock({ result }: { result: ObservationResult }) {
 
   if (isShort) {
     return (
-      <div className="max-w-[85%] mt-1 bg-panel/60 border border-default rounded-lg overflow-hidden">
+      <div className="max-w-[85%] mt-1 bg-panel/30 border border-default rounded-lg overflow-hidden">
         <ToolOutput text={content} isError={isError} />
       </div>
     );
@@ -59,7 +59,7 @@ export function ToolResultBlock({ result }: { result: ObservationResult }) {
         )}
       </button>
       {open && (
-        <div className="mt-1 bg-panel/60 border border-default rounded-lg overflow-hidden">
+        <div className="mt-1 bg-panel/30 border border-default rounded-lg overflow-hidden">
           <ToolOutput text={content} isError={isError} />
         </div>
       )}
@@ -92,7 +92,7 @@ function ToolOutput({ text, isError }: { text: string; isError: boolean }) {
   if (formattedJson) {
     return (
       <div className="relative">
-        <div className="flex items-center justify-between px-3 py-1 bg-control/60 border-b border-card">
+        <div className="flex items-center justify-between px-3 py-1 bg-control/40 border-b border-card">
           <span className="text-[10px] font-medium text-dimmed uppercase tracking-wider">json</span>
           <CopyButton text={formattedJson} />
         </div>
@@ -116,7 +116,7 @@ function ToolOutput({ text, isError }: { text: string; isError: boolean }) {
     <div className="relative">
       <pre
         className={`text-xs p-3 overflow-x-auto whitespace-pre-wrap break-words max-h-96 overflow-y-auto ${
-          isError ? "text-rose-700 dark:text-rose-300" : "text-teal-700 dark:text-teal-200/80"
+          isError ? "text-rose-800 dark:text-rose-200" : "text-teal-800 dark:text-teal-100"
         }`}
       >
         {displayed}

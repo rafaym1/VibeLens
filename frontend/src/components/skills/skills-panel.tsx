@@ -450,7 +450,7 @@ export function SkillsPanel({ checkedIds, activeJobId, onJobIdChange }: SkillsPa
                   </button>
                 </Tooltip>
               </div>
-              <div className="flex-1 overflow-y-auto p-3 pt-1">
+              <div className="flex-1 min-h-0 overflow-y-auto p-3 pt-1">
                 <SkillsHistory onSelect={handleHistorySelect} refreshTrigger={historyRefresh} filterMode={currentMode} activeJobId={activeJobId} />
               </div>
             </div>

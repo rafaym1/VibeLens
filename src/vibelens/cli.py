@@ -3,7 +3,9 @@
 import asyncio
 import importlib
 import shutil
+import socket
 import threading
+import time
 import webbrowser
 from pathlib import Path
 
@@ -13,15 +15,30 @@ import uvicorn
 from vibelens import __version__
 from vibelens.config import load_settings
 
-# Wait for the server to bind before opening the browser
-BROWSER_OPEN_DELAY_SECONDS = 1.5
+# Polling interval when waiting for the server to accept connections
+POLL_INTERVAL_SECONDS = 0.3
+# Maximum time to wait for the server before giving up
+POLL_TIMEOUT_SECONDS = 30
 
 app = typer.Typer(name="vibelens", help="Agent Trajectory analysis and visualization platform.")
 
 
-def _open_browser(url: str) -> None:
-    """Open the given URL in the default browser."""
-    webbrowser.open(url)
+def _open_browser_when_ready(host: str, port: int, url: str) -> None:
+    """Poll the server until it accepts connections, then open the browser.
+
+    Args:
+        host: Server bind host.
+        port: Server bind port.
+        url: Full URL to open in the browser.
+    """
+    deadline = time.monotonic() + POLL_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=1):
+                webbrowser.open(url)
+                return
+        except OSError:
+            time.sleep(POLL_INTERVAL_SECONDS)
 
 
 @app.command()
@@ -41,9 +58,10 @@ def serve(
 
     if open_browser:
         url = f"http://{bind_host}:{bind_port}"
-        timer = threading.Timer(BROWSER_OPEN_DELAY_SECONDS, _open_browser, args=[url])
-        timer.daemon = True
-        timer.start()
+        thread = threading.Thread(
+            target=_open_browser_when_ready, args=[bind_host, bind_port, url], daemon=True
+        )
+        thread.start()
 
     uvicorn.run(
         "vibelens.app:create_app", factory=True, host=bind_host, port=bind_port, reload=False
@@ -212,11 +230,10 @@ def recommend(
         url = f"http://{bind_host}:{bind_port}?recommendation={result.analysis_id}"
         typer.echo(f"Opening {url}")
 
-        timer = threading.Timer(
-            BROWSER_OPEN_DELAY_SECONDS, _open_browser, args=[url]
+        thread = threading.Thread(
+            target=_open_browser_when_ready, args=[bind_host, bind_port, url], daemon=True
         )
-        timer.daemon = True
-        timer.start()
+        thread.start()
 
         uvicorn.run(
             "vibelens.app:create_app",

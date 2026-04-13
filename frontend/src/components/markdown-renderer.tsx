@@ -88,7 +88,7 @@ function MarkdownRendererInner({ content, className = "" }: MarkdownRendererProp
             </span>
             <CopyButton text={codeText} />
           </div>
-          <pre className="p-3 overflow-x-auto bg-panel/60 text-[12px] leading-relaxed !m-0">
+          <pre className="p-3 overflow-x-auto bg-panel/30 text-[12px] leading-relaxed !m-0">
             {children}
           </pre>
         </div>

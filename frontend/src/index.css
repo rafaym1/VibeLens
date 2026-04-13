@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=OpenDyslexic:wght@400;700&display=swap');
+@import '@fontsource/opendyslexic/400.css';
+@import '@fontsource/opendyslexic/700.css';
 @import 'highlight.js/styles/github.css';
 
 :root {
@@ -84,12 +85,12 @@
   --color-chart-text: #6e6e73;
   --color-chart-crosshair: rgba(8, 145, 178, 0.3);
 
-  /* Heatmap */
+  /* Heatmap — high contrast steps for clear differentiation */
   --color-heatmap-0: rgba(0, 0, 0, 0.04);
-  --color-heatmap-1: rgba(8, 145, 178, 0.15);
-  --color-heatmap-2: rgba(8, 145, 178, 0.30);
-  --color-heatmap-3: rgba(8, 145, 178, 0.50);
-  --color-heatmap-4: rgba(8, 145, 178, 0.70);
+  --color-heatmap-1: rgba(8, 145, 178, 0.25);
+  --color-heatmap-2: rgba(8, 145, 178, 0.50);
+  --color-heatmap-3: rgba(8, 145, 178, 0.75);
+  --color-heatmap-4: rgba(8, 145, 178, 1.0);
 
   /* Scrollbar */
   --color-scrollbar-thumb: rgba(0, 0, 0, 0.15);
@@ -193,12 +194,12 @@
   --color-chart-text: #a1a1aa;
   --color-chart-crosshair: rgba(34, 211, 238, 0.4);
 
-  /* Heatmap */
+  /* Heatmap — high contrast steps for clear differentiation */
   --color-heatmap-0: rgba(255, 255, 255, 0.04);
-  --color-heatmap-1: rgba(34, 211, 238, 0.20);
-  --color-heatmap-2: rgba(34, 211, 238, 0.40);
-  --color-heatmap-3: rgba(34, 211, 238, 0.60);
-  --color-heatmap-4: rgba(34, 211, 238, 0.80);
+  --color-heatmap-1: rgba(34, 211, 238, 0.30);
+  --color-heatmap-2: rgba(34, 211, 238, 0.55);
+  --color-heatmap-3: rgba(34, 211, 238, 0.80);
+  --color-heatmap-4: rgba(34, 211, 238, 1.0);
 
   /* Scrollbar */
   --color-scrollbar-thumb: rgba(63, 63, 70, 0.5);

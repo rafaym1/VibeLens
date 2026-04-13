@@ -12,11 +12,11 @@ import {
   RefreshCw,
   Wrench,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppContext } from "../../app";
 import type { DashboardStats, ToolUsageStat } from "../../types";
 import { formatTokens, formatDuration, formatCost, baseProjectName } from "../../utils";
-import { LoadingSpinner } from "../loading-spinner";
+import { LoadingSpinnerRings } from "../loading-spinner";
 import { ActivityHeatmap } from "./activity-heatmap";
 import { BarRow } from "./bar-row";
 import { ModelDistribution } from "./model-distribution-chart";
@@ -40,38 +40,39 @@ export function DashboardView({ cache }: DashboardViewProps) {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"csv" | "json" | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [showAllProjects, setShowAllProjects] = useState(false);
   const { tip, show, move, hide } = useTooltip();
 
   // Populate from cache when it arrives (background preload)
   useEffect(() => {
-    if (cache && !stats) {
+    if (!cache) return;
+    if (cache.stats && !stats) {
       setStats(cache.stats);
-      setToolUsage(cache.toolUsage);
       setLoading(false);
+    }
+    if (cache.toolUsage.length > 0) {
+      setToolUsage(cache.toolUsage);
     }
   }, [cache, stats]);
 
-  // Fallback: fetch directly if cache hasn't arrived after mount
+  // Fallback: fetch stats directly if cache hasn't arrived after mount.
+  // Stats use metadata (fast); tool usage loads all sessions (slow) and arrives later.
   useEffect(() => {
     if (cache || stats || selectedProject || selectedAgent) return;
-    Promise.all([
-      fetchWithToken("/api/analysis/dashboard")
-        .then((r) => (r.ok ? r.json() : null)),
-      fetchWithToken("/api/analysis/tool-usage")
-        .then((r) => (r.ok ? r.json() : []))
-        .catch(() => []),
-    ])
-      .then(([dashData, toolData]: [DashboardStats | null, ToolUsageStat[]]) => {
-        if (dashData) {
-          setStats(dashData);
-          setToolUsage(toolData);
-        } else {
-          setError("Failed to load dashboard data");
-        }
+    fetchWithToken("/api/analysis/dashboard")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: DashboardStats | null) => {
+        if (data) setStats(data);
+        else setError("Failed to load dashboard data");
       })
       .catch((err) => setError(String(err)))
       .finally(() => setLoading(false));
+
+    fetchWithToken("/api/analysis/tool-usage")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: ToolUsageStat[]) => setToolUsage(data))
+      .catch(() => {});
   }, [cache, stats, fetchWithToken, selectedProject]);
 
   // Fetch on-demand when filtering by project or agent
@@ -113,6 +114,32 @@ export function DashboardView({ cache }: DashboardViewProps) {
   }, [cache]);
 
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      // Re-scan sessions from disk, then invalidate cache and recompute stats
+      await fetchWithToken("/api/sessions?refresh=true");
+      const [dashData, toolData] = await Promise.all([
+        fetchWithToken("/api/analysis/dashboard?refresh=true").then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        }),
+        fetchWithToken("/api/analysis/tool-usage")
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+      ]);
+      setStats(dashData as DashboardStats);
+      setToolUsage(toolData as ToolUsageStat[]);
+      setSelectedProject(null);
+      setSelectedAgent(null);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchWithToken]);
+
   const handleExport = async (format: "csv" | "json") => {
     setExporting(format);
     const params = new URLSearchParams({ format });
@@ -138,7 +165,7 @@ export function DashboardView({ cache }: DashboardViewProps) {
   };
 
   if (loading) {
-    return <LoadingSpinner label="Loading dashboard" />;
+    return <WarmingProgressBar />;
   }
 
   if (error || !stats) {
@@ -211,18 +238,21 @@ export function DashboardView({ cache }: DashboardViewProps) {
           </div>
           <div className="flex items-center gap-3">
             {stats.cached_at && (
-              <span
-                className="flex items-center gap-1.5 text-xs text-dimmed"
-                onMouseEnter={(e) =>
-                  show(e, "Stats are cached for 1 hour. Data reflects sessions available at this time.")
-                }
-                onMouseMove={move}
-                onMouseLeave={hide}
-              >
-                <RefreshCw className="w-3 h-3" />
+              <span className="flex items-center gap-1.5 text-xs text-dimmed">
                 Updated {new Date(stats.cached_at).toLocaleTimeString()}
               </span>
             )}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary hover:text-primary bg-control/80 hover:bg-control-hover rounded-lg border border-card transition disabled:opacity-50 disabled:cursor-not-allowed"
+              onMouseEnter={(e) => show(e, "Refresh dashboard data")}
+              onMouseMove={move}
+              onMouseLeave={hide}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </button>
             <button
               onClick={() => handleExport("csv")}
               disabled={exporting !== null}
@@ -606,34 +636,105 @@ export function DashboardView({ cache }: DashboardViewProps) {
               />
             </div>
 
-            {toolUsage.length > 0 && (
-              <div className="rounded-xl border border-card bg-panel/80 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Wrench className="w-4 h-4 text-accent-cyan" />
-                    <h3
-                      className="text-base font-medium text-secondary cursor-default"
-                      onMouseEnter={(e) =>
-                        show(e, `Tool call distribution (${totalToolCalls(toolUsage).toLocaleString()} total, avg ${stats.avg_tool_calls_per_session.toFixed(1)}/session)`)
-                      }
-                      onMouseMove={move}
-                      onMouseLeave={hide}
-                    >
-                      Tool Distribution
-                    </h3>
-                  </div>
+            <div className="rounded-xl border border-card bg-panel/80 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-accent-cyan" />
+                  <h3
+                    className="text-base font-medium text-secondary cursor-default"
+                    onMouseEnter={(e) =>
+                      show(e, toolUsage.length > 0
+                        ? `Tool call distribution (${totalToolCalls(toolUsage).toLocaleString()} total, avg ${stats.avg_tool_calls_per_session.toFixed(1)}/session)`
+                        : "Loading tool usage data...")
+                    }
+                    onMouseMove={move}
+                    onMouseLeave={hide}
+                  >
+                    Tool Distribution
+                  </h3>
+                </div>
+                {toolUsage.length > 0 ? (
                   <span className="text-xs text-dimmed">
                     {totalToolCalls(toolUsage).toLocaleString()} total
                   </span>
-                </div>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-xs text-dimmed">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Loading
+                  </span>
+                )}
+              </div>
+              {toolUsage.length > 0 ? (
                 <ToolDistribution
                   data={toolUsage}
                   onHover={show}
                   onMove={move}
                   onLeave={hide}
                 />
-              </div>
+              ) : (
+                <div className="flex items-center justify-center py-8 text-xs text-dimmed">
+                  Loading tool usage across all sessions...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Warming progress bar shown while cache is loading ── */
+
+const POLL_INTERVAL_MS = 1500;
+
+interface WarmingStatus {
+  total: number;
+  loaded: number;
+  done: boolean;
+}
+
+function WarmingProgressBar() {
+  const { fetchWithToken } = useAppContext();
+  const [status, setStatus] = useState<WarmingStatus | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  useEffect(() => {
+    const poll = () => {
+      fetchWithToken("/api/warming-status")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: WarmingStatus | null) => {
+          if (data) setStatus(data);
+        })
+        .catch(() => {});
+    };
+    poll();
+    timerRef.current = setInterval(poll, POLL_INTERVAL_MS);
+    return () => clearInterval(timerRef.current);
+  }, [fetchWithToken]);
+
+  const total = status?.total ?? 0;
+  const loaded = status?.loaded ?? 0;
+  const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
+
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="flex flex-col items-center gap-5 w-72">
+        <LoadingSpinnerRings color="cyan" />
+        <div className="w-full space-y-2">
+          <div className="flex items-center justify-between text-xs text-secondary">
+            <span>Loading sessions</span>
+            {total > 0 && (
+              <span className="tabular-nums">
+                {loaded}/{total} ({pct}%)
+              </span>
             )}
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-control overflow-hidden">
+            <div
+              className="h-full rounded-full bg-accent-cyan transition-all duration-500 ease-out"
+              style={{ width: total > 0 ? `${pct}%` : "0%" }}
+            />
           </div>
         </div>
       </div>

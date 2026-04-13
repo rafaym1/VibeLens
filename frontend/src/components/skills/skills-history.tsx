@@ -20,10 +20,12 @@ function formatDuration(seconds: number): string {
 
 function HistoryCard({
   meta,
+  isLoading,
   onSelect,
   onDelete,
 }: {
   meta: SkillAnalysisMeta;
+  isLoading: boolean;
   onSelect: () => void;
   onDelete: () => void;
 }) {
@@ -54,61 +56,75 @@ function HistoryCard({
   });
 
   return (
-    <div
-      onClick={onSelect}
-      className="group relative px-3 py-2.5 border-b border-card hover:bg-zinc-100 dark:hover:bg-zinc-800/60 cursor-pointer transition"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0 space-y-1">
-          <p className="text-xs text-secondary font-semibold truncate">
-            {meta.title || "Untitled"}
-          </p>
-          <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 text-[10px] text-accent-cyan/70">
-              <Layers className="w-2.5 h-2.5" />
-              {meta.session_ids.length} session{meta.session_ids.length !== 1 ? "s" : ""}
-            </span>
-            {(meta.is_example || meta.model.startsWith("mock/")) && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700/50 text-amber-600 dark:text-amber-400">Example</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2.5 text-[10px] text-muted">
-            {meta.cost_usd != null && (
-              <span className="inline-flex items-center gap-1">
-                <Coins className="w-2.5 h-2.5" />
-                ${meta.cost_usd.toFixed(3)}
+    <>
+      <button
+        type="button"
+        onClick={onSelect}
+        disabled={isLoading}
+        className={`group relative w-full text-left px-3 py-2.5 border-b border-card cursor-pointer transition ${
+          isLoading
+            ? "bg-accent-teal-subtle/50"
+            : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-xs text-secondary font-semibold truncate">
+              {meta.title || "Untitled"}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[10px] text-accent-cyan/70">
+                <Layers className="w-2.5 h-2.5" />
+                {meta.session_ids.length} session{meta.session_ids.length !== 1 ? "s" : ""}
               </span>
-            )}
-            {meta.duration_seconds != null && (
+              {(meta.is_example || meta.model.startsWith("mock/")) && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700/50 text-amber-600 dark:text-amber-400">Example</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2.5 text-[10px] text-muted">
+              {meta.cost_usd != null && (
+                <span className="inline-flex items-center gap-1">
+                  <Coins className="w-2.5 h-2.5" />
+                  ${meta.cost_usd.toFixed(3)}
+                </span>
+              )}
+              {meta.duration_seconds != null && (
+                <span className="inline-flex items-center gap-1">
+                  <Timer className="w-2.5 h-2.5" />
+                  {formatDuration(meta.duration_seconds)}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-muted">
               <span className="inline-flex items-center gap-1">
-                <Timer className="w-2.5 h-2.5" />
-                {formatDuration(meta.duration_seconds)}
+                <Calendar className="w-2.5 h-2.5" />
+                {dateStr}
               </span>
-            )}
+              <span className="inline-flex items-center gap-1">
+                <Clock className="w-2.5 h-2.5" />
+                {timeStr}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-muted">
-            <span className="inline-flex items-center gap-1">
-              <Calendar className="w-2.5 h-2.5" />
-              {dateStr}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="w-2.5 h-2.5" />
-              {timeStr}
-            </span>
+          <div
+            role="button"
+            tabIndex={-1}
+            onClick={handleDeleteClick}
+            className={`opacity-0 group-hover:opacity-100 p-1 text-dimmed hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition ${deleting ? "opacity-100" : ""}`}
+          >
+            {deleting ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Trash2 className="w-3 h-3" />
+            )}
           </div>
         </div>
-        <button
-          onClick={handleDeleteClick}
-          disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 p-1 text-dimmed hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition"
-        >
-          {deleting ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <Trash2 className="w-3 h-3" />
-          )}
-        </button>
-      </div>
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-panel/60">
+            <Loader2 className="w-3.5 h-3.5 text-accent-teal animate-spin" />
+          </div>
+        )}
+      </button>
       {showConfirm && (
         <ConfirmDialog
           title="Delete Analysis"
@@ -121,7 +137,7 @@ function HistoryCard({
       {showInstallDialog && (
         <InstallLocallyDialog onClose={() => setShowInstallDialog(false)} />
       )}
-    </div>
+    </>
   );
 }
 
@@ -139,6 +155,7 @@ export function SkillsHistory({
   const { fetchWithToken } = useAppContext();
   const [analyses, setAnalyses] = useState<SkillAnalysisMeta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -166,6 +183,7 @@ export function SkillsHistory({
 
   const handleSelect = useCallback(
     async (meta: SkillAnalysisMeta) => {
+      setLoadingId(meta.analysis_id);
       try {
         const res = await fetchWithToken(`/api/skills/analysis/${meta.analysis_id}`);
         if (res.ok) {
@@ -174,6 +192,8 @@ export function SkillsHistory({
         }
       } catch {
         // Ignore load errors
+      } finally {
+        setLoadingId(null);
       }
     },
     [fetchWithToken, onSelect],
@@ -228,6 +248,7 @@ export function SkillsHistory({
         <HistoryCard
           key={meta.analysis_id}
           meta={meta}
+          isLoading={loadingId === meta.analysis_id}
           onSelect={() => handleSelect(meta)}
           onDelete={() => handleDelete(meta.analysis_id)}
         />

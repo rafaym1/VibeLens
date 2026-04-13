@@ -152,8 +152,8 @@ function ToolInputRenderer({
     const filePath = String(data.file_path || "");
     const lang = filePath.split(".").pop() || "";
     return (
-      <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-control/60 border-b border-card">
+      <div className="bg-panel/30 border border-default rounded-lg overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-control/40 border-b border-card">
           <FileCode className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
           <span className="text-[11px] font-mono text-secondary truncate flex-1">{filePath}</span>
           {lang && (
@@ -167,8 +167,8 @@ function ToolInputRenderer({
 
   if (n === "grep") {
     return (
-      <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2 bg-control/60">
+      <div className="bg-panel/30 border border-default rounded-lg overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2 bg-control/40">
           <Search className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           <span className="text-[11px] font-mono text-secondary">
             {Boolean(data.pattern) && (
@@ -185,8 +185,8 @@ function ToolInputRenderer({
 
   if (n === "glob") {
     return (
-      <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2 bg-control/60">
+      <div className="bg-panel/30 border border-default rounded-lg overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2 bg-control/40">
           <FolderOpen className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
           <span className="text-[11px] font-mono text-secondary">
             {Boolean(data.pattern) && (
@@ -203,7 +203,7 @@ function ToolInputRenderer({
 
   const jsonStr = JSON.stringify(data, null, 2);
   return (
-    <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
+    <div className="bg-panel/30 border border-default rounded-lg overflow-hidden">
       <MarkdownRenderer
         content={`\`\`\`json\n${jsonStr}\n\`\`\``}
         className="[&>div]:my-0 [&>div]:border-0 [&>div]:rounded-none"
@@ -214,15 +214,15 @@ function ToolInputRenderer({
 
 function BashRenderer({ command }: { command: string }) {
   return (
-    <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-control/60 border-b border-card">
+    <div className="bg-panel/30 border border-default rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-control/40 border-b border-card">
         <div className="flex items-center gap-1.5">
           <Terminal className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
           <span className="text-[10px] font-medium text-muted uppercase tracking-wider">Command</span>
         </div>
         <CopyButton text={command} />
       </div>
-      <pre className="p-3 overflow-x-auto text-[12px] font-mono text-green-700 dark:text-green-300 leading-relaxed">
+      <pre className="p-3 overflow-x-auto text-[12px] font-mono text-green-800 dark:text-green-200 leading-relaxed">
         <span className="text-dimmed">$ </span>{command}
       </pre>
     </div>
@@ -251,8 +251,8 @@ function EditRenderer({
   }
 
   return (
-    <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-control/60 border-b border-card">
+    <div className="bg-panel/30 border border-default rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-control/40 border-b border-card">
         <Pencil className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
         <span className="text-[11px] font-mono text-secondary truncate flex-1">{filePath}</span>
         {addCount > 0 && (
@@ -322,14 +322,14 @@ function WriteRenderer({
       : content;
 
   return (
-    <div className="bg-panel/60 border border-default rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-control/60 border-b border-card">
+    <div className="bg-panel/30 border border-default rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-control/40 border-b border-card">
         <FilePlus2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
         <span className="text-[11px] font-mono text-secondary truncate flex-1">{filePath}</span>
         <span className="text-[10px] text-dimmed">{lineCount} lines</span>
       </div>
       {content && (
-        <pre className="p-3 overflow-x-auto text-[11px] font-mono text-muted max-h-48 overflow-y-auto leading-relaxed">
+        <pre className="p-3 overflow-x-auto text-[11px] font-mono text-secondary max-h-48 overflow-y-auto leading-relaxed">
           {previewContent}
         </pre>
       )}

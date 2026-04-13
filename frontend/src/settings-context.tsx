@@ -43,7 +43,7 @@ const SettingsContext = createContext<SettingsValue>({
   theme: "system",
   setTheme: () => {},
   themeOptions: THEME_OPTIONS,
-  fontFamily: "default",
+  fontFamily: "system",
   setFontFamily: () => {},
   fontFamilyOptions: FONT_FAMILY_OPTIONS,
 });
@@ -83,7 +83,7 @@ function loadPersistedFontFamily(): FontFamily {
   if (parsed.fontFamily && FONT_FAMILY_OPTIONS.includes(parsed.fontFamily as FontFamily)) {
     return parsed.fontFamily as FontFamily;
   }
-  return "default";
+  return "system";
 }
 
 function persistSettings(fontScale: FontScale, theme: ThemePreference, fontFamily: FontFamily): void {

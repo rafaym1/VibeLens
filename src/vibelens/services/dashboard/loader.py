@@ -1,6 +1,7 @@
 """Dashboard service — trajectory loading, caching, and reconciliation."""
 
-import time
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
 from cachetools import TTLCache
@@ -29,15 +30,17 @@ from vibelens.utils.timestamps import parse_metadata_timestamp
 
 logger = get_logger(__name__)
 
-# Number of sessions to load per batch during cache warming.
-# After each batch, the thread sleeps briefly to release the GIL
-# so the event loop can serve other requests (friction history, LLM status).
-WARM_BATCH_SIZE = 20
-# Sleep between batches to release the GIL for other requests
-WARM_YIELD_SECONDS = 0.01
+# Thread pool size for parallel session loading during cache warming.
+# Each load is I/O-bound (JSONL file read + JSON parsing), so we use
+# many more threads than CPU cores to maximize I/O overlap.
+WARM_MAX_WORKERS = min((os.cpu_count() or 4) * 4, 32)
 
 _dashboard_cache: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL_SECONDS)
 _tool_usage_cache: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL_SECONDS)
+
+# Warming progress visible to the status API.
+# Updated atomically by _load_sessions_parallel; read by get_warming_status().
+_warming_progress: dict = {"total": 0, "loaded": 0, "done": True}
 
 
 def load_filtered_trajectories(
@@ -169,20 +172,27 @@ def get_session_analytics(
     return compute_session_analytics(group)
 
 
+def get_warming_status() -> dict:
+    """Return current cache warming progress for the status API.
+
+    Returns:
+        Dict with total, loaded, and done fields.
+    """
+    return dict(_warming_progress)
+
+
 def warm_cache() -> None:
     """Pre-compute global dashboard stats and tool usage into cache.
 
     Dashboard stats use enriched metadata (fast-scanned token counts)
     to avoid loading full trajectories. Tool usage still requires full
-    trajectories since it needs per-tool function names.
-
-    Sessions are loaded in batches of WARM_BATCH_SIZE with brief
-    GIL-releasing sleeps between batches so the event loop can serve
-    other endpoints (friction history, LLM status) concurrently.
+    trajectories since it needs per-tool function names — these are
+    loaded in parallel using a thread pool for speed.
     """
+    _warming_progress.update(total=0, loaded=0, done=False)
     logger.info("Warming dashboard cache...")
-    cache_key_dash = "dash:all:None:None:None"
-    cache_key_tools = "tools:all:None:None:None"
+    cache_key_dash = "dash:all:None:None:None:all"
+    cache_key_tools = "tools:all:None:None:None:all"
 
     metadata = list_all_metadata(session_token=None)
     filtered = filter_metadata(metadata, None, None, None)
@@ -197,53 +207,104 @@ def warm_cache() -> None:
         _reconcile_session_counts(stats, trajectories, filtered)
     _dashboard_cache[cache_key_dash] = stats
 
-    # Tool usage requires full trajectories — load in batches to yield GIL
+    # Tool usage requires full trajectories — load in parallel
     trajectories = _load_and_enrich_trajectories(
-        filtered, session_token=None, batch_size=WARM_BATCH_SIZE
+        filtered, session_token=None, parallel=True
     )
     usage = compute_tool_usage(trajectories)
     _tool_usage_cache[cache_key_tools] = usage
 
+    _warming_progress["done"] = True
     logger.info("Dashboard cache warmed")
 
 
 def _load_and_enrich_trajectories(
-    metadata: list[dict], session_token: str | None, batch_size: int = 0
+    metadata: list[dict], session_token: str | None, parallel: bool = False
 ) -> list[Trajectory]:
     """Load trajectories from metadata, enriching project_path from skeleton data.
 
-    When ``batch_size > 0``, sleeps briefly between batches to release the
-    GIL so the async event loop can serve other requests concurrently.
+    When ``parallel=True``, uses a thread pool to load sessions concurrently.
+    Each session load is I/O-bound (JSONL file read + JSON parsing), so
+    threads provide near-linear speedup.
 
     Args:
         metadata: Filtered metadata list with session_ids to load.
         session_token: Browser tab token for upload scoping.
-        batch_size: If > 0, yield GIL every N sessions. 0 means no yielding.
+        parallel: If True, load sessions using a thread pool.
 
     Returns:
         List of loaded Trajectory objects.
     """
+    valid_metadata = [(meta, meta.get("session_id", "")) for meta in metadata]
+    valid_metadata = [(meta, sid) for meta, sid in valid_metadata if sid]
+    total = len(valid_metadata)
+
+    if not valid_metadata:
+        return []
+
+    if not parallel:
+        return _load_sessions_sequential(valid_metadata, session_token, total)
+    return _load_sessions_parallel(valid_metadata, session_token, total)
+
+
+def _load_one_session(
+    meta: dict, session_id: str, session_token: str | None
+) -> Trajectory | None:
+    """Load a single session and enrich its project_path.
+
+    Args:
+        meta: Metadata dict for the session.
+        session_id: Session identifier.
+        session_token: Browser tab token for upload scoping.
+
+    Returns:
+        Enriched Trajectory, or None on failure.
+    """
+    try:
+        group = load_from_stores(session_id, session_token)
+        if group:
+            traj = group[0]
+            if not traj.project_path:
+                traj.project_path = meta.get("project_path")
+            return traj
+    except Exception:
+        logger.warning("Failed to load session %s, skipping", session_id)
+    return None
+
+
+def _load_sessions_sequential(
+    valid_metadata: list[tuple[dict, str]], session_token: str | None, total: int
+) -> list[Trajectory]:
+    """Load sessions one at a time (used for non-warming requests)."""
     trajectories: list[Trajectory] = []
+    for meta, sid in valid_metadata:
+        traj = _load_one_session(meta, sid, session_token)
+        if traj:
+            trajectories.append(traj)
+    return trajectories
 
-    for i, meta in enumerate(metadata):
-        session_id = meta.get("session_id", "")
-        if not session_id:
-            continue
-        try:
-            group = load_from_stores(session_id, session_token)
-            if group:
-                traj = group[0]
-                # Enrich project_path from skeleton metadata when full
-                # parse fails to extract it (cwd not in first N entries)
-                if not traj.project_path:
-                    traj.project_path = meta.get("project_path")
+
+def _load_sessions_parallel(
+    valid_metadata: list[tuple[dict, str]], session_token: str | None, total: int
+) -> list[Trajectory]:
+    """Load sessions concurrently using a thread pool."""
+    _warming_progress.update(total=total, loaded=0)
+    trajectories: list[Trajectory] = []
+    done_count = 0
+
+    with ThreadPoolExecutor(max_workers=WARM_MAX_WORKERS) as pool:
+        futures = {
+            pool.submit(_load_one_session, meta, sid, session_token): sid
+            for meta, sid in valid_metadata
+        }
+        for future in as_completed(futures):
+            done_count += 1
+            _warming_progress["loaded"] = done_count
+            traj = future.result()
+            if traj:
                 trajectories.append(traj)
-        except Exception:
-            logger.warning("Failed to load session %s, skipping", session_id)
-
-        if batch_size > 0 and (i + 1) % batch_size == 0:
-            logger.info("Cache warming progress: %d/%d sessions loaded", i + 1, len(metadata))
-            time.sleep(WARM_YIELD_SECONDS)
+            if done_count % 50 == 0 or done_count == total:
+                logger.info("Cache warming progress: %d/%d sessions loaded", done_count, total)
 
     return trajectories
 

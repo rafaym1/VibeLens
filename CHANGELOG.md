@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.9.31] - 2026-04-12
+
+### Added
+- **Recommendation pipeline**: L1-L4 engine with TF-IDF retrieval, multi-signal scoring, LLM profiling/rationale, catalog loader, API endpoints, and frontend view.
+- **Recommend CLI**: `vibelens recommend` with backend auto-discovery and lightweight compaction-based extraction.
+- **Catalog CLI**: `vibelens build-catalog` and `vibelens update-catalog` commands.
+- **Light mode**: Full light/dark/system theme with CSS custom property tokens, semantic color migration across all components, and settings toggle.
+- **Expanded tool categories**: Added interact, browser, and infra groups.
+
+### Fixed
+- **Recommendation 404**: Bundled catalog with static assets to resolve missing route.
+- **Python 3.10 compatibility**: Replaced `datetime.UTC` with `timezone.utc`, added `StrEnum` shim, raised minimum Python to 3.10.
+
+### Changed
+- **Frontend restructure**: Renamed `conversation/` to `session/`, `analysis/` to `dashboard/`, extracted `friction/` and `upload/` directories, split large components (step-block, friction-panel, skill-analysis-views), promoted shared state components to root.
+- **Backend model reorganization**: New `models/recommendation/`, `models/creation/`, `models/evolution/`, `models/friction/`, `models/session/` packages. Moved prompts to `src/vibelens/prompts/`.
+- **GEMINI_CLI merged**: Consolidated `GEMINI_CLI` into `GEMINI` enum across backend and frontend.
+- **Naming updates**: `AgentType`/`BackendType` renamed to official product names. `cached_input_per_mtok` to `cache_read_per_mtok`.
+
 ## [0.9.30] - 2026-04-09
 
 ### Added

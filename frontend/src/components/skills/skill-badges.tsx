@@ -1,4 +1,4 @@
-import { FolderOpen, Tag, Wrench } from "lucide-react";
+import { Tag, Wrench } from "lucide-react";
 import { Tooltip } from "../tooltip";
 import {
   CATEGORY_COLORS,
@@ -113,19 +113,6 @@ export function ToolList({ tools, max = 3 }: { tools: string[]; max?: number }) 
       {tools.length > max && (
         <span className="text-[10px] text-faint">+{tools.length - max}</span>
       )}
-    </div>
-  );
-}
-
-/** Row of subdirectory badges, prefixed by a FolderOpen icon. */
-export function SubdirList({ dirs }: { dirs: string[] }) {
-  if (dirs.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      <FolderOpen className="w-3 h-3 text-dimmed shrink-0 mt-0.5" />
-      {dirs.map((dir) => (
-        <SubdirBadge key={dir} dir={dir} />
-      ))}
     </div>
   );
 }
