@@ -12,6 +12,12 @@ const MODE_LABELS: Record<SkillMode, string> = {
   evolution: "Evolve",
 };
 
+const MODE_API_BASE: Record<SkillMode, string> = {
+  retrieval: "/api/recommendation",
+  creation: "/api/creation",
+  evolution: "/api/evolution",
+};
+
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds.toFixed(1)}s`;
   return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
@@ -160,7 +166,8 @@ export function PersonalizationHistory({
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchWithToken("/api/skills/analysis/history");
+      const apiBase = filterMode ? MODE_API_BASE[filterMode] : "/api/recommendation";
+      const res = await fetchWithToken(`${apiBase}/history`);
       if (res.ok) {
         const data: SkillAnalysisMeta[] = await res.json();
         setAnalyses(data);
@@ -170,7 +177,7 @@ export function PersonalizationHistory({
     } finally {
       setLoading(false);
     }
-  }, [fetchWithToken]);
+  }, [fetchWithToken, filterMode]);
 
   useEffect(() => {
     fetchHistory();
@@ -185,7 +192,8 @@ export function PersonalizationHistory({
     async (meta: SkillAnalysisMeta) => {
       setLoadingId(meta.analysis_id);
       try {
-        const res = await fetchWithToken(`/api/skills/analysis/${meta.analysis_id}`);
+        const apiBase = MODE_API_BASE[meta.mode];
+        const res = await fetchWithToken(`${apiBase}/${meta.analysis_id}`);
         if (res.ok) {
           const result: SkillAnalysisResult = await res.json();
           onSelect(result);
@@ -200,9 +208,10 @@ export function PersonalizationHistory({
   );
 
   const handleDelete = useCallback(
-    async (analysisId: string) => {
+    async (analysisId: string, mode: SkillMode) => {
       try {
-        await fetchWithToken(`/api/skills/analysis/${analysisId}`, {
+        const apiBase = MODE_API_BASE[mode];
+        await fetchWithToken(`${apiBase}/${analysisId}`, {
           method: "DELETE",
         });
         setAnalyses((prev) => prev.filter((a) => a.analysis_id !== analysisId));
@@ -250,7 +259,7 @@ export function PersonalizationHistory({
           meta={meta}
           isLoading={loadingId === meta.analysis_id}
           onSelect={() => handleSelect(meta)}
-          onDelete={() => handleDelete(meta.analysis_id)}
+          onDelete={() => handleDelete(meta.analysis_id, meta.mode)}
         />
       ))}
     </div>

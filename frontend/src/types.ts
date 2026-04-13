@@ -489,6 +489,8 @@ export interface CatalogRecommendation {
   install_command: string | null;
   has_content: boolean;
   source_url: string | null;
+  tags: string[];
+  category: string;
 }
 
 export interface RecommendationResult {
