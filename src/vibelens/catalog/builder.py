@@ -93,19 +93,19 @@ def build_catalog(
 
     bwc_dir = hub_dir / "buildwithclaude"
     if bwc_dir.is_dir():
-        bwc_items = parse_buildwithclaude(bwc_dir)
+        bwc_items, _ = parse_buildwithclaude(bwc_dir)
         print(f"  buildwithclaude: {len(bwc_items)} items")
         raw_items.extend(bwc_items)
 
     cct_dir = hub_dir / "claude-code-templates"
     if cct_dir.is_dir():
-        cct_items = parse_templates(cct_dir)
+        cct_items, _ = parse_templates(cct_dir)
         print(f"  claude-code-templates: {len(cct_items)} items")
         raw_items.extend(cct_items)
 
     featured_dir = hub_dir / "skills-hub"
     if featured_dir.is_dir():
-        featured_items = parse_featured(featured_dir)
+        featured_items, _ = parse_featured(featured_dir)
         print(f"  skills-hub featured: {len(featured_items)} items")
         raw_items.extend(featured_items)
 

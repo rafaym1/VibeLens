@@ -1,5 +1,6 @@
 """Parse claude-code-templates components directory."""
 
+import contextlib
 import json
 from pathlib import Path
 
@@ -18,31 +19,57 @@ DIR_TYPE_MAP: dict[str, tuple[ItemType, str]] = {
 }
 
 
-def parse_templates(hub_dir: Path) -> list[CatalogItem]:
+def parse_templates(hub_dir: Path) -> tuple[list[CatalogItem], dict[str, str]]:
     """Parse all items from a claude-code-templates hub directory.
 
     Args:
         hub_dir: Path to the claude-code-templates directory.
 
     Returns:
-        List of CatalogItem instances.
+        Tuple of (items, path_map) where path_map maps item_id to relative
+        file path from hub_dir.
     """
     comp_dir = hub_dir / COMPONENTS_REL
     if not comp_dir.is_dir():
-        return []
+        return [], {}
 
     items: list[CatalogItem] = []
+    path_map: dict[str, str] = {}
     for subdir in sorted(comp_dir.iterdir()):
         if not subdir.is_dir() or subdir.name in EXCLUDED_DIRS:
             continue
-        if subdir.name in DIR_TYPE_MAP:
+        if subdir.name == "skills":
+            for item in _parse_md_components(subdir, ItemType.SKILL, "skill"):
+                items.append(item)
+                rel_path = COMPONENTS_REL / "skills" / item.name / "SKILL.md"
+                path_map[item.item_id] = str(rel_path)
+        elif subdir.name in DIR_TYPE_MAP:
             item_type, type_label = DIR_TYPE_MAP[subdir.name]
-            items.extend(_parse_md_components(subdir, item_type, type_label))
+            # Build a name->path map by scanning files so we can associate items to paths
+            name_to_rel: dict[str, str] = {}
+            for md_file in subdir.glob("**/*.md"):
+                try:
+                    content = md_file.read_text(encoding="utf-8")
+                except OSError:
+                    continue
+                meta, _ = parse_frontmatter(content)
+                file_name = meta.get("name") or md_file.stem
+                with contextlib.suppress(ValueError):
+                    name_to_rel[file_name] = str(md_file.relative_to(hub_dir))
+            for item in _parse_md_components(subdir, item_type, type_label):
+                items.append(item)
+                if item.name in name_to_rel:
+                    path_map[item.item_id] = name_to_rel[item.name]
         elif subdir.name == "hooks":
-            items.extend(_parse_hook_components(subdir))
+            for item in _parse_hook_components(subdir):
+                items.append(item)
+                # item_id suffix is "category/stem", reconstruct path from it
+                item_id_suffix = item.item_id[len(f"{SOURCE_PREFIX}:hook:"):]
+                rel_path = COMPONENTS_REL / "hooks" / f"{item_id_suffix}.json"
+                path_map[item.item_id] = str(rel_path)
         elif subdir.name == "mcps":
             items.extend(_parse_mcp_components(subdir))
-    return items
+    return items, path_map
 
 
 def _parse_md_components(

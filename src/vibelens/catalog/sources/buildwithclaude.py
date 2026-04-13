@@ -1,5 +1,6 @@
 """Parse buildwithclaude plugins directory and MCP servers JSON."""
 
+import contextlib
 import json
 from pathlib import Path
 
@@ -10,7 +11,7 @@ SOURCE_PREFIX = "bwc"
 DEFAULT_PLATFORMS = ["claude_code"]
 
 
-def parse_buildwithclaude(hub_dir: Path) -> list[CatalogItem]:
+def parse_buildwithclaude(hub_dir: Path) -> tuple[list[CatalogItem], dict[str, str]]:
     """Parse all items from a buildwithclaude hub directory.
 
     Reads plugins/ subdirectories for agents, commands, skills, hooks,
@@ -20,36 +21,61 @@ def parse_buildwithclaude(hub_dir: Path) -> list[CatalogItem]:
         hub_dir: Path to the buildwithclaude directory.
 
     Returns:
-        List of CatalogItem instances.
+        Tuple of (items, path_map) where path_map maps item_id to relative
+        file path from hub_dir.
     """
     items: list[CatalogItem] = []
+    path_map: dict[str, str] = {}
     plugins_dir = hub_dir / "plugins"
     if plugins_dir.is_dir():
-        items.extend(_parse_plugins(plugins_dir))
+        plugin_items, plugin_paths = _parse_plugins(plugins_dir, hub_dir)
+        items.extend(plugin_items)
+        path_map.update(plugin_paths)
     mcp_path = hub_dir / "mcp-servers.json"
     if mcp_path.is_file():
         items.extend(_parse_mcp_servers(mcp_path))
-    return items
+    return items, path_map
 
 
-def _parse_plugins(plugins_dir: Path) -> list[CatalogItem]:
+def _parse_plugins(
+    plugins_dir: Path, hub_dir: Path
+) -> tuple[list[CatalogItem], dict[str, str]]:
     """Parse all plugin packages under plugins/.
 
     Args:
         plugins_dir: Path to the plugins/ directory.
+        hub_dir: Path to the hub root, used to compute relative paths.
 
     Returns:
-        List of CatalogItem instances from all plugin subdirectories.
+        Tuple of (items, path_map) where path_map maps item_id to relative
+        file path from hub_dir.
     """
     items: list[CatalogItem] = []
+    path_map: dict[str, str] = {}
     for plugin_dir in sorted(plugins_dir.iterdir()):
         if not plugin_dir.is_dir():
             continue
-        items.extend(_parse_agents(plugin_dir))
-        items.extend(_parse_commands(plugin_dir))
-        items.extend(_parse_skills(plugin_dir))
-        items.extend(_parse_hooks(plugin_dir))
-    return items
+        for item in _parse_agents(plugin_dir):
+            items.append(item)
+            abs_path = plugin_dir / "agents" / f"{item.name}.md"
+            with contextlib.suppress(ValueError):
+                path_map[item.item_id] = str(abs_path.relative_to(hub_dir))
+        for item in _parse_commands(plugin_dir):
+            items.append(item)
+            abs_path = plugin_dir / "commands" / f"{item.name}.md"
+            with contextlib.suppress(ValueError):
+                path_map[item.item_id] = str(abs_path.relative_to(hub_dir))
+        for item in _parse_skills(plugin_dir):
+            items.append(item)
+            abs_path = plugin_dir / "skills" / item.name / "SKILL.md"
+            with contextlib.suppress(ValueError):
+                path_map[item.item_id] = str(abs_path.relative_to(hub_dir))
+        for item in _parse_hooks(plugin_dir):
+            items.append(item)
+            abs_path = plugin_dir / "hooks" / f"{item.name}.json"
+            with contextlib.suppress(ValueError):
+                path_map[item.item_id] = str(abs_path.relative_to(hub_dir))
+    return items, path_map
 
 
 def _parse_agents(plugin_dir: Path) -> list[CatalogItem]:

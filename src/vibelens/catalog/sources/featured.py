@@ -10,23 +10,27 @@ SOURCE_PREFIX = "featured"
 DEFAULT_PLATFORMS = ["claude_code"]
 
 
-def parse_featured(hub_dir: Path) -> list[CatalogItem]:
+def parse_featured(hub_dir: Path) -> tuple[list[CatalogItem], dict[str, str]]:
     """Parse featured-skills.json into CatalogItem list.
+
+    Featured items already carry source_url from the JSON, so no path_map
+    is needed.
 
     Args:
         hub_dir: Path to the skills-hub directory containing featured-skills.json.
 
     Returns:
-        List of CatalogItem instances.
+        Tuple of (items, path_map). path_map is always empty because featured
+        items already have source_url populated from the JSON data.
     """
     json_path = hub_dir / "featured-skills.json"
     if not json_path.is_file():
-        return []
+        return [], {}
 
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return []
+        return [], {}
 
     skills = data.get("skills") or []
     max_stars = max((s.get("stars") or 0 for s in skills), default=1)
@@ -62,4 +66,4 @@ def parse_featured(hub_dir: Path) -> list[CatalogItem]:
                 install_method="skill_file",
             )
         )
-    return items
+    return items, {}

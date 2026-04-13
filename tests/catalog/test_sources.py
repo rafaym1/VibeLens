@@ -36,13 +36,14 @@ def test_bwc_parses_agents(tmp_path: Path):
         "Ensures WCAG compliance",
         "design-experience",
     )
-    items = parse_buildwithclaude(tmp_path)
+    items, path_map = parse_buildwithclaude(tmp_path)
     agents = [i for i in items if i.item_type == ItemType.SUBAGENT]
     assert len(agents) == 1
     assert agents[0].name == "accessibility-expert"
     assert agents[0].item_id == "bwc:agent:accessibility-expert"
     assert agents[0].install_content is not None
     assert "WCAG" in agents[0].description
+    assert path_map.get("bwc:agent:accessibility-expert") is not None
     print(f"BWC agent: {agents[0].item_id} — {agents[0].description}")
 
 
@@ -55,7 +56,7 @@ def test_bwc_parses_commands(tmp_path: Path):
         "Generate REST API designs",
         "api-development",
     )
-    items = parse_buildwithclaude(tmp_path)
+    items, _ = parse_buildwithclaude(tmp_path)
     commands = [i for i in items if i.item_type == ItemType.COMMAND]
     assert len(commands) == 1
     assert commands[0].item_id == "bwc:command:design-rest-api"
@@ -67,7 +68,7 @@ def test_bwc_parses_skills(tmp_path: Path):
     plugin_dir = tmp_path / "plugins" / "all-skills"
     skill_dir = plugin_dir / "skills" / "my-skill"
     _write_md(skill_dir / "SKILL.md", "my-skill", "Does cool things", "automation")
-    items = parse_buildwithclaude(tmp_path)
+    items, _ = parse_buildwithclaude(tmp_path)
     skills = [i for i in items if i.item_type == ItemType.SKILL]
     assert len(skills) == 1
     assert skills[0].item_id == "bwc:skill:my-skill"
@@ -88,7 +89,7 @@ def test_bwc_parses_hooks(tmp_path: Path):
             },
         },
     )
-    items = parse_buildwithclaude(tmp_path)
+    items, _ = parse_buildwithclaude(tmp_path)
     hooks = [i for i in items if i.item_type == ItemType.HOOK]
     assert len(hooks) == 1
     assert hooks[0].item_id == "bwc:hook:project-boundary"
@@ -114,7 +115,7 @@ def test_bwc_parses_mcp_servers(tmp_path: Path):
             }
         },
     )
-    items = parse_buildwithclaude(tmp_path)
+    items, _ = parse_buildwithclaude(tmp_path)
     mcps = [i for i in items if i.item_type == ItemType.REPO]
     assert len(mcps) == 1
     assert mcps[0].item_id == "bwc:mcp:github-server"
@@ -125,8 +126,9 @@ def test_bwc_parses_mcp_servers(tmp_path: Path):
 
 def test_bwc_empty_dir(tmp_path: Path):
     """Return empty list for missing or empty directory."""
-    items = parse_buildwithclaude(tmp_path)
+    items, path_map = parse_buildwithclaude(tmp_path)
     assert items == []
+    assert path_map == {}
     print("BWC empty dir: 0 items")
 
 
@@ -139,11 +141,12 @@ def test_cct_parses_agents(tmp_path: Path):
         "Design and optimize LLM prompts",
         "ai-specialists",
     )
-    items = parse_templates(tmp_path)
+    items, path_map = parse_templates(tmp_path)
     agents = [i for i in items if i.item_type == ItemType.SUBAGENT]
     assert len(agents) == 1
     assert agents[0].item_id == "cct:agent:prompt-engineer"
     assert agents[0].install_content is not None
+    assert path_map.get("cct:agent:prompt-engineer") is not None
     print(f"CCT agent: {agents[0].item_id}")
 
 
@@ -155,10 +158,11 @@ def test_cct_parses_skills(tmp_path: Path):
         "design-to-code",
         "Figma to React conversion",
     )
-    items = parse_templates(tmp_path)
+    items, path_map = parse_templates(tmp_path)
     skills = [i for i in items if i.item_type == ItemType.SKILL]
     assert len(skills) == 1
     assert skills[0].item_id == "cct:skill:design-to-code"
+    assert path_map.get("cct:skill:design-to-code") is not None
     print(f"CCT skill: {skills[0].item_id}")
 
 
@@ -177,7 +181,7 @@ def test_cct_parses_mcps(tmp_path: Path):
             }
         },
     )
-    items = parse_templates(tmp_path)
+    items, _ = parse_templates(tmp_path)
     mcps = [i for i in items if i.item_type == ItemType.REPO]
     assert len(mcps) == 1
     assert mcps[0].item_id == "cct:mcp:deepgraph/deepgraph-typescript"
@@ -189,7 +193,7 @@ def test_cct_excludes_settings(tmp_path: Path):
     comp_dir = tmp_path / "cli-tool" / "components"
     (comp_dir / "settings" / "general").mkdir(parents=True)
     (comp_dir / "settings" / "general" / "theme.json").write_text('{"theme": "dark"}')
-    items = parse_templates(tmp_path)
+    items, _ = parse_templates(tmp_path)
     assert len(items) == 0
     print("CCT settings excluded: 0 items")
 
@@ -211,10 +215,11 @@ def test_cct_parses_hooks(tmp_path: Path):
             },
         },
     )
-    items = parse_templates(tmp_path)
+    items, path_map = parse_templates(tmp_path)
     hooks = [i for i in items if i.item_type == ItemType.HOOK]
     assert len(hooks) == 1
     assert hooks[0].item_id == "cct:hook:security/secret-scanner"
+    assert path_map.get("cct:hook:security/secret-scanner") is not None
     print(f"CCT hook: {hooks[0].item_id}")
 
 
@@ -252,20 +257,22 @@ def test_featured_parses_skills(tmp_path: Path):
             ],
         },
     )
-    items = parse_featured(tmp_path)
+    items, path_map = parse_featured(tmp_path)
     assert len(items) == 2
     assert items[0].item_id == "featured:skill:algorithmic-art"
     assert items[0].item_type == ItemType.SKILL
     assert items[0].popularity > 0.0
     assert items[0].updated_at == "2026-03-25T01:00:33Z"
     assert items[0].source_url == "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art"
+    assert path_map == {}
     print(f"Featured: {[i.item_id for i in items]}")
 
 
 def test_featured_missing_file(tmp_path: Path):
     """Return empty list when featured-skills.json is missing."""
-    items = parse_featured(tmp_path)
+    items, path_map = parse_featured(tmp_path)
     assert items == []
+    assert path_map == {}
     print("Featured missing: 0 items")
 
 
@@ -288,6 +295,6 @@ def test_featured_skips_no_summary(tmp_path: Path):
             ]
         },
     )
-    items = parse_featured(tmp_path)
+    items, _ = parse_featured(tmp_path)
     assert len(items) == 0
     print("Featured no-summary: 0 items")
