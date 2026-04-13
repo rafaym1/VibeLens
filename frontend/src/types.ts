@@ -520,6 +520,11 @@ export interface CatalogItemSummary {
   popularity: number;
   updated_at: string;
   source_url: string;
+  repo_full_name: string;
+  stars: number;
+  forks: number;
+  language: string;
+  license_name: string;
   install_method: string;
   install_command: string | null;
   is_file_based: boolean;
