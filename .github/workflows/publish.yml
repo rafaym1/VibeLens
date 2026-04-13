@@ -43,3 +43,12 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Trigger Homebrew tap update
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          gh workflow run update-formula.yml \
+            --repo CHATS-lab/homebrew-tap \
+            --field version="$TAG"
+        env:
+          GH_TOKEN: ${{ secrets.TAP_WORKFLOW_PAT }}
