@@ -27,7 +27,6 @@ This npm package is a thin wrapper that detects your Python installation and del
 | Method | Command |
 |--------|---------|
 | pip | `pip install vibelens` |
-| Homebrew | `brew install chats-lab/tap/vibelens` |
 | Developer | `uv pip install -e ".[dev]"` |
 
 ## Links
