@@ -50,6 +50,10 @@ class CatalogItem(BaseModel):
     updated_at: str = Field(description="Last commit ISO timestamp.")
     source_url: str = Field(description="GitHub URL.")
     repo_full_name: str = Field(description="GitHub owner/repo.")
+    stars: int = Field(default=0, description="GitHub star count.")
+    forks: int = Field(default=0, description="GitHub fork count.")
+    language: str = Field(default="", description="Primary repository language.")
+    license_name: str = Field(default="", description="Repository license identifier (e.g. MIT).")
     install_method: str = Field(
         description="Installation method: skill_file, pip, npm, mcp_config, etc."
     )
