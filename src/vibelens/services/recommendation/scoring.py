@@ -31,6 +31,35 @@ PLATFORM_ALIASES: dict[str, str] = {
 }
 
 
+def score_candidates(
+    candidates: list[tuple[CatalogItem, float]], profile: UserProfile, top_k: int = 15
+) -> list[tuple[CatalogItem, float]]:
+    """Score and rank retrieval candidates using weighted signals.
+
+    Args:
+        candidates: (CatalogItem, relevance_score) pairs from retrieval.
+        profile: User profile for platform matching.
+        top_k: Number of top results to return.
+
+    Returns:
+        Top-k (CatalogItem, composite_score) pairs sorted by score descending.
+    """
+    scored: list[tuple[CatalogItem, float]] = []
+
+    for item, relevance in candidates:
+        composite = (
+            WEIGHT_RELEVANCE * relevance
+            + WEIGHT_QUALITY * _score_quality(item)
+            + WEIGHT_PLATFORM_MATCH * _score_platform_match(item, profile)
+            + WEIGHT_POPULARITY * _score_popularity(item)
+            + WEIGHT_COMPOSABILITY * 0.0  # Composability uses pre-computed pairs (future)
+        )
+        scored.append((item, composite))
+
+    scored.sort(key=lambda pair: pair[1], reverse=True)
+    return scored[:top_k]
+
+
 def _score_quality(item: CatalogItem) -> float:
     """Normalize quality score to 0.0-1.0 range.
 
@@ -83,32 +112,3 @@ def _score_popularity(item: CatalogItem) -> float:
         Popularity score.
     """
     return min(max(item.popularity, 0.0), 1.0)
-
-
-def score_candidates(
-    candidates: list[tuple[CatalogItem, float]], profile: UserProfile, top_k: int = 15
-) -> list[tuple[CatalogItem, float]]:
-    """Score and rank retrieval candidates using weighted signals.
-
-    Args:
-        candidates: (CatalogItem, relevance_score) pairs from retrieval.
-        profile: User profile for platform matching.
-        top_k: Number of top results to return.
-
-    Returns:
-        Top-k (CatalogItem, composite_score) pairs sorted by score descending.
-    """
-    scored: list[tuple[CatalogItem, float]] = []
-
-    for item, relevance in candidates:
-        composite = (
-            WEIGHT_RELEVANCE * relevance
-            + WEIGHT_QUALITY * _score_quality(item)
-            + WEIGHT_PLATFORM_MATCH * _score_platform_match(item, profile)
-            + WEIGHT_POPULARITY * _score_popularity(item)
-            + WEIGHT_COMPOSABILITY * 0.0  # Composability uses pre-computed pairs (future)
-        )
-        scored.append((item, composite))
-
-    scored.sort(key=lambda pair: pair[1], reverse=True)
-    return scored[:top_k]

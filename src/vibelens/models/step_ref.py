@@ -11,10 +11,8 @@ class StepRef(BaseModel):
     """
 
     session_id: str = Field(description="Session containing the referenced step(s).")
-    start_step_id: str = Field(description="Step ID of the first (or only) step.")
-    end_step_id: str | None = Field(
-        default=None, description="Last step for range refs. None for point refs."
-    )
+    start_step_id: str = Field(description="Start step id of a range.")
+    end_step_id: str = Field(description="Last step id of a range.")
 
     @model_validator(mode="after")
     def normalize_point_ref(self) -> "StepRef":

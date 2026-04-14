@@ -18,7 +18,7 @@ export function CostEstimateDialog({
   const [agreed, setAgreed] = useState(false);
 
   return (
-    <Modal onClose={onCancel} maxWidth="max-w-md">
+    <Modal onClose={onCancel} maxWidth="max-w-lg">
       <ModalHeader onClose={onCancel}>
         <h2 className="text-base font-semibold text-primary">Confirm Analysis</h2>
       </ModalHeader>

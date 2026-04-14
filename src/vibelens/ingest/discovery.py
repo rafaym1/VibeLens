@@ -25,8 +25,8 @@ _SKIP_DIR_NAMES = {SUBAGENTS_DIR_NAME, "parsed"}
 PARSEABLE_EXTENSIONS = {".json", ".jsonl"}
 
 _PARSERS_BY_TYPE: dict[AgentType, type[BaseParser]] = {
-    AgentType.CLAUDE_CODE: ClaudeCodeParser,
-    AgentType.CLAUDE_CODE_WEB: ClaudeCodeWebParser,
+    AgentType.CLAUDE: ClaudeCodeParser,
+    AgentType.CLAUDE_WEB: ClaudeCodeWebParser,
     AgentType.CODEX: CodexParser,
     AgentType.GEMINI: GeminiParser,
     AgentType.OPENCLAW: OpenClawParser,

@@ -71,11 +71,10 @@ interface AnalysisWelcomePageProps {
   maxSessions: number;
   error: string | null;
   onRun: () => void;
+  onRunAll?: () => void;
   isDemo?: boolean;
   tutorial?: Tutorial;
   tutorialAccentColor?: AccentColor;
-  buttonLabel?: string;
-  alwaysEnabled?: boolean;
 }
 
 export function AnalysisWelcomePage({
@@ -90,11 +89,10 @@ export function AnalysisWelcomePage({
   maxSessions,
   error,
   onRun,
+  onRunAll,
   isDemo,
   tutorial,
   tutorialAccentColor,
-  buttonLabel,
-  alwaysEnabled,
 }: AnalysisWelcomePageProps) {
   const [view, setView] = useState<"intro" | "config">("intro");
   const [showInstallDialog, setShowInstallDialog] = useState(false);
@@ -189,20 +187,29 @@ export function AnalysisWelcomePage({
           </div>
         )}
 
-        <Tooltip text={!alwaysEnabled && checkedCount === 0 ? "Use the checkboxes in the session list to select sessions for analysis." : ""}>
-          <button
-            onClick={isDemo ? () => setShowInstallDialog(true) : onRun}
-            disabled={(!alwaysEnabled && checkedCount === 0) || overLimit || (!isConnected && !isMock)}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 ${ACCENT_BUTTON[accentColor]} text-white text-sm font-medium rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed`}
-          >
-            <Play className="w-4 h-4" />
-            {buttonLabel
-              ? buttonLabel
-              : checkedCount > 0
+        <div className="flex flex-col items-center gap-3">
+          <Tooltip text={checkedCount === 0 ? "Use the checkboxes in the session list to select sessions for analysis." : ""}>
+            <button
+              onClick={isDemo ? () => setShowInstallDialog(true) : onRun}
+              disabled={checkedCount === 0 || overLimit || (!isConnected && !isMock)}
+              className={`inline-flex items-center gap-2 px-5 py-2.5 ${ACCENT_BUTTON[accentColor]} text-white text-sm font-medium rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed`}
+            >
+              <Play className="w-4 h-4" />
+              {checkedCount > 0
                 ? `Analyze ${checkedCount} session${checkedCount !== 1 ? "s" : ""}`
                 : "Select sessions first"}
-          </button>
-        </Tooltip>
+            </button>
+          </Tooltip>
+          {onRunAll && (
+            <button
+              onClick={isDemo ? () => setShowInstallDialog(true) : onRunAll}
+              disabled={!isConnected && !isMock}
+              className="text-xs text-muted hover:text-secondary transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              or analyze all sessions
+            </button>
+          )}
+        </div>
       </div>
 
       {showInstallDialog && (

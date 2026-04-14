@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from vibelens.models.skill import SkillMode
+from vibelens.models.personalization.enums import PersonalizationMode
 
 
 class SkillWriteRequest(BaseModel):
@@ -40,7 +40,7 @@ class PersonalizationMeta(BaseModel):
     """Lightweight metadata for a persisted personalization analysis."""
 
     analysis_id: str = Field(description="Unique ID for this analysis.")
-    mode: SkillMode = Field(description="Analysis mode used.")
+    mode: PersonalizationMode = Field(description="Analysis mode used.")
     title: str = Field(default="", description="LLM-generated analysis title.")
     session_ids: list[str] = Field(description="Sessions that were analyzed.")
     created_at: str = Field(description="ISO timestamp of analysis.")

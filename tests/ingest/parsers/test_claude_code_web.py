@@ -506,7 +506,7 @@ def test_agent_type_is_claude_code_web():
     """Parser AGENT_TYPE is set correctly."""
     from vibelens.models.enums import AgentType
 
-    assert _parser.AGENT_TYPE == AgentType.CLAUDE_CODE_WEB
+    assert _parser.AGENT_TYPE == AgentType.CLAUDE_WEB
 
     trajectories = _parser.parse(
         json.dumps(
@@ -520,5 +520,5 @@ def test_agent_type_is_claude_code_web():
             ]
         )
     )
-    assert trajectories[0].agent.name == "claude_code_web"
+    assert trajectories[0].agent.name == "claude_web"
     print(f"Agent type: {trajectories[0].agent.name}")

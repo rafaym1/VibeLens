@@ -221,7 +221,7 @@ export function SkillDetailPopup({
             <div className="flex flex-wrap gap-1.5">
               {agentSources.map((src) => {
                 const installedSource = skill.sources.find((s) => s.source_type === src.key);
-                const isSynced = !!installedSource || skill.skill_targets.includes(src.key);
+                const isSynced = !!installedSource;
                 const hasDir = !!src.skills_dir;
                 const tooltipText = isSynced
                   ? installedSource?.source_path ?? `Synced to ${src.label}`

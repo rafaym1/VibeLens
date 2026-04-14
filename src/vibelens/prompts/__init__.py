@@ -1,13 +1,13 @@
 """Analysis prompt registry."""
 
 from vibelens.models.llm.prompts import AnalysisPrompt
-from vibelens.prompts.evolution import SKILL_EVOLUTION_PROPOSAL_PROMPT
-from vibelens.prompts.friction_analysis import FRICTION_ANALYSIS_PROMPT
+from vibelens.prompts.evolution import EVOLUTION_PROPOSAL_PROMPT
+from vibelens.prompts.friction_analysis import FRICTION_PROMPT
 from vibelens.prompts.recommendation import RECOMMENDATION_PROFILE_PROMPT
 
 PROMPT_REGISTRY: dict[str, AnalysisPrompt] = {
-    FRICTION_ANALYSIS_PROMPT.task_id: FRICTION_ANALYSIS_PROMPT,
-    SKILL_EVOLUTION_PROPOSAL_PROMPT.task_id: SKILL_EVOLUTION_PROPOSAL_PROMPT,
+    FRICTION_PROMPT.task_id: FRICTION_PROMPT,
+    EVOLUTION_PROPOSAL_PROMPT.task_id: EVOLUTION_PROPOSAL_PROMPT,
     RECOMMENDATION_PROFILE_PROMPT.task_id: RECOMMENDATION_PROFILE_PROMPT,
 }
 

@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from vibelens.models.skill.source import SkillSource, SkillSourceType
+from vibelens.models.skill.source import SkillSourceInfo
 
 # Enforces kebab-case naming (e.g. "test-fix-loop", "commit-with-review")
 VALID_SKILL_NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
@@ -18,7 +18,7 @@ class SkillInfo(BaseModel):
 
     name: str = Field(description="Skill identifier in kebab-case.")
     description: str = Field(description="Trigger description from frontmatter.")
-    sources: list[SkillSource] = Field(
+    sources: list[SkillSourceInfo] = Field(
         default_factory=list,
         description="All known sources from which this skill was loaded or is available.",
     )
@@ -29,10 +29,6 @@ class SkillInfo(BaseModel):
     content_hash: str = Field(description="Stable hash of the SKILL.md content.")
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata from frontmatter."
-    )
-    skill_targets: list[SkillSourceType] = Field(
-        default_factory=list,
-        description="Interfaces to which this skill is or can be synced.",
     )
 
     @field_validator("name")

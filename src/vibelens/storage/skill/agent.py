@@ -11,20 +11,20 @@ Registry:
 
 from pathlib import Path
 
-from vibelens.models.skill import SkillSourceType
+from vibelens.models.skill import SkillSource
 from vibelens.storage.skill.disk import DiskSkillStore
 
 # Maps each third-party agent to its default skills directory on macOS
-AGENT_SKILL_REGISTRY: dict[SkillSourceType, Path] = {
-    SkillSourceType.CURSOR: Path.home() / ".cursor" / "skills",
-    SkillSourceType.OPENCODE: Path.home() / ".config" / "opencode" / "skills",
-    SkillSourceType.ANTIGRAVITY: Path.home() / ".gemini" / "antigravity" / "global_skills",
-    SkillSourceType.KIMI: Path.home() / ".config" / "agents" / "skills",
-    SkillSourceType.OPENCLAW: Path.home() / ".openclaw" / "skills",
-    SkillSourceType.OPENHANDS: Path.home() / ".openhands" / "skills",
-    SkillSourceType.QWEN_CODE: Path.home() / ".qwen" / "skills",
-    SkillSourceType.GEMINI: Path.home() / ".gemini" / "skills",
-    SkillSourceType.COPILOT: Path.home() / ".copilot" / "skills",
+AGENT_SKILL_REGISTRY: dict[SkillSource, Path] = {
+    SkillSource.CURSOR: Path.home() / ".cursor" / "skills",
+    SkillSource.OPENCODE: Path.home() / ".config" / "opencode" / "skills",
+    SkillSource.ANTIGRAVITY: Path.home() / ".gemini" / "antigravity" / "global_skills",
+    SkillSource.KIMI: Path.home() / ".config" / "agents" / "skills",
+    SkillSource.OPENCLAW: Path.home() / ".openclaw" / "skills",
+    SkillSource.OPENHANDS: Path.home() / ".openhands" / "skills",
+    SkillSource.QWEN: Path.home() / ".qwen" / "skills",
+    SkillSource.GEMINI: Path.home() / ".gemini" / "skills",
+    SkillSource.COPILOT: Path.home() / ".copilot" / "skills",
 }
 
 

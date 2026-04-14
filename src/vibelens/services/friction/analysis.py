@@ -29,7 +29,7 @@ from vibelens.models.step_ref import StepRef
 from vibelens.models.trajectories import Trajectory
 from vibelens.models.trajectories.metrics import Metrics
 from vibelens.prompts.friction_analysis import (
-    FRICTION_ANALYSIS_PROMPT,
+    FRICTION_PROMPT,
     FRICTION_SYNTHESIS_PROMPT,
 )
 from vibelens.services.analysis_store import generate_analysis_id
@@ -38,7 +38,7 @@ from vibelens.services.inference_shared import (
     CACHE_TTL_SECONDS,
     build_system_kwargs,
     extract_all_contexts,
-    format_batch_digest,
+    format_context_batch,
     log_analysis_summary,
     require_backend,
     run_batches_concurrent,
@@ -86,9 +86,9 @@ def estimate_friction(session_ids: list[str], session_token: str | None = None) 
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
 
     batches = build_batches(context_set.contexts, max_batch_tokens=get_settings().max_batch_tokens)
-    system_prompt = FRICTION_ANALYSIS_PROMPT.render_system()
+    system_prompt = FRICTION_PROMPT.render_system()
 
-    batch_token_counts = [count_tokens(format_batch_digest(batch)) for batch in batches]
+    batch_token_counts = [count_tokens(format_context_batch(batch)) for batch in batches]
 
     return estimate_analysis_cost(
         batch_token_counts=batch_token_counts,
@@ -204,27 +204,23 @@ async def _infer_friction_analysis_batch(
     Returns:
         Tuple of (parsed batch output, cost in USD).
     """
-    digest = format_batch_digest(batch)
+    digest = format_context_batch(batch)
     session_count = len(batch.contexts)
 
-    system_kwargs = build_system_kwargs(FRICTION_ANALYSIS_PROMPT, backend)
-    system_prompt = FRICTION_ANALYSIS_PROMPT.render_system(**system_kwargs)
+    system_kwargs = build_system_kwargs(FRICTION_PROMPT, backend)
+    system_prompt = FRICTION_PROMPT.render_system(**system_kwargs)
 
-    non_digest_overhead = FRICTION_ANALYSIS_PROMPT.render_user(
-        session_count=session_count, batch_digest=""
-    )
+    non_digest_overhead = FRICTION_PROMPT.render_user(session_count=session_count, batch_digest="")
     digest = truncate_digest_to_fit(digest, system_prompt, non_digest_overhead)
 
-    user_prompt = FRICTION_ANALYSIS_PROMPT.render_user(
-        session_count=session_count, batch_digest=digest
-    )
+    user_prompt = FRICTION_PROMPT.render_user(session_count=session_count, batch_digest=digest)
 
     request = InferenceRequest(
         system=system_prompt,
         user=user_prompt,
         max_tokens=FRICTION_OUTPUT_TOKENS,
         timeout=FRICTION_TIMEOUT_SECONDS,
-        json_schema=FRICTION_ANALYSIS_PROMPT.output_json_schema(),
+        json_schema=FRICTION_PROMPT.output_json_schema(),
     )
 
     if batch_index == 0:

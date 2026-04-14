@@ -5,7 +5,7 @@ import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from vibelens.models.skill import SkillInfo, SkillSourceType
+from vibelens.models.skill import SkillInfo, SkillSource
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -28,7 +28,7 @@ class BaseSkillStore(ABC):
 
     @property
     @abstractmethod
-    def source_type(self) -> SkillSourceType:
+    def source_type(self) -> SkillSource:
         """Unified source/store type for this store."""
 
     @property

@@ -20,12 +20,7 @@ from pathlib import Path
 
 import yaml
 
-from vibelens.models.skill import (
-    VALID_SKILL_NAME,
-    SkillInfo,
-    SkillSource,
-    SkillSourceType,
-)
+from vibelens.models.skill import VALID_SKILL_NAME, SkillInfo, SkillSource, SkillSourceInfo
 from vibelens.storage.skill.base import BaseSkillStore
 from vibelens.utils.log import get_logger
 
@@ -48,13 +43,13 @@ class DiskSkillStore(BaseSkillStore):
     can be represented by a plain DiskSkillStore instance.
     """
 
-    def __init__(self, skills_dir: Path, source_type: SkillSourceType) -> None:
+    def __init__(self, skills_dir: Path, source_type: SkillSource) -> None:
         super().__init__()
         self._skills_dir = skills_dir.expanduser().resolve()
         self._source_type = source_type
 
     @property
-    def source_type(self) -> SkillSourceType:
+    def source_type(self) -> SkillSource:
         """Return the agent-specific source type."""
         return self._source_type
 
@@ -144,9 +139,7 @@ class DiskSkillStore(BaseSkillStore):
         logger.info("Deleted skill %r from %s", name, skill_dir)
         return True
 
-    def _build_skill_info(
-        self, name: str, skill_dir: Path, skill_file: Path
-    ) -> SkillInfo | None:
+    def _build_skill_info(self, name: str, skill_dir: Path, skill_file: Path) -> SkillInfo | None:
         """Parse a SKILL.md and build SkillInfo metadata."""
         try:
             text = skill_file.read_text(encoding="utf-8")
@@ -163,7 +156,7 @@ class DiskSkillStore(BaseSkillStore):
         return SkillInfo(
             name=name,
             description=description,
-            sources=[SkillSource(source_type=self.source_type, source_path=str(skill_dir))],
+            sources=[SkillSourceInfo(source_type=self.source_type, source_path=str(skill_dir))],
             central_path=None,
             content_hash=SkillInfo.hash_content(text),
             metadata={
@@ -173,7 +166,6 @@ class DiskSkillStore(BaseSkillStore):
                 "store_path": str(skill_dir),
                 "line_count": text.count("\n") + 1,
             },
-            skill_targets=[self.source_type],
         )
 
 

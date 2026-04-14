@@ -10,7 +10,7 @@ from pathlib import Path
 
 import yaml
 
-from vibelens.models.skill import SkillInfo, SkillSource, SkillSourceType
+from vibelens.models.skill import SkillInfo, SkillSource, SkillSourceInfo
 from vibelens.storage.skill.base import BaseSkillStore
 from vibelens.storage.skill.disk import (
     FRONTMATTER_DELIMITER,
@@ -30,18 +30,16 @@ class CentralSkillStore(DiskSkillStore):
     """Central repository for VibeLens-managed skills.
 
     Extends DiskSkillStore with source metadata injection and
-    central-specific frontmatter fields (tags, sources, skill_targets).
+    central-specific frontmatter fields (tags, sources).
     Creates its directory on init (unlike agent stores which are read-only).
     """
 
     def __init__(self, root_dir: Path) -> None:
-        super().__init__(root_dir, SkillSourceType.CENTRAL)
+        super().__init__(root_dir, SkillSource.CENTRAL)
         self._skills_dir.mkdir(parents=True, exist_ok=True)
 
-    def _build_skill_info(
-        self, name: str, skill_dir: Path, skill_file: Path
-    ) -> SkillInfo | None:
-        """Parse central SKILL.md with extra metadata (tags, sources, skill_targets)."""
+    def _build_skill_info(self, name: str, skill_dir: Path, skill_file: Path) -> SkillInfo | None:
+        """Parse central SKILL.md with extra metadata (tags, sources)."""
         try:
             text = skill_file.read_text(encoding="utf-8")
         except OSError as exc:
@@ -53,7 +51,7 @@ class CentralSkillStore(DiskSkillStore):
         allowed_tools = parse_allowed_tools(frontmatter.pop("allowed-tools", None))
         tags = frontmatter.pop("tags", [])
         sources = _parse_sources(frontmatter.pop("sources", None))
-        skill_targets = _parse_skill_targets(frontmatter.pop("skill_targets", None))
+        frontmatter.pop("skill_targets", None)
         frontmatter.pop("name", None)
 
         if not isinstance(tags, list):
@@ -72,7 +70,6 @@ class CentralSkillStore(DiskSkillStore):
                 "tags": [str(tag) for tag in tags if str(tag).strip()],
                 "line_count": text.count("\n") + 1,
             },
-            skill_targets=skill_targets,
         )
 
     def import_skill_from(
@@ -117,34 +114,21 @@ class CentralSkillStore(DiskSkillStore):
         skill_file.write_text(new_text.rstrip() + "\n", encoding="utf-8")
 
 
-def _parse_sources(raw: object) -> list[SkillSource]:
-    """Normalize persisted source metadata into SkillSource objects."""
+def _parse_sources(raw: object) -> list[SkillSourceInfo]:
+    """Normalize persisted source metadata into SkillSourceInfo objects."""
     if not isinstance(raw, list):
         return []
-    sources: list[SkillSource] = []
+    sources: list[SkillSourceInfo] = []
     for item in raw:
         if not isinstance(item, dict):
             continue
         try:
             sources.append(
-                SkillSource(
-                    source_type=SkillSourceType(item.get("source_type")),
+                SkillSourceInfo(
+                    source_type=SkillSource(item.get("source_type")),
                     source_path=str(item.get("source_path", "")),
                 )
             )
         except Exception:
             continue
     return sources
-
-
-def _parse_skill_targets(raw: object) -> list[SkillSourceType]:
-    """Normalize persisted target metadata into SkillSourceType values."""
-    if not isinstance(raw, list):
-        return []
-    targets: list[SkillSourceType] = []
-    for item in raw:
-        try:
-            targets.append(SkillSourceType(item))
-        except Exception:
-            continue
-    return targets

@@ -4,7 +4,7 @@ export type UploadStep = "select" | "upload" | "confirm" | "result";
 
 export const AGENT_OPTIONS: { type: AgentType; label: string }[] = [
   { type: "claude_code", label: "Claude Code" },
-  { type: "claude_code_web", label: "Claude Web" },
+  { type: "claude_web", label: "Claude Web" },
   { type: "codex", label: "Codex CLI" },
   { type: "gemini", label: "Gemini CLI" },
 ];
@@ -17,7 +17,7 @@ export const OS_OPTIONS: { platform: OSPlatform; label: string }[] = [
 
 export const AGENT_LABELS: Record<AgentType, string> = {
   claude_code: "Claude Code",
-  claude_code_web: "Claude Web",
+  claude_web: "Claude Web",
   codex: "Codex CLI",
   gemini: "Gemini CLI",
 };

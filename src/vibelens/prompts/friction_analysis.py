@@ -9,16 +9,16 @@ from vibelens.models.friction import FrictionAnalysisOutput
 from vibelens.models.llm.prompts import AnalysisPrompt, load_template
 
 # Per-batch friction detection: identifies friction types and mitigations
-FRICTION_ANALYSIS_PROMPT = AnalysisPrompt(
-    task_id="friction_analysis",
-    system_template=load_template("friction/analysis_system.j2"),
-    user_template=load_template("friction/analysis_user.j2"),
+FRICTION_PROMPT = AnalysisPrompt(
+    task_id="friction",
+    system_template=load_template("friction/friction_system.j2"),
+    user_template=load_template("friction/friction_user.j2"),
     output_model=FrictionAnalysisOutput,
 )
 # Post-batch synthesis: merges and deduplicates batch results into one report
 FRICTION_SYNTHESIS_PROMPT = AnalysisPrompt(
     task_id="friction_synthesis",
-    system_template=load_template("friction/synthesis_system.j2"),
-    user_template=load_template("friction/synthesis_user.j2"),
+    system_template=load_template("friction/friction_synthesis_system.j2"),
+    user_template=load_template("friction/friction_synthesis_user.j2"),
     output_model=FrictionAnalysisOutput,
 )

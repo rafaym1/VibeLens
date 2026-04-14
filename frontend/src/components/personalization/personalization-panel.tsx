@@ -16,7 +16,6 @@ import {
 } from "./personalization-view";
 import { PersonalizationHistory } from "./personalization-history";
 import { RecommendationView } from "./recommendation-results-view";
-import { RecommendConsentDialog } from "./recommend-consent-dialog";
 
 const TAB_CONFIG: { id: SkillTab; label: string; tooltip: string }[] = [
   { id: "local", label: "Local Skills", tooltip: "Manage installed SKILL.md files" },
@@ -149,7 +148,6 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
   const selectedSkillNamesRef = useRef<string[] | undefined>(undefined);
   const resolvedSessionIdsRef = useRef<string[]>([]);
   const [showSkillSelector, setShowSkillSelector] = useState(false);
-  const [showRecommendConsent, setShowRecommendConsent] = useState(false);
 
   const fetchAllSessionIds = useCallback(async (): Promise<string[]> => {
     const res = await fetchWithToken("/api/sessions");
@@ -159,11 +157,11 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
   }, [fetchWithToken]);
 
   const proceedToEstimate = useCallback(
-    async (mode: SkillMode) => {
+    async (mode: SkillMode, overrideSessionIds?: string[]) => {
       setEstimating(true);
       setAnalysisError(null);
       try {
-        const sessionIds = [...checkedIds];
+        const sessionIds = overrideSessionIds ?? [...checkedIds];
         const body: Record<string, unknown> = { session_ids: sessionIds };
         if (selectedSkillNamesRef.current) body.skill_names = selectedSkillNamesRef.current;
         const tabKey = Object.entries(MODE_MAP).find(([, v]) => v === mode)?.[0] ?? "retrieve";
@@ -233,27 +231,11 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
 
   const handleRequestEstimate = useCallback(
     async (mode: SkillMode) => {
-      if (mode !== "retrieval" && checkedIds.size === 0) return;
+      if (checkedIds.size === 0) return;
       pendingModeRef.current = mode;
       selectedSkillNamesRef.current = undefined;
       if (mode === "retrieval") {
-        setAnalysisError(null);
-        setAnalysisLoading(true);
-        try {
-          resolvedSessionIdsRef.current = await fetchAllSessionIds();
-          if (resolvedSessionIdsRef.current.length === 0) {
-            setAnalysisError("No sessions available for analysis.");
-            setAnalysisLoading(false);
-            return;
-          }
-        } catch (err) {
-          setAnalysisError(err instanceof Error ? err.message : String(err));
-          setAnalysisLoading(false);
-          return;
-        }
-        setAnalysisLoading(false);
-        setShowRecommendConsent(true);
-        return;
+        resolvedSessionIdsRef.current = [...checkedIds];
       }
       if (mode === "evolution") {
         setShowSkillSelector(true);
@@ -261,8 +243,25 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
       }
       proceedToEstimate(mode);
     },
-    [checkedIds, fetchAllSessionIds, handleConfirmAnalysis, proceedToEstimate],
+    [checkedIds, proceedToEstimate],
   );
+
+  const handleRunAll = useCallback(async () => {
+    pendingModeRef.current = "retrieval";
+    selectedSkillNamesRef.current = undefined;
+    setAnalysisError(null);
+    try {
+      const allIds = await fetchAllSessionIds();
+      if (allIds.length === 0) {
+        setAnalysisError("No sessions available for analysis.");
+        return;
+      }
+      resolvedSessionIdsRef.current = allIds;
+      proceedToEstimate("retrieval", allIds);
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : String(err));
+    }
+  }, [fetchAllSessionIds, proceedToEstimate]);
 
   const handleSkillSelectionConfirm = useCallback(
     (skillNames: string[]) => {
@@ -462,7 +461,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
           {activeTab === "local" && <LocalSkillsTab />}
           {activeTab === "explore" && <CatalogExploreTab />}
           {isAnalysisTab && (analysisLoading || estimating) && (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center pt-16">
               <div className="flex flex-col items-center gap-5 max-w-md">
                 <AnalysisLoadingState mode={currentMode} sessionCount={activeTab === "retrieve" ? resolvedSessionIdsRef.current.length : checkedIds.size} />
                 {activeJobId && (
@@ -497,7 +496,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
               error={analysisError}
               onRun={() => handleRequestEstimate(currentMode)}
               isDemo={appMode === "demo"}
-              {...(activeTab === "retrieve" ? { buttonLabel: "Start", alwaysEnabled: true } : {})}
+              {...(activeTab === "retrieve" ? { onRunAll: handleRunAll } : {})}
             />
           )}
           {isAnalysisTab && !analysisLoading && activeTab === "retrieve" && recommendationAnalysisId && (
@@ -572,15 +571,6 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
           fetchWithToken={fetchWithToken}
           onConfirm={handleSkillSelectionConfirm}
           onCancel={() => setShowSkillSelector(false)}
-        />
-      )}
-      {showRecommendConsent && (
-        <RecommendConsentDialog
-          onConfirm={() => {
-            setShowRecommendConsent(false);
-            handleConfirmAnalysis();
-          }}
-          onCancel={() => setShowRecommendConsent(false)}
         />
       )}
     </div>

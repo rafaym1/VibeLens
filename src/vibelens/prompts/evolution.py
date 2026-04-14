@@ -1,27 +1,30 @@
 """Prompts for element evolution: proposals, synthesis, and editing."""
 
 from vibelens.models.llm.prompts import AnalysisPrompt, load_template
-from vibelens.models.skill import SkillEvolution, SkillEvolutionProposalOutput
+from vibelens.models.personalization.evolution import (
+    EvolutionProposalBatch,
+    PersonalizationEvolution,
+)
 
-# Per-batch proposal: detects patterns and proposes improvements to existing skills
-SKILL_EVOLUTION_PROPOSAL_PROMPT = AnalysisPrompt(
-    task_id="skill_evolution_proposal",
+# Per-batch proposal: detects patterns and proposes improvements to existing elements
+EVOLUTION_PROPOSAL_PROMPT = AnalysisPrompt(
+    task_id="evolution_proposal",
     system_template=load_template("evolution/evolution_proposal_system.j2"),
     user_template=load_template("evolution/evolution_proposal_user.j2"),
-    output_model=SkillEvolutionProposalOutput,
+    output_model=EvolutionProposalBatch,
 )
 # Post-batch synthesis: merges and deduplicates evolution proposals across batches
-SKILL_EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT = AnalysisPrompt(
-    task_id="skill_evolution_proposal_synthesis",
+EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT = AnalysisPrompt(
+    task_id="evolution_proposal_synthesis",
     system_template=load_template("evolution/evolution_proposal_synthesis_system.j2"),
     user_template=load_template("evolution/evolution_proposal_synthesis_user.j2"),
-    output_model=SkillEvolutionProposalOutput,
+    output_model=EvolutionProposalBatch,
 )
 # Edit step: generates granular old_string/new_string edits for each proposal
-SKILL_EVOLUTION_EDIT_PROMPT = AnalysisPrompt(
-    task_id="skill_evolution_edit",
+EVOLUTION_PROMPT = AnalysisPrompt(
+    task_id="evolution",
     system_template=load_template("evolution/evolution_system.j2"),
     user_template=load_template("evolution/evolution_user.j2"),
-    output_model=SkillEvolution,
-    exclude_fields={"SkillEvolution": frozenset({"description", "addressed_patterns"})},
+    output_model=PersonalizationEvolution,
+    exclude_fields={"PersonalizationEvolution": frozenset({"addressed_patterns"})},
 )

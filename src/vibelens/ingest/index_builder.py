@@ -249,7 +249,7 @@ def _enrich_continuation_refs(
     claude_entries = {
         sid: fpath
         for sid, (fpath, parser) in file_index.items()
-        if parser.AGENT_TYPE == AgentType.CLAUDE_CODE
+        if parser.AGENT_TYPE == AgentType.CLAUDE
     }
     if not claude_entries:
         return

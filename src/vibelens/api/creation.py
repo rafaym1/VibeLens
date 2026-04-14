@@ -6,7 +6,7 @@ import secrets
 from fastapi import APIRouter, Header, HTTPException
 
 from vibelens.deps import get_personalization_store, is_demo_mode, is_test_mode
-from vibelens.models.skill import PersonalizationResult
+from vibelens.models.personalization.results import PersonalizationResult
 from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
 from vibelens.schemas.creation import CreationAnalysisMeta, CreationAnalysisRequest
@@ -33,7 +33,7 @@ async def _run_creation_analysis(
     """Background wrapper for creation analysis."""
     try:
         result = await analyze_skill_creation(session_ids, session_token=token)
-        mark_completed(job_id, result.analysis_id or "")
+        mark_completed(job_id, result.id)
     except asyncio.CancelledError:
         logger.info("Creation analysis job %s was cancelled", job_id)
         raise

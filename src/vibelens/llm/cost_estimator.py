@@ -136,7 +136,6 @@ def estimate_analysis_cost(
     return estimate
 
 
-
 def _compute_cost(
     pricing: ModelPricing | None,
     total_input_tokens: int,

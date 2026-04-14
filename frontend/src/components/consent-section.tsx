@@ -3,19 +3,19 @@ import { Coins, HardDrive, Send, Shield } from "lucide-react";
 const ANALYSIS_CONSENT_ITEMS: { icon: React.ReactNode; text: string }[] = [
   {
     icon: <Send className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />,
-    text: "Your session data, including conversations, tool calls, and file paths, will be sent to a third-party AI provider for analysis.",
+    text: "Session data will be sent to a third-party AI provider.",
   },
   {
     icon: <Coins className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />,
-    text: "This analysis will incur costs on your configured LLM API key.",
+    text: "Costs will be charged to your configured API key.",
   },
   {
     icon: <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />,
-    text: "VibeLens runs locally. Data is processed by the LLM provider for the API call but is not stored remotely.",
+    text: "Data is processed for the API call but not stored remotely.",
   },
   {
     icon: <HardDrive className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />,
-    text: "Analysis results are saved locally on your machine and can be deleted at any time.",
+    text: "Results are saved locally and can be deleted anytime.",
   },
 ];
 

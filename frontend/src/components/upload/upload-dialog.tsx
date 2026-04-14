@@ -45,7 +45,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
   const [uploadPhase, setUploadPhase] = useState<"sending" | "processing">("sending");
   const [result, setResult] = useState<UploadResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isWebExport = agentType === "claude_code_web";
+  const isWebExport = agentType === "claude_web";
 
   // Fetch command when entering upload step (skip for web exports)
   useEffect(() => {

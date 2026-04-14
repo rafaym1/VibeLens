@@ -1,14 +1,13 @@
-"""Skill evolution mode — propose improvements then edit existing skills.
+"""Skill evolution mode — propose improvements then evolve existing skills.
 
 Two-step pipeline (mirrors creation):
-1. _infer_skill_evolution_proposals: batch → concurrent LLM proposal calls
-   → optional synthesis → SkillEvolutionProposalOutput
-2. _infer_skill_evolution: single LLM call per proposal → SkillEvolution
+1. _infer_evolution_proposals: batch → concurrent LLM proposal calls
+   → optional synthesis → EvolutionProposalBatch
+2. _infer_skill_evolution: single LLM call per proposal → PersonalizationEvolution
 3. analyze_skill_evolution: orchestrator calling both steps
 """
 
 import asyncio
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,25 +18,24 @@ from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContextBatch
 from vibelens.models.llm.inference import InferenceRequest
-from vibelens.models.skill import (
-    PersonalizationResult,
-    SkillEvolution,
-    SkillEvolutionProposalOutput,
-    SkillEvolutionProposalResult,
-    SkillMode,
+from vibelens.models.personalization.enums import PersonalizationMode
+from vibelens.models.personalization.evolution import (
+    EvolutionProposalBatch,
+    EvolutionProposalResult,
+    PersonalizationEvolution,
 )
-from vibelens.models.trajectories.metrics import Metrics
+from vibelens.models.personalization.results import PersonalizationResult
+from vibelens.models.trajectories.final_metrics import FinalMetrics
 from vibelens.prompts.evolution import (
-    SKILL_EVOLUTION_EDIT_PROMPT,
-    SKILL_EVOLUTION_PROPOSAL_PROMPT,
-    SKILL_EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT,
+    EVOLUTION_PROMPT,
+    EVOLUTION_PROPOSAL_PROMPT,
+    EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT,
 )
 from vibelens.services.analysis_store import generate_analysis_id
 from vibelens.services.inference_shared import (
-    build_digest_from_contexts,
     build_system_kwargs,
     extract_all_contexts,
-    format_batch_digest,
+    format_context_batch,
     log_analysis_summary,
     require_backend,
     run_batches_concurrent,
@@ -59,14 +57,14 @@ from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 logger = get_logger(__name__)
 
 # LLM inference limits for each step of the skill evolution pipeline
-SKILL_EVOLUTION_PROPOSAL_OUTPUT_TOKENS = 4096
-SKILL_EVOLUTION_PROPOSAL_TIMEOUT_SECONDS = 300
-SKILL_EVOLUTION_SYNTHESIS_OUTPUT_TOKENS = 8192
-SKILL_EVOLUTION_SYNTHESIS_TIMEOUT_SECONDS = 300
-SKILL_EVOLUTION_EDIT_OUTPUT_TOKENS = 8192
-SKILL_EVOLUTION_EDIT_TIMEOUT_SECONDS = 300
-# Number of sequential LLM calls in the full pipeline (proposal → synthesis → edit)
-EXPECTED_DEEP_CALLS = 3
+EVOLUTION_PROPOSAL_OUTPUT_TOKENS = 4096
+EVOLUTION_PROPOSAL_TIMEOUT_SECONDS = 300
+EVOLUTION_SYNTHESIS_OUTPUT_TOKENS = 8192
+EVOLUTION_SYNTHESIS_TIMEOUT_SECONDS = 300
+EVOLUTION_OUTPUT_TOKENS = 8192
+EVOLUTION_TIMEOUT_SECONDS = 300
+# Number of sequential LLM calls in the full pipeline (proposal → synthesis → evolution)
+EXPECTED_EVOLUTION_CALLS = 3
 
 
 def _filter_skills(
@@ -88,13 +86,11 @@ def _filter_skills(
 
 
 def estimate_skill_evolution(
-    session_ids: list[str],
-    session_token: str | None = None,
-    skill_names: list[str] | None = None,
+    session_ids: list[str], session_token: str | None = None, skill_names: list[str] | None = None
 ) -> CostEstimate:
     """Pre-flight cost estimate for skill evolution analysis.
 
-    Estimates the full pipeline: proposal batches + synthesis + deep edits
+    Estimates the full pipeline: proposal batches + synthesis + evolution
     for an expected number of proposals.
 
     Args:
@@ -122,27 +118,26 @@ def estimate_skill_evolution(
     batches = build_batches(context_set.contexts, max_batch_tokens=get_settings().max_batch_tokens)
 
     # Proposal phase tokens
-    proposal_system = SKILL_EVOLUTION_PROPOSAL_PROMPT.render_system(
-        **build_system_kwargs(SKILL_EVOLUTION_PROPOSAL_PROMPT, backend)
+    proposal_system = EVOLUTION_PROPOSAL_PROMPT.render_system(
+        **build_system_kwargs(EVOLUTION_PROPOSAL_PROMPT, backend)
     )
-    batch_token_counts = [count_tokens(format_batch_digest(batch)) for batch in batches]
+    batch_token_counts = [count_tokens(format_context_batch(batch)) for batch in batches]
 
-    # Deep edit phase tokens (estimated per-call)
-    edit_system = SKILL_EVOLUTION_EDIT_PROMPT.render_system(
-        **build_system_kwargs(SKILL_EVOLUTION_EDIT_PROMPT, backend)
-    )
-    digest = build_digest_from_contexts(context_set)
-    deep_input_tokens = count_tokens(edit_system) + count_tokens(digest)
+    # Evolution phase tokens (estimated per-call)
+    evolution_kwargs = build_system_kwargs(EVOLUTION_PROMPT, backend)
+    evolution_system = EVOLUTION_PROMPT.render_system(**evolution_kwargs)
+    digest = format_context_batch(context_set)
+    deep_input_tokens = count_tokens(evolution_system) + count_tokens(digest)
     extra_calls = [
-        (deep_input_tokens, SKILL_EVOLUTION_EDIT_OUTPUT_TOKENS) for _ in range(EXPECTED_DEEP_CALLS)
+        (deep_input_tokens, EVOLUTION_OUTPUT_TOKENS) for _ in range(EXPECTED_EVOLUTION_CALLS)
     ]
 
     return estimate_analysis_cost(
         batch_token_counts=batch_token_counts,
         system_prompt=proposal_system,
         model=backend.model,
-        max_output_tokens=SKILL_EVOLUTION_PROPOSAL_OUTPUT_TOKENS,
-        synthesis_output_tokens=SKILL_EVOLUTION_SYNTHESIS_OUTPUT_TOKENS,
+        max_output_tokens=EVOLUTION_PROPOSAL_OUTPUT_TOKENS,
+        synthesis_output_tokens=EVOLUTION_SYNTHESIS_OUTPUT_TOKENS,
         synthesis_threshold=1,
         extra_calls=extra_calls,
     )
@@ -151,11 +146,11 @@ def estimate_skill_evolution(
 async def analyze_skill_evolution(
     session_ids: list[str], session_token: str | None = None, skill_names: list[str] | None = None
 ) -> PersonalizationResult:
-    """Run evolvement-mode skill analysis: propose then deep-edit installed skills.
+    """Run evolvement-mode skill analysis: propose then evolve installed skills.
 
     Two-step pipeline:
     1. Generate evolution proposals (batched, with optional synthesis)
-    2. Deep-edit each proposed skill concurrently (full SKILL.md + evidence)
+    2. Evolve each proposed skill concurrently (full SKILL.md + evidence)
 
     Args:
         session_ids: Sessions to analyze.
@@ -165,11 +160,10 @@ async def analyze_skill_evolution(
     Returns:
         PersonalizationResult with evolutions populated.
     """
-    cache_key = personalization_cache_key(session_ids, SkillMode.EVOLUTION)
+    cache_key = personalization_cache_key(session_ids, PersonalizationMode.EVOLUTION)
     if cache_key in _cache:
         return _cache[cache_key]
 
-    start_time = time.monotonic()
     analysis_id = generate_analysis_id()
     set_analysis_id(analysis_id)
 
@@ -177,41 +171,41 @@ async def analyze_skill_evolution(
     log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
 
     # Step 1: Generate proposals (filtered to user-selected skills)
-    proposal_result = await _infer_skill_evolution_proposals(
+    proposal_result = await _infer_evolution_proposals(
         session_ids, session_token, log_dir, skill_names
     )
 
-    # Deduplicate: keep only the first proposal per skill_name
+    # Deduplicate: keep only the first proposal per element_name
     seen_skills: set[str] = set()
     unique_proposals = []
-    for p in proposal_result.proposal_output.proposals:
-        if p.skill_name in seen_skills:
-            logger.warning("Dropping duplicate proposal for skill '%s'", p.skill_name)
+    for p in proposal_result.proposal_batch.proposals:
+        if p.element_name in seen_skills:
+            logger.warning("Dropping duplicate proposal for skill '%s'", p.element_name)
             continue
-        seen_skills.add(p.skill_name)
+        seen_skills.add(p.element_name)
         unique_proposals.append(p)
-    proposal_result.proposal_output.proposals = unique_proposals
+    proposal_result.proposal_batch.proposals = unique_proposals
 
-    proposal_names = [p.skill_name for p in unique_proposals]
+    proposal_names = [p.element_name for p in unique_proposals]
     logger.info("Evolution proposals: %s", proposal_names)
 
-    # Step 2: Deep-edit each proposal concurrently
-    edit_tasks = []
+    # Step 2: Generate evolutions concurrently
+    evolution_tasks = []
     for idx, p in enumerate(unique_proposals):
         # Filter to only relevant sessions when indices are specified
-        if p.relevant_session_indices:
+        if p.session_indices:
             relevant_ids = [
                 proposal_result.session_ids[i]
-                for i in p.relevant_session_indices
+                for i in p.session_indices
                 if i < len(proposal_result.session_ids)
             ]
         else:
             relevant_ids = session_ids
-        edit_tasks.append(
-            _infer_skill_evolution(
-                skill_name=p.skill_name,
+        evolution_tasks.append(
+            _infer_evolution(
+                skill_name=p.element_name,
                 rationale=p.rationale,
-                suggested_changes=p.suggested_changes,
+                suggested_changes=p.rationale,
                 addressed_patterns=p.addressed_patterns,
                 session_ids=relevant_ids,
                 session_token=session_token,
@@ -221,42 +215,35 @@ async def analyze_skill_evolution(
             )
         )
 
-    evolutions: list[SkillEvolution] = []
-    edit_warnings: list[str] = list(proposal_result.warnings)
-    total_cost = proposal_result.metrics.cost_usd or 0.0
+    evolutions: list[PersonalizationEvolution] = []
+    warnings: list[str] = list(proposal_result.warnings)
+    total_cost = proposal_result.final_metrics.total_cost_usd or 0.0
 
-    if edit_tasks:
-        results = await asyncio.gather(*edit_tasks, return_exceptions=True)
+    if evolution_tasks:
+        results = await asyncio.gather(*evolution_tasks, return_exceptions=True)
         for idx, result in enumerate(results):
             if isinstance(result, tuple):
                 evolution, cost = result
                 evolutions.append(evolution)
                 total_cost += cost
             else:
-                name = proposal_result.proposal_output.proposals[idx].skill_name
-                edit_warnings.append(f"Deep edit failed for '{name}': {result}")
-                logger.warning("Deep edit failed for proposal '%s': %s", name, result)
+                name = proposal_result.proposal_batch.proposals[idx].element_name
+                warnings.append(f"Evolution failed for '{name}': {result}")
+                logger.warning("Evolution failed for proposal '%s': %s", name, result)
 
-    # Populate description on each evolution from installed skill metadata
-    installed_skills = gather_installed_skills()
-    skill_desc_map = {s["name"]: s["description"] for s in installed_skills}
-    for evo in evolutions:
-        evo.description = skill_desc_map.get(evo.skill_name, "")
-
-    duration = round(time.monotonic() - start_time, 2)
-    proposal_output = proposal_result.proposal_output
+    proposal_output = proposal_result.proposal_batch
     skill_result = PersonalizationResult(
-        mode=SkillMode.EVOLUTION,
+        id=analysis_id,
+        mode=PersonalizationMode.EVOLUTION,
         title=proposal_output.title,
         workflow_patterns=proposal_output.workflow_patterns,
         evolutions=evolutions,
         session_ids=proposal_result.session_ids,
         skipped_session_ids=proposal_result.skipped_session_ids,
-        warnings=edit_warnings,
-        backend_id=proposal_result.backend_id,
+        warnings=warnings,
+        backend=proposal_result.backend,
         model=proposal_result.model,
-        metrics=Metrics(cost_usd=total_cost if total_cost > 0 else None),
-        duration_seconds=duration,
+        final_metrics=FinalMetrics(total_cost_usd=total_cost if total_cost > 0 else None),
         batch_count=proposal_result.batch_count,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
@@ -267,12 +254,12 @@ async def analyze_skill_evolution(
     return skill_result
 
 
-async def _infer_skill_evolution_proposals(
+async def _infer_evolution_proposals(
     session_ids: list[str],
     session_token: str | None,
     log_dir: Path,
     skill_names: list[str] | None = None,
-) -> SkillEvolutionProposalResult:
+) -> EvolutionProposalResult:
     """Execute the proposal step: load sessions, batch, infer, validate.
 
     Args:
@@ -282,7 +269,7 @@ async def _infer_skill_evolution_proposals(
         skill_names: Skill names to target. None means all installed skills.
 
     Returns:
-        SkillEvolutionProposalResult with nested proposal_output and metadata.
+        EvolutionProposalResult with nested proposal_batch and metadata.
 
     Raises:
         ValueError: If no sessions could be loaded or no installed skills found.
@@ -309,7 +296,7 @@ async def _infer_skill_evolution_proposals(
     log_analysis_summary(context_set, batches, backend)
 
     tasks = [
-        _infer_skill_evolution_proposal_batch(backend, batch, installed_skills, log_dir, idx)
+        _infer_evolution_proposal_batch(backend, batch, installed_skills, log_dir, idx)
         for idx, batch in enumerate(batches)
     ]
     batch_results, batch_warnings = await run_batches_concurrent(tasks, "evolution_proposal")
@@ -320,7 +307,7 @@ async def _infer_skill_evolution_proposals(
     if len(batch_results) == 1:
         proposal_output = batch_results[0][0]
     else:
-        proposal_output, syn_cost = await _synthesize_skill_evolution_proposals(
+        proposal_output, syn_cost = await _synthesize_evolution_proposals(
             backend, batch_results, len(context_set.session_ids), log_dir
         )
         total_cost += syn_cost
@@ -332,26 +319,26 @@ async def _infer_skill_evolution_proposals(
 
     validated_patterns = validate_patterns(proposal_output.workflow_patterns, context_set)
 
-    final_output = SkillEvolutionProposalOutput(
+    final_output = EvolutionProposalBatch(
         title=proposal_output.title,
         workflow_patterns=validated_patterns,
         proposals=proposal_output.proposals,
     )
 
-    return SkillEvolutionProposalResult(
+    return EvolutionProposalResult(
         session_ids=context_set.session_ids,
         skipped_session_ids=context_set.skipped_session_ids,
         warnings=batch_warnings,
-        backend_id=backend.backend_id,
+        backend=backend.backend_id,
         model=backend.model,
-        metrics=Metrics(cost_usd=total_cost if total_cost > 0 else None),
+        final_metrics=FinalMetrics(total_cost_usd=total_cost if total_cost > 0 else None),
         batch_count=len(batches),
         created_at=datetime.now(timezone.utc).isoformat(),
-        proposal_output=final_output,
+        proposal_batch=final_output,
     )
 
 
-async def _infer_skill_evolution(
+async def _infer_evolution(
     skill_name: str,
     rationale: str,
     suggested_changes: str,
@@ -361,8 +348,8 @@ async def _infer_skill_evolution(
     proposal_confidence: float = 0.0,
     log_dir: Path | None = None,
     proposal_index: int | None = None,
-) -> tuple[SkillEvolution, float]:
-    """Generate granular edits for one existing skill.
+) -> tuple[PersonalizationEvolution, float]:
+    """Generate granular evolutions for one existing skill.
 
     Args:
         skill_name: Name of the installed skill to evolve.
@@ -376,7 +363,7 @@ async def _infer_skill_evolution(
         proposal_index: Index for log file naming.
 
     Returns:
-        Tuple of (SkillEvolution, cost in USD).
+        Tuple of (PersonalizationEvolution, cost in USD).
     """
     backend = require_backend()
     context_set = extract_all_contexts(
@@ -392,13 +379,13 @@ async def _infer_skill_evolution(
     if not target_skill:
         raise ValueError(f"Skill '{skill_name}' not found in installed skills.")
 
-    digest = build_digest_from_contexts(context_set)
+    digest = format_context_batch(context_set)
 
-    system_kwargs = build_system_kwargs(SKILL_EVOLUTION_EDIT_PROMPT, backend)
-    system_prompt = SKILL_EVOLUTION_EDIT_PROMPT.render_system(**system_kwargs)
+    system_kwargs = build_system_kwargs(EVOLUTION_PROMPT, backend)
+    system_prompt = EVOLUTION_PROMPT.render_system(**system_kwargs)
 
     # Truncate digest to fit context budget
-    non_digest_overhead = SKILL_EVOLUTION_EDIT_PROMPT.render_user(
+    non_digest_overhead = EVOLUTION_PROMPT.render_user(
         skill_name=skill_name,
         rationale=rationale,
         suggested_changes=suggested_changes,
@@ -407,7 +394,7 @@ async def _infer_skill_evolution(
     )
     digest = truncate_digest_to_fit(digest, system_prompt, non_digest_overhead)
 
-    user_prompt = SKILL_EVOLUTION_EDIT_PROMPT.render_user(
+    user_prompt = EVOLUTION_PROMPT.render_user(
         skill_name=skill_name,
         rationale=rationale,
         suggested_changes=suggested_changes,
@@ -418,9 +405,9 @@ async def _infer_skill_evolution(
     request = InferenceRequest(
         system=system_prompt,
         user=user_prompt,
-        max_tokens=SKILL_EVOLUTION_EDIT_OUTPUT_TOKENS,
-        timeout=SKILL_EVOLUTION_EDIT_TIMEOUT_SECONDS,
-        json_schema=SKILL_EVOLUTION_EDIT_PROMPT.output_json_schema(),
+        max_tokens=EVOLUTION_OUTPUT_TOKENS,
+        timeout=EVOLUTION_TIMEOUT_SECONDS,
+        json_schema=EVOLUTION_PROMPT.output_json_schema(),
     )
 
     if log_dir is None:
@@ -434,20 +421,20 @@ async def _infer_skill_evolution(
     result = await backend.generate(request)
     save_analysis_log(log_dir, f"skill_evolution{suffix}_output.txt", result.text)
 
-    evolution = parse_llm_output(result.text, SkillEvolution, "deep edit")
+    evolution = parse_llm_output(result.text, PersonalizationEvolution, "evolution")
     evolution.confidence = proposal_confidence
     evolution.addressed_patterns = addressed_patterns
     cost = result.cost_usd or 0.0
     return evolution, cost
 
 
-async def _infer_skill_evolution_proposal_batch(
+async def _infer_evolution_proposal_batch(
     backend: InferenceBackend,
     batch: SessionContextBatch,
     installed_skills: list[dict],
     log_dir: Path,
     batch_index: int,
-) -> tuple[SkillEvolutionProposalOutput, float]:
+) -> tuple[EvolutionProposalBatch, float]:
     """Run LLM inference for one evolution proposal batch.
 
     Args:
@@ -458,12 +445,12 @@ async def _infer_skill_evolution_proposal_batch(
         batch_index: Zero-based batch index for file naming.
 
     Returns:
-        Tuple of (parsed proposal output, cost in USD).
+        Tuple of (parsed proposal batch, cost in USD).
     """
-    digest = format_batch_digest(batch)
+    digest = format_context_batch(batch)
     session_count = len(batch.contexts)
 
-    prompt = SKILL_EVOLUTION_PROPOSAL_PROMPT
+    prompt = EVOLUTION_PROPOSAL_PROMPT
     system_kwargs = build_system_kwargs(prompt, backend)
     system_prompt = prompt.render_system(**system_kwargs)
 
@@ -484,8 +471,8 @@ async def _infer_skill_evolution_proposal_batch(
     request = InferenceRequest(
         system=system_prompt,
         user=user_prompt,
-        max_tokens=SKILL_EVOLUTION_PROPOSAL_OUTPUT_TOKENS,
-        timeout=SKILL_EVOLUTION_PROPOSAL_TIMEOUT_SECONDS,
+        max_tokens=EVOLUTION_PROPOSAL_OUTPUT_TOKENS,
+        timeout=EVOLUTION_PROPOSAL_TIMEOUT_SECONDS,
         json_schema=prompt.output_json_schema(),
     )
 
@@ -496,19 +483,17 @@ async def _infer_skill_evolution_proposal_batch(
     result = await backend.generate(request)
     save_analysis_log(log_dir, f"skill_evolution_proposal_output_{batch_index}.txt", result.text)
 
-    proposal_output = parse_llm_output(
-        result.text, SkillEvolutionProposalOutput, "evolution proposal"
-    )
+    proposal_output = parse_llm_output(result.text, EvolutionProposalBatch, "evolution proposal")
     cost = result.cost_usd or 0.0
     return proposal_output, cost
 
 
-async def _synthesize_skill_evolution_proposals(
+async def _synthesize_evolution_proposals(
     backend: InferenceBackend,
-    batch_results: list[tuple[SkillEvolutionProposalOutput, float]],
+    batch_results: list[tuple[EvolutionProposalBatch, float]],
     session_count: int,
     log_dir: Path,
-) -> tuple[SkillEvolutionProposalOutput, float]:
+) -> tuple[EvolutionProposalBatch, float]:
     """Merge evolution proposals from multiple batches via LLM synthesis.
 
     Args:
@@ -518,7 +503,7 @@ async def _synthesize_skill_evolution_proposals(
         log_dir: Timestamped directory for saving prompts and outputs.
 
     Returns:
-        Tuple of (merged SkillEvolutionProposalOutput, synthesis cost in USD).
+        Tuple of (merged EvolutionProposalBatch, synthesis cost in USD).
     """
     batch_data = [
         {
@@ -533,9 +518,8 @@ async def _synthesize_skill_evolution_proposals(
             ],
             "proposals": [
                 {
-                    "skill_name": p.skill_name,
+                    "element_name": p.element_name,
                     "rationale": p.rationale,
-                    "suggested_changes": p.suggested_changes,
                     "addressed_patterns": p.addressed_patterns,
                 }
                 for p in output.proposals
@@ -544,7 +528,7 @@ async def _synthesize_skill_evolution_proposals(
         for output, _ in batch_results
     ]
 
-    prompt = SKILL_EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT
+    prompt = EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT
     system_kwargs = build_system_kwargs(prompt, backend)
     system_prompt = prompt.render_system(**system_kwargs)
     user_prompt = prompt.render_user(
@@ -554,8 +538,8 @@ async def _synthesize_skill_evolution_proposals(
     request = InferenceRequest(
         system=system_prompt,
         user=user_prompt,
-        max_tokens=SKILL_EVOLUTION_SYNTHESIS_OUTPUT_TOKENS,
-        timeout=SKILL_EVOLUTION_SYNTHESIS_TIMEOUT_SECONDS,
+        max_tokens=EVOLUTION_SYNTHESIS_OUTPUT_TOKENS,
+        timeout=EVOLUTION_SYNTHESIS_TIMEOUT_SECONDS,
         json_schema=prompt.output_json_schema(),
     )
 
@@ -566,7 +550,7 @@ async def _synthesize_skill_evolution_proposals(
     save_analysis_log(log_dir, "skill_evolution_proposal_synthesis_output.txt", result.text)
 
     synthesis_output = parse_llm_output(
-        result.text, SkillEvolutionProposalOutput, "evolution proposal synthesis"
+        result.text, EvolutionProposalBatch, "evolution proposal synthesis"
     )
     cost = result.cost_usd or 0.0
     return synthesis_output, cost

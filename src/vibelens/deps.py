@@ -73,23 +73,23 @@ def get_friction_store():
 
 def get_claude_skill_store():
     """Return cached Claude Code skill store singleton."""
-    from vibelens.models.skill import SkillSourceType
+    from vibelens.models.skill import SkillSource
     from vibelens.storage.skill.disk import DiskSkillStore
 
     return _get_or_create(
         "skill_store",
-        lambda: DiskSkillStore(get_settings().skills_dir, SkillSourceType.CLAUDE_CODE),
+        lambda: DiskSkillStore(get_settings().skills_dir, SkillSource.CLAUDE),
     )
 
 
 def get_codex_skill_store():
     """Return cached Codex CLI skill store singleton."""
-    from vibelens.models.skill import SkillSourceType
+    from vibelens.models.skill import SkillSource
     from vibelens.storage.skill.disk import DiskSkillStore
 
     return _get_or_create(
         "codex_skill_store",
-        lambda: DiskSkillStore(get_settings().codex_dir / "skills", SkillSourceType.CODEX),
+        lambda: DiskSkillStore(get_settings().codex_dir / "skills", SkillSource.CODEX),
     )
 
 

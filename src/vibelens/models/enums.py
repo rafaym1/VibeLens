@@ -6,14 +6,14 @@ from vibelens.utils.compat import StrEnum
 class AgentType(StrEnum):
     """Known agent CLI types.
 
-    Includes both trajectory-parsed agents (claude_code, codex, gemini, dataclaw)
+    Includes both trajectory-parsed agents (claude, codex, gemini, dataclaw)
     and skill-only agents (cursor, opencode, etc.) that we scan for installed skills.
     """
 
     AIDER = "aider"
     ANTIGRAVITY = "antigravity"
-    CLAUDE_CODE = "claude_code"
-    CLAUDE_CODE_WEB = "claude_code_web"
+    CLAUDE = "claude"
+    CLAUDE_WEB = "claude_web"
     CODEX = "codex"
     COPILOT = "copilot"
     CURSOR = "cursor"
@@ -24,7 +24,30 @@ class AgentType(StrEnum):
     OPENCLAW = "openclaw"
     OPENHANDS = "openhands"
     PARSED = "parsed"
-    QWEN_CODE = "qwen_code"
+    QWEN = "qwen"
+
+
+class SkillSource(StrEnum):
+    """Unified source/store type for skills.
+
+    Every AgentType member is mirrored here, plus CENTRAL.
+    When adding a new agent to AgentType, add a matching line here.
+    """
+
+    AIDER = AgentType.AIDER
+    ANTIGRAVITY = AgentType.ANTIGRAVITY
+    CLAUDE = AgentType.CLAUDE
+    CODEX = AgentType.CODEX
+    COPILOT = AgentType.COPILOT
+    CURSOR = AgentType.CURSOR
+    DATACLAW = AgentType.DATACLAW
+    GEMINI = AgentType.GEMINI
+    KIMI = AgentType.KIMI
+    OPENCODE = AgentType.OPENCODE
+    OPENCLAW = AgentType.OPENCLAW
+    OPENHANDS = AgentType.OPENHANDS
+    QWEN = AgentType.QWEN
+    CENTRAL = "central"
 
 
 class StepSource(StrEnum):
@@ -60,12 +83,3 @@ class SessionPhase(StrEnum):
     VERIFICATION = "verification"
     DEBUGGING = "debugging"
     MIXED = "mixed"
-
-
-class ElementType(StrEnum):
-    """File-based element types that can be created or evolved."""
-
-    SKILL = "skill"
-    SUBAGENT = "subagent"
-    COMMAND = "command"
-    HOOK = "hook"

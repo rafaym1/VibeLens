@@ -6,15 +6,9 @@ from vibelens.models.step_ref import StepRef
 
 
 class WorkflowPattern(BaseModel):
-    """A recurring workflow pattern detected from trajectory analysis.
+    """A recurring workflow pattern detected from trajectory analysis."""
 
-    The LLM generates title, description, and example_refs.
-    frequency is computed from the number of example_refs.
-    """
-
-    title: str = Field(
-        description="Short pattern name, 3-8 words (e.g. 'Search-Read-Edit Cycle')."
-    )
+    title: str = Field(description="Short pattern name, 3-8 words (e.g. 'Search-Read-Edit Cycle').")
     description: str = Field(
         description="What this pattern does and when it occurs. 1-2 sentences, under 40 words."
     )

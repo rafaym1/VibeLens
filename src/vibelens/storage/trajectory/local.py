@@ -12,11 +12,7 @@ from pathlib import Path
 from vibelens.config import Settings
 from vibelens.ingest.fast_metrics import scan_session_metrics
 from vibelens.ingest.index_builder import build_session_index
-from vibelens.ingest.index_cache import (
-    collect_file_mtimes,
-    load_cache,
-    save_cache,
-)
+from vibelens.ingest.index_cache import collect_file_mtimes, load_cache, save_cache
 from vibelens.ingest.parsers import LOCAL_PARSER_CLASSES
 from vibelens.ingest.parsers.base import BaseParser
 from vibelens.models.enums import AgentType
@@ -41,7 +37,7 @@ def _extract_session_id(filepath: Path, agent_type: AgentType) -> str:
         Unique session identifier.
     """
     stem = filepath.stem
-    if agent_type == AgentType.CLAUDE_CODE:
+    if agent_type == AgentType.CLAUDE:
         return stem
     return f"{agent_type.value}:{stem}"
 
@@ -94,7 +90,7 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
         overrides: dict[AgentType, Path] = {}
         if settings:
             overrides = {
-                AgentType.CLAUDE_CODE: settings.claude_dir,
+                AgentType.CLAUDE: settings.claude_dir,
                 AgentType.CODEX: settings.codex_dir,
                 AgentType.GEMINI: settings.gemini_dir,
                 AgentType.OPENCLAW: settings.openclaw_dir,

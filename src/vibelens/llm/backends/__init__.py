@@ -109,11 +109,30 @@ def _create_cli_backend(backend_id: BackendType, config: LLMConfig) -> Inference
     return backend
 
 
+def _strip_provider_prefix(model: str) -> str:
+    """Remove provider prefix from a litellm-format model name.
+
+    CLI backends expect bare model names (e.g. 'claude-sonnet-4-5'),
+    but the config may store litellm-format names with a provider
+    prefix (e.g. 'anthropic/claude-sonnet-4-5').
+
+    Args:
+        model: Model name, possibly with provider prefix.
+
+    Returns:
+        Bare model name without provider prefix.
+    """
+    if "/" in model:
+        return model.rsplit("/", 1)[-1]
+    return model
+
+
 def _resolve_cli_model(config_model: str, backend: InferenceBackend) -> str | None:
     """Pick the right model for a CLI backend.
 
     If the user left the model at the litellm default or empty, use the
-    backend's own default. Otherwise pass the user's choice through.
+    backend's own default. Otherwise strip any provider prefix and pass
+    the user's choice through.
 
     Args:
         config_model: Model string from LLMConfig.
@@ -125,4 +144,4 @@ def _resolve_cli_model(config_model: str, backend: InferenceBackend) -> str | No
     is_default = not config_model or config_model == LITELLM_DEFAULT_MODEL
     if is_default:
         return backend.default_model
-    return config_model
+    return _strip_provider_prefix(config_model)

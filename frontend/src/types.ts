@@ -1,4 +1,4 @@
-export type AgentType = "claude_code" | "claude_code_web" | "codex" | "gemini";
+export type AgentType = "claude_code" | "claude_web" | "codex" | "gemini";
 export type OSPlatform = "macos" | "linux" | "windows";
 
 export interface Agent {
@@ -335,7 +335,6 @@ export interface SkillInfo {
   central_path: string | null;
   content_hash: string;
   metadata: Record<string, unknown>;
-  skill_targets: string[];
 }
 
 export interface FeaturedSkill {

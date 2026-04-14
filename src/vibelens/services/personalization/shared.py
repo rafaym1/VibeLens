@@ -16,7 +16,8 @@ from pydantic import BaseModel, ValidationError
 from vibelens.deps import get_central_skill_store
 from vibelens.llm.backend import InferenceError
 from vibelens.models.context import SessionContextBatch
-from vibelens.models.skill import SkillMode, WorkflowPattern
+from vibelens.models.personalization.enums import PersonalizationMode
+from vibelens.models.session.patterns import WorkflowPattern
 from vibelens.services.inference_shared import CACHE_MAXSIZE, CACHE_TTL_SECONDS
 from vibelens.utils.json import extract_json_from_llm_output
 from vibelens.utils.log import get_logger
@@ -38,7 +39,7 @@ class SkillDetailLevel(Enum):
     FULL = "full"
 
 
-def personalization_cache_key(session_ids: list[str], mode: SkillMode) -> str:
+def personalization_cache_key(session_ids: list[str], mode: PersonalizationMode) -> str:
     """Generate a cache key from sorted session IDs and mode."""
     sorted_ids = ",".join(sorted(session_ids))
     raw = f"personalization:{mode}:{sorted_ids}"

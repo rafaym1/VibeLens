@@ -46,7 +46,7 @@ SKIP_BLOCK_TYPES = {"token_budget"}
 class ClaudeCodeWebParser(BaseParser):
     """Parser for claude.ai web export datasets."""
 
-    AGENT_TYPE = AgentType.CLAUDE_CODE_WEB
+    AGENT_TYPE = AgentType.CLAUDE_WEB
     LOCAL_DATA_DIR = None
 
     def discover_session_files(self, data_dir: Path) -> list[Path]:

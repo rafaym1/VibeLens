@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from vibelens.models.enums import AgentType
 
 UPLOAD_COMMANDS: dict[str, dict[str, dict[str, str]]] = {
-    AgentType.CLAUDE_CODE: {
+    AgentType.CLAUDE: {
         "macos": {
             "command": (
                 "cd ~/.claude && zip -r ~/Desktop/claude-data.zip projects/"
@@ -73,7 +73,7 @@ UPLOAD_COMMANDS: dict[str, dict[str, dict[str, str]]] = {
             "description": "Output: Desktop\\gemini-data.zip",
         },
     },
-    AgentType.CLAUDE_CODE_WEB: {
+    AgentType.CLAUDE_WEB: {
         "macos": {
             "command": "# Export from claude.ai > Settings > Export Data",
             "description": "Upload the zip downloaded from claude.ai",

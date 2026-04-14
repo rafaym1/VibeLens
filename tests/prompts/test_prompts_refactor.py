@@ -12,46 +12,46 @@ class TestCreationPrompts:
     """Verify creation prompts export correctly from the new module path."""
 
     def test_creation_module_exports_proposal_prompt(self) -> None:
-        from vibelens.prompts.creation import SKILL_CREATION_PROPOSAL_PROMPT
+        from vibelens.prompts.creation import CREATION_PROPOSAL_PROMPT
 
-        assert SKILL_CREATION_PROPOSAL_PROMPT.task_id == "skill_creation_proposal"
-        print(f"SKILL_CREATION_PROPOSAL_PROMPT task_id: {SKILL_CREATION_PROPOSAL_PROMPT.task_id}")
+        assert CREATION_PROPOSAL_PROMPT.task_id == "creation_proposal"
+        print(f"SKILL_CREATION_PROPOSAL_PROMPT task_id: {CREATION_PROPOSAL_PROMPT.task_id}")
 
     def test_creation_module_exports_synthesis_prompt(self) -> None:
-        from vibelens.prompts.creation import SKILL_CREATION_PROPOSAL_SYNTHESIS_PROMPT
+        from vibelens.prompts.creation import CREATION_PROPOSAL_SYNTHESIS_PROMPT
 
-        expected_id = "skill_creation_proposal_synthesis"
-        assert SKILL_CREATION_PROPOSAL_SYNTHESIS_PROMPT.task_id == expected_id
+        expected_id = "creation_proposal_synthesis"
+        assert CREATION_PROPOSAL_SYNTHESIS_PROMPT.task_id == expected_id
         print(f"SKILL_CREATION_PROPOSAL_SYNTHESIS_PROMPT task_id: {expected_id}")
 
     def test_creation_module_exports_generate_prompt(self) -> None:
-        from vibelens.prompts.creation import SKILL_CREATION_GENERATE_PROMPT
+        from vibelens.prompts.creation import CREATION_PROMPT
 
-        assert SKILL_CREATION_GENERATE_PROMPT.task_id == "skill_creation_generate"
-        print(f"SKILL_CREATION_GENERATE_PROMPT task_id: {SKILL_CREATION_GENERATE_PROMPT.task_id}")
+        assert CREATION_PROMPT.task_id == "creation"
+        print(f"SKILL_CREATION_GENERATE_PROMPT task_id: {CREATION_PROMPT.task_id}")
 
 
 class TestEvolutionPrompts:
     """Verify evolution prompts export correctly from the new module path."""
 
     def test_evolution_module_exports_proposal_prompt(self) -> None:
-        from vibelens.prompts.evolution import SKILL_EVOLUTION_PROPOSAL_PROMPT
+        from vibelens.prompts.evolution import EVOLUTION_PROPOSAL_PROMPT
 
-        assert SKILL_EVOLUTION_PROPOSAL_PROMPT.task_id == "skill_evolution_proposal"
-        print(f"SKILL_EVOLUTION_PROPOSAL_PROMPT task_id: {SKILL_EVOLUTION_PROPOSAL_PROMPT.task_id}")
+        assert EVOLUTION_PROPOSAL_PROMPT.task_id == "evolution_proposal"
+        print(f"SKILL_EVOLUTION_PROPOSAL_PROMPT task_id: {EVOLUTION_PROPOSAL_PROMPT.task_id}")
 
     def test_evolution_module_exports_synthesis_prompt(self) -> None:
-        from vibelens.prompts.evolution import SKILL_EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT
+        from vibelens.prompts.evolution import EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT
 
-        expected_id = "skill_evolution_proposal_synthesis"
-        assert SKILL_EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT.task_id == expected_id
+        expected_id = "evolution_proposal_synthesis"
+        assert EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT.task_id == expected_id
         print(f"SKILL_EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT task_id: {expected_id}")
 
     def test_evolution_module_exports_edit_prompt(self) -> None:
-        from vibelens.prompts.evolution import SKILL_EVOLUTION_EDIT_PROMPT
+        from vibelens.prompts.evolution import EVOLUTION_PROMPT
 
-        assert SKILL_EVOLUTION_EDIT_PROMPT.task_id == "skill_evolution_edit"
-        print(f"SKILL_EVOLUTION_EDIT_PROMPT task_id: {SKILL_EVOLUTION_EDIT_PROMPT.task_id}")
+        assert EVOLUTION_PROMPT.task_id == "evolution"
+        print(f"SKILL_EVOLUTION_EDIT_PROMPT task_id: {EVOLUTION_PROMPT.task_id}")
 
 
 class TestOldModuleRemoved:
@@ -123,6 +123,6 @@ class TestPromptRegistry:
     def test_registry_contains_friction_and_evolution(self) -> None:
         from vibelens.prompts import PROMPT_REGISTRY
 
-        assert "friction_analysis" in PROMPT_REGISTRY
-        assert "skill_evolution_proposal" in PROMPT_REGISTRY
+        assert "friction" in PROMPT_REGISTRY
+        assert "evolution_proposal" in PROMPT_REGISTRY
         print(f"Registry contains expected keys: {list(PROMPT_REGISTRY.keys())}")

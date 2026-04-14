@@ -166,7 +166,7 @@ class ClaudeCodeParser(BaseParser):
     session files, including subagent conversations.
     """
 
-    AGENT_TYPE = AgentType.CLAUDE_CODE
+    AGENT_TYPE = AgentType.CLAUDE
     LOCAL_DATA_DIR: Path | None = Path.home() / ".claude"
 
     def discover_session_files(self, data_dir: Path) -> list[Path]:
