@@ -1,6 +1,5 @@
 """Dashboard aggregate analysis and behavior models."""
 
-
 from pydantic import BaseModel, Field
 
 from vibelens.models.session.phase import PhaseSegment

@@ -568,10 +568,7 @@ class TestEdgeCases:
     def test_identical_timestamps_stable_sort(self):
         """Sessions with identical timestamps maintain stable ordering."""
         same_ts = datetime(2026, 3, 15, 10, 0, tzinfo=timezone.utc)
-        trajs = [
-            _make_trajectory(session_id=f"s{i}", timestamp=same_ts)
-            for i in range(5)
-        ]
+        trajs = [_make_trajectory(session_id=f"s{i}", timestamp=same_ts) for i in range(5)]
         result = compute_dashboard_stats(trajs)
 
         assert result.total_sessions == 5

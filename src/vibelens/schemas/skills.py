@@ -1,5 +1,4 @@
-"""Skill analysis API schemas — request models and lightweight metadata."""
-
+"""Skill and personalization API schemas — request models and lightweight metadata."""
 
 from pydantic import BaseModel, Field
 
@@ -37,8 +36,8 @@ class FeaturedSkillInstallRequest(BaseModel):
     )
 
 
-class SkillAnalysisMeta(BaseModel):
-    """Lightweight metadata for a persisted skill analysis."""
+class PersonalizationMeta(BaseModel):
+    """Lightweight metadata for a persisted personalization analysis."""
 
     analysis_id: str = Field(description="Unique ID for this analysis.")
     mode: SkillMode = Field(description="Analysis mode used.")

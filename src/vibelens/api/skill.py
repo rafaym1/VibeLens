@@ -38,8 +38,10 @@ DEFAULT_PAGE_SIZE = 50
 
 def _make_agent_getter(source_type, skills_dir):
     """Create a lazy getter for a third-party agent skill store."""
+
     def _getter():
         return DiskSkillStore(skills_dir.expanduser().resolve(), source_type)
+
     return _getter
 
 

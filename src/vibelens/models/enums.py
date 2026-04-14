@@ -11,7 +11,6 @@ class AgentType(StrEnum):
     """
 
     AIDER = "aider"
-    AMP = "amp"
     ANTIGRAVITY = "antigravity"
     CLAUDE_CODE = "claude_code"
     CLAUDE_CODE_WEB = "claude_code_web"
@@ -44,22 +43,6 @@ class ContentType(StrEnum):
     PDF = "pdf"
 
 
-class DataSourceType(StrEnum):
-    """Supported data source types."""
-
-    LOCAL = "local"
-    HUGGINGFACE = "huggingface"
-    MONGODB = "mongodb"
-    UPLOAD = "upload"
-
-
-class DataTargetType(StrEnum):
-    """Supported data target types."""
-
-    MONGODB = "mongodb"
-    HUGGINGFACE = "huggingface"
-
-
 class AppMode(StrEnum):
     """Application operating mode."""
 
@@ -72,10 +55,10 @@ class SessionPhase(StrEnum):
     """Semantic phase of a coding agent session."""
 
     EXPLORATION = "exploration"
-    IMPLEMENTATION = "implementation"
-    DEBUGGING = "debugging"
-    VERIFICATION = "verification"
     PLANNING = "planning"
+    IMPLEMENTATION = "implementation"
+    VERIFICATION = "verification"
+    DEBUGGING = "debugging"
     MIXED = "mixed"
 
 

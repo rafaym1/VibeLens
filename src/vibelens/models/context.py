@@ -177,9 +177,7 @@ class SessionContextBatch(BaseModel):
             logger.warning("Dropping ref: unknown session_id %r", ref.session_id)
             return None
         resolved_ref = StepRef(
-            session_id=ctx.session_id,
-            start_step_id=ref.start_step_id,
-            end_step_id=ref.end_step_id,
+            session_id=ctx.session_id, start_step_id=ref.start_step_id, end_step_id=ref.end_step_id
         )
         return ctx.resolve_step_ref(resolved_ref)
 

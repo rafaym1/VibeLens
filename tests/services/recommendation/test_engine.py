@@ -1,4 +1,5 @@
 """Tests for the recommendation engine orchestrator."""
+
 import inspect
 
 from vibelens.services.recommendation.engine import (
@@ -23,6 +24,7 @@ def test_engine_importable():
         analyze_recommendation,
         estimate_recommendation,
     )
+
     assert callable(analyze_recommendation)
     assert callable(estimate_recommendation)
 

@@ -1,4 +1,5 @@
 """Tests for catalog configuration fields."""
+
 from vibelens.config.settings import Settings
 
 

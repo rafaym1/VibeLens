@@ -34,7 +34,8 @@ class ElementEvolutionProposal(BaseModel):
     description: str = Field(description="Proposed improvement. Max 30 words.")
     rationale: str = Field(
         description=(
-            "One sentence (15 words), then 1-2 bullets starting with '\\n- ' (10 words each)."
+            "One sentence (max 15 words), then 1-2 bullets "
+            "starting with '\\n- ' (max 10 words each). Plain language, no jargon."
         )
     )
     suggested_changes: str = Field(
@@ -112,7 +113,8 @@ class ElementEvolution(BaseModel):
     edits: list[ElementEdit] = Field(description="Ordered list of granular edits to apply.")
     rationale: str = Field(
         description=(
-            "One sentence (15 words), then 1-2 bullets starting with '\\n- ' (10 words each)."
+            "One sentence (max 15 words), then 1-2 bullets "
+            "starting with '\\n- ' (max 10 words each). Plain language, no jargon."
         )
     )
     addressed_patterns: list[str] = Field(

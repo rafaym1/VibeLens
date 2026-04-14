@@ -399,7 +399,7 @@ export interface SkillEvolution {
   confidence: number;
 }
 
-export interface SkillAnalysisResult {
+export interface PersonalizationResult {
   analysis_id: string | null;
   mode: SkillMode;
   title: string;
@@ -419,7 +419,7 @@ export interface SkillAnalysisResult {
 }
 
 
-export interface SkillAnalysisMeta {
+export interface PersonalizationMeta {
   analysis_id: string;
   mode: SkillMode;
   title: string;

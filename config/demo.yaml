@@ -12,7 +12,7 @@ app:
 demo:
   example_sessions: "examples/recipe-book"
   friction_dir: "examples/recipe-book/friction_analyses"
-  skill_analysis_dir: "examples/recipe-book/skill_analyses"
+  personalization_dir: "examples/recipe-book/personalization"
 
 donation:
   dir: ~/.vibelens/donations

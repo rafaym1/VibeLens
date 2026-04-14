@@ -15,14 +15,14 @@ from pathlib import Path
 from cachetools import TTLCache
 
 from vibelens.context import DetailExtractor, SummaryExtractor, build_batches
-from vibelens.deps import get_settings, get_skill_analysis_store
+from vibelens.deps import get_personalization_store, get_settings
 from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContextBatch
 from vibelens.models.llm.inference import InferenceRequest
 from vibelens.models.skill import (
-    SkillAnalysisResult,
+    PersonalizationResult,
     SkillCreation,
     SkillCreationProposalOutput,
     SkillCreationProposalResult,
@@ -47,13 +47,13 @@ from vibelens.services.inference_shared import (
     save_analysis_log,
     truncate_digest_to_fit,
 )
-from vibelens.services.skill.shared import (
-    SKILL_LOG_DIR,
+from vibelens.services.personalization.shared import (
+    PERSONALIZATION_LOG_DIR,
     _cache,
     gather_installed_skills,
     merge_batch_refs,
     parse_llm_output,
-    skill_cache_key,
+    personalization_cache_key,
     validate_patterns,
 )
 from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
@@ -130,7 +130,7 @@ def estimate_skill_creation(
 
 async def analyze_skill_creation(
     session_ids: list[str], session_token: str | None = None
-) -> SkillAnalysisResult:
+) -> PersonalizationResult:
     """Backward-compatible creation: proposals then deep creation for each.
 
     Preserves the existing POST /skills/analysis endpoint with mode=creation.
@@ -140,9 +140,9 @@ async def analyze_skill_creation(
         session_token: Browser tab token for upload scoping.
 
     Returns:
-        SkillAnalysisResult with creations populated.
+        PersonalizationResult with creations populated.
     """
-    cache_key = skill_cache_key(session_ids, SkillMode.CREATION)
+    cache_key = personalization_cache_key(session_ids, SkillMode.CREATION)
     if cache_key in _cache:
         return _cache[cache_key]
 
@@ -151,7 +151,7 @@ async def analyze_skill_creation(
     set_analysis_id(analysis_id)
 
     run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    log_dir = SKILL_LOG_DIR / run_timestamp
+    log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
 
     # Step 1: Generate proposals
     proposal_result = await _infer_skill_creation_proposals(
@@ -204,7 +204,7 @@ async def analyze_skill_creation(
 
     duration = round(time.monotonic() - start_time, 2)
     proposal_output = proposal_result.proposal_output
-    skill_result = SkillAnalysisResult(
+    skill_result = PersonalizationResult(
         mode=SkillMode.CREATION,
         title=proposal_output.title,
         workflow_patterns=proposal_output.workflow_patterns,
@@ -218,7 +218,7 @@ async def analyze_skill_creation(
         duration_seconds=duration,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
-    get_skill_analysis_store().save(skill_result, analysis_id)
+    get_personalization_store().save(skill_result, analysis_id)
     clear_analysis_id()
 
     _cache[cache_key] = skill_result
@@ -242,7 +242,7 @@ async def _infer_skill_creation_proposals(
         ValueError: If no sessions could be loaded or no backend configured.
         InferenceError: If LLM backend fails.
     """
-    cache_key = skill_cache_key(session_ids, SkillMode.CREATION) + ":proposals"
+    cache_key = personalization_cache_key(session_ids, SkillMode.CREATION) + ":proposals"
     if cache_key in _proposal_cache:
         return _proposal_cache[cache_key]
 
@@ -262,7 +262,7 @@ async def _infer_skill_creation_proposals(
 
     if log_dir is None:
         run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        log_dir = SKILL_LOG_DIR / run_timestamp
+        log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
 
     installed_skills = gather_installed_skills()
 
@@ -388,7 +388,7 @@ async def _infer_skill_creation(
 
     if log_dir is None:
         run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        log_dir = SKILL_LOG_DIR / run_timestamp
+        log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
 
     suffix = f"_{proposal_index}" if proposal_index is not None else ""
     save_analysis_log(log_dir, f"skill_creation{suffix}_system.txt", system_prompt)

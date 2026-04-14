@@ -1,7 +1,7 @@
 import { BarChart3, Plus, Timer } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
-  SkillAnalysisResult,
+  PersonalizationResult,
   SkillMode,
   SkillSourceInfo,
 } from "../../types";
@@ -58,7 +58,7 @@ export function AnalysisResultView({
   onNew,
   fetchWithToken,
 }: {
-  result: SkillAnalysisResult;
+  result: PersonalizationResult;
   activeTab: SkillTab;
   onNew: () => void;
   fetchWithToken: (url: string, init?: RequestInit) => Promise<Response>;
@@ -126,7 +126,7 @@ export function AnalysisResultView({
   );
 }
 
-function getItemCount(result: SkillAnalysisResult, mode: SkillMode): number {
+function getItemCount(result: PersonalizationResult, mode: SkillMode): number {
   if (mode === "retrieval") return result.recommendations.length;
   if (mode === "creation") return result.creations.length;
   return result.evolutions.length;
@@ -137,7 +137,7 @@ function ResultHeader({
   onNew,
   mode,
 }: {
-  result: SkillAnalysisResult;
+  result: PersonalizationResult;
   onNew: () => void;
   mode: SkillMode;
 }) {
@@ -187,7 +187,7 @@ function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
 }
 
-function MetadataFooter({ result }: { result: SkillAnalysisResult }) {
+function MetadataFooter({ result }: { result: PersonalizationResult }) {
   const computedDate = new Date(result.created_at);
   const dateStr = isNaN(computedDate.getTime()) ? result.created_at : computedDate.toLocaleDateString();
   const timeStr = isNaN(computedDate.getTime()) ? "" : computedDate.toLocaleTimeString();

@@ -1,4 +1,5 @@
 """Tests for lightweight compaction-based extraction."""
+
 from vibelens.services.recommendation.extraction import (
     _sample_sessions,
     extract_lightweight_digest,
@@ -15,16 +16,20 @@ def test_extract_lightweight_digest_with_compaction(tmp_path):
     import json
 
     lines = [
-        json.dumps({
-            "type": "message",
-            "message": {
-                "role": "assistant",
-                "content": [
-                    {"type": "text",
-                     "text": "Implemented auth system with JWT tokens and bcrypt hashing."}
-                ],
-            },
-        }),
+        json.dumps(
+            {
+                "type": "message",
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Implemented auth system with JWT tokens and bcrypt hashing.",
+                        }
+                    ],
+                },
+            }
+        ),
     ]
     compaction_file.write_text("\n".join(lines))
 
@@ -55,10 +60,14 @@ def test_extract_lightweight_digest_metadata_fallback(tmp_path):
             "session_id": "def456",
             "project_path": "/home/user/other",
             "filepath": str(tmp_path / "nonexistent" / "def456.jsonl"),
-            "agent_type": "codex",
-            "model": "gpt-4o",
-            "total_tool_calls": 10,
-            "duration_seconds": 300,
+            "first_message": "Implement a REST API for user management",
+            "final_metrics": {
+                "tool_call_count": 10,
+                "duration": 300,
+            },
+            "agent": {
+                "model_name": "gpt-4o",
+            },
         },
     ]
 
@@ -93,8 +102,7 @@ def test_sample_sessions_over_budget():
     """Sampling reduces sessions when over budget."""
     # Create many sessions with large signals
     sessions = [
-        (f"s{i}", "x" * 2000, f"/project-{i % 3}", f"2026-01-{i:02d}")
-        for i in range(1, 101)
+        (f"s{i}", "x" * 2000, f"/project-{i % 3}", f"2026-01-{i:02d}") for i in range(1, 101)
     ]
     result = _sample_sessions(sessions, token_budget=5_000)
     assert len(result) < 100
@@ -108,8 +116,12 @@ def test_sample_sessions_diverse_projects():
     for proj in range(5):
         for i in range(20):
             sessions.append(
-                (f"p{proj}-s{i}", f"Signal for project {proj}",
-                 f"/project-{proj}", f"2026-01-{i+1:02d}")
+                (
+                    f"p{proj}-s{i}",
+                    f"Signal for project {proj}",
+                    f"/project-{proj}",
+                    f"2026-01-{i + 1:02d}",
+                )
             )
     result = _sample_sessions(sessions, token_budget=3_000)
     # Should have sessions from multiple projects

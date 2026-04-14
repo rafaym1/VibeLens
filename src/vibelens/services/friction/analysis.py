@@ -45,7 +45,7 @@ from vibelens.services.inference_shared import (
     save_analysis_log,
     truncate_digest_to_fit,
 )
-from vibelens.services.skill.shared import parse_llm_output
+from vibelens.services.personalization.shared import parse_llm_output
 from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 
 logger = get_logger(__name__)

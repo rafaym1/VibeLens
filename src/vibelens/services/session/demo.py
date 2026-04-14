@@ -225,7 +225,9 @@ def seed_example_analyses() -> None:
         if not example_path.is_dir():
             continue
         _copy_example_store(example_path / "friction_analyses", settings.friction_dir, "friction")
-        _copy_example_store(example_path / "skill_analyses", settings.skill_analysis_dir, "skill")
+        _copy_example_store(
+            example_path / "personalization", settings.personalization_dir, "personalization"
+        )
 
 
 def _copy_example_store(src_dir: Path, dst_dir: Path, label: str) -> None:

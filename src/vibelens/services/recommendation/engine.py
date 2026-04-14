@@ -43,12 +43,12 @@ from vibelens.services.inference_shared import (
     save_analysis_log,
     truncate_digest_to_fit,
 )
+from vibelens.services.personalization.shared import parse_llm_output
 from vibelens.services.recommendation.catalog import CatalogSnapshot, load_catalog
 from vibelens.services.recommendation.extraction import extract_lightweight_digest
 from vibelens.services.recommendation.retrieval import KeywordRetrieval
 from vibelens.services.recommendation.scoring import score_candidates
 from vibelens.services.session.store_resolver import list_all_metadata
-from vibelens.services.skill.shared import parse_llm_output
 from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 
 logger = get_logger(__name__)
@@ -354,11 +354,7 @@ async def _generate_rationales(
         Tuple of (RationaleOutput, cost in USD).
     """
     candidates_for_template = [
-        {
-            "item_id": item.item_id,
-            "name": item.name,
-            "description": item.description,
-        }
+        {"item_id": item.item_id, "name": item.name, "description": item.description}
         for item, _ in scored_candidates
     ]
 

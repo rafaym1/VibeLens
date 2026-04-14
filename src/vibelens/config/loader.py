@@ -43,7 +43,7 @@ YAML_FIELD_MAP: dict[str, dict[str, str]] = {
     "demo": {
         "example_sessions": "demo_example_sessions",
         "friction_dir": "friction_dir",
-        "skill_analysis_dir": "skill_analysis_dir",
+        "personalization_dir": "personalization_dir",
     },
     "examples": {
         "sessions": "demo_example_sessions",

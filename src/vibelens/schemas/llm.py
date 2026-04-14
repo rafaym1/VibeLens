@@ -1,6 +1,5 @@
 """LLM configuration request schemas."""
 
-
 from pydantic import BaseModel, Field
 
 from vibelens.models.llm.inference import BackendType

@@ -377,7 +377,7 @@ class TestParserResilience:
         """parse_file returns [] for files with non-UTF-8 bytes."""
         settings, _, test_project = test_settings
         corrupt_file = test_project / "corrupt.jsonl"
-        corrupt_file.write_bytes(b'\x80\x81\x82 invalid utf-8 bytes')
+        corrupt_file.write_bytes(b"\x80\x81\x82 invalid utf-8 bytes")
 
         parser = ClaudeCodeParser()
         result = parser.parse_file(corrupt_file)

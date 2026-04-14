@@ -5,12 +5,12 @@ import secrets
 
 from fastapi import APIRouter, Header, HTTPException
 
-from vibelens.deps import get_skill_analysis_store, is_demo_mode, is_test_mode
-from vibelens.models.skill import SkillAnalysisResult, SkillMode
+from vibelens.deps import get_personalization_store, is_demo_mode, is_test_mode
+from vibelens.models.skill import PersonalizationResult
 from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
 from vibelens.schemas.evolution import EvolutionAnalysisMeta, EvolutionAnalysisRequest
-from vibelens.services.evolution.mock import build_mock_evolution_result
+from vibelens.services.evolution import analyze_skill_evolution, estimate_skill_evolution
 from vibelens.services.job_tracker import (
     cancel_job,
     get_job,
@@ -18,8 +18,6 @@ from vibelens.services.job_tracker import (
     mark_failed,
     submit_job,
 )
-from vibelens.services.skill import estimate_skill_analysis
-from vibelens.services.skill.evolution import analyze_skill_evolution
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -28,10 +26,7 @@ router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 
 async def _run_evolution_analysis(
-    job_id: str,
-    session_ids: list[str],
-    token: str | None,
-    skill_names: list[str] | None,
+    job_id: str, session_ids: list[str], token: str | None, skill_names: list[str] | None
 ) -> None:
     """Background wrapper for evolution analysis."""
     try:
@@ -64,9 +59,8 @@ async def evolution_estimate(
         raise HTTPException(status_code=400, detail="session_ids must not be empty")
 
     try:
-        est = estimate_skill_analysis(
+        est = estimate_skill_evolution(
             body.session_ids,
-            SkillMode.EVOLUTION,
             session_token=x_session_token,
             skill_names=body.skill_names,
         )
@@ -103,10 +97,7 @@ async def evolution_analysis(
         raise HTTPException(status_code=400, detail="session_ids must not be empty")
 
     if is_test_mode() or is_demo_mode():
-        result = build_mock_evolution_result(body.session_ids)
-        return AnalysisJobResponse(
-            job_id="mock", status="completed", analysis_id=result.analysis_id
-        )
+        raise HTTPException(status_code=503, detail="Evolution analysis unavailable in demo mode")
 
     job_id = secrets.token_urlsafe(12)
     try:
@@ -167,20 +158,20 @@ async def evolution_job_cancel(job_id: str) -> AnalysisJobStatus:
 @router.get("/history")
 async def evolution_analysis_history() -> list[EvolutionAnalysisMeta]:
     """List all persisted evolution analyses, newest first."""
-    return get_skill_analysis_store().list_analyses()
+    return get_personalization_store().list_analyses()
 
 
 @router.get("/{analysis_id}")
-async def evolution_analysis_load(analysis_id: str) -> SkillAnalysisResult:
+async def evolution_analysis_load(analysis_id: str) -> PersonalizationResult:
     """Load a persisted evolution analysis by ID.
 
     Args:
         analysis_id: Unique analysis identifier.
 
     Returns:
-        Full SkillAnalysisResult.
+        Full PersonalizationResult.
     """
-    result = get_skill_analysis_store().load(analysis_id)
+    result = get_personalization_store().load(analysis_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"Analysis {analysis_id} not found")
     return result
@@ -196,7 +187,7 @@ async def evolution_analysis_delete(analysis_id: str) -> dict[str, bool]:
     Returns:
         Success status.
     """
-    deleted = get_skill_analysis_store().delete(analysis_id)
+    deleted = get_personalization_store().delete(analysis_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Analysis {analysis_id} not found")
     return {"deleted": True}

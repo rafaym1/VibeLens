@@ -1,6 +1,5 @@
 """Element creation models for the proposal and deep-generation pipeline."""
 
-
 from pydantic import BaseModel, Field
 
 from vibelens.models.llm.inference import BackendType
@@ -122,8 +121,7 @@ class ElementCreation(BaseModel):
         description="Tool names referenced in the element (e.g. Read, Edit, Bash).",
     )
     addressed_patterns: list[str] = Field(
-        default_factory=list,
-        description="Titles of workflow patterns addressed by this element.",
+        default_factory=list, description="Titles of workflow patterns addressed by this element."
     )
     confidence: float = Field(
         default=0.0,

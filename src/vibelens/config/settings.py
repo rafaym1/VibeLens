@@ -1,5 +1,6 @@
 """Core settings model and loader."""
 
+import hashlib
 from pathlib import Path
 
 from pydantic import Field, model_validator
@@ -79,10 +80,10 @@ class Settings(BaseSettings):
         description="Directory for persisted friction analysis results.",
     )
 
-    # Skill analysis persistence
-    skill_analysis_dir: Path = Field(
-        default=Path.home() / ".vibelens" / "skill_analyses",
-        description="Directory for persisted skill analysis results.",
+    # Personalization persistence
+    personalization_dir: Path = Field(
+        default=Path.home() / ".vibelens" / "personalization",
+        description="Directory for persisted personalization results.",
     )
 
     # Recommendation persistence
@@ -183,7 +184,7 @@ class Settings(BaseSettings):
         self.managed_skills_dir = self.managed_skills_dir.expanduser()
         self.share_dir = self.share_dir.expanduser()
         self.friction_dir = self.friction_dir.expanduser()
-        self.skill_analysis_dir = self.skill_analysis_dir.expanduser()
+        self.personalization_dir = self.personalization_dir.expanduser()
         self.recommendation_dir = self.recommendation_dir.expanduser()
         self.donation_dir = self.donation_dir.expanduser()
         self.upload_dir = self.upload_dir.expanduser()
@@ -196,8 +197,6 @@ class Settings(BaseSettings):
         Different configs (e.g. recipe-book vs redteam) get separate
         cache directories so switching configs doesn't serve stale data.
         """
-        import hashlib
-
         base = self.examples_dir.expanduser()
         if not self.demo_example_sessions:
             return base

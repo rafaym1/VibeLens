@@ -8,7 +8,6 @@ from vibelens.context.params import (
     PRESET_CONCISE,
     PRESET_DETAIL,
     PRESET_MEDIUM,
-    PRESET_RECOMMENDATION,
     ContextParams,
 )
 
@@ -36,37 +35,31 @@ def test_context_params_is_frozen() -> None:
     print("PASS: ContextParams is frozen — mutation raises FrozenInstanceError")
 
 
-def test_preset_recommendation_values() -> None:
-    """PRESET_RECOMMENDATION has maximum-compression values."""
-    p = PRESET_RECOMMENDATION
-    assert p.user_prompt_max_chars == 500
-    assert p.user_prompt_head_chars == 400
-    assert p.user_prompt_tail_chars == 100
-    assert p.bash_command_max_chars == 0
-    assert p.tool_arg_max_chars == 0
-    assert p.error_truncate_chars == 200
+def test_preset_concise_values() -> None:
+    """PRESET_CONCISE has tight-compression values."""
+    p = PRESET_CONCISE
+    assert p.user_prompt_max_chars == 800
+    assert p.user_prompt_head_chars == 600
+    assert p.user_prompt_tail_chars == 200
+    assert p.bash_command_max_chars == 120
+    assert p.tool_arg_max_chars == 80
+    assert p.error_truncate_chars == 300
     assert p.include_non_error_obs is False
     assert p.observation_max_chars == 0
-    assert p.agent_message_max_chars == 0
+    assert p.agent_message_max_chars == 200
     assert p.shorten_home_prefix is True
     assert p.path_max_segments == 2
-    print(
-        f"PASS: PRESET_RECOMMENDATION values correct — "
-        f"user_prompt_max_chars={p.user_prompt_max_chars}"
-    )
+    print(f"PASS: PRESET_CONCISE values correct — user_prompt_max_chars={p.user_prompt_max_chars}")
 
 
 def test_preset_ordering_by_compression() -> None:
     """Presets are ordered from most to least compressed by user_prompt_max_chars."""
     limits = [
-        PRESET_RECOMMENDATION.user_prompt_max_chars,
         PRESET_CONCISE.user_prompt_max_chars,
         PRESET_MEDIUM.user_prompt_max_chars,
         PRESET_DETAIL.user_prompt_max_chars,
     ]
-    assert limits == sorted(limits), (
-        f"Expected ascending order but got {limits}"
-    )
+    assert limits == sorted(limits), f"Expected ascending order but got {limits}"
     print(f"PASS: compression ordering correct — {limits}")
 
 

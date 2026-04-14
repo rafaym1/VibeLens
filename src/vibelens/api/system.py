@@ -171,7 +171,7 @@ async def list_cli_models() -> dict:
                 entry["output_per_mtok"] = pricing.output_per_mtok
             models_with_pricing.append(entry)
 
-        result[str(backend_type)] = {
+        result[backend_type.value] = {
             "models": models_with_pricing,
             "default_model": backend.default_model,
             "supports_freeform": backend.supports_freeform_model,

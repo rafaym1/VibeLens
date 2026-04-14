@@ -11,7 +11,7 @@ from vibelens.api.friction import router as friction_router
 from vibelens.api.recommendation import router as recommendation_router
 from vibelens.api.sessions import router as sessions_router
 from vibelens.api.shares import router as shares_router
-from vibelens.api.skill_management import router as skills_router
+from vibelens.api.skill import router as skills_router
 from vibelens.api.system import router as system_router
 from vibelens.api.upload import router as upload_router
 

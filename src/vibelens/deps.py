@@ -112,32 +112,13 @@ def get_agent_skill_stores() -> list:
     return _get_or_create("agent_skill_stores", create_agent_skill_stores)
 
 
-def get_skill_analysis_store():
-    """Return cached SkillAnalysisStore singleton."""
-    from vibelens.services.skill.store import SkillAnalysisStore
+def get_personalization_store():
+    """Return cached PersonalizationStore singleton."""
+    from vibelens.services.personalization.store import PersonalizationStore
 
     return _get_or_create(
-        "skill_analysis_store", lambda: SkillAnalysisStore(get_settings().skill_analysis_dir)
-    )
-
-
-def get_creation_store():
-    """Return cached CreationAnalysisStore singleton."""
-    from vibelens.services.creation.store import CreationAnalysisStore
-
-    return _get_or_create(
-        "creation_store",
-        lambda: CreationAnalysisStore(get_settings().skill_analysis_dir / "creation"),
-    )
-
-
-def get_evolution_store():
-    """Return cached EvolutionAnalysisStore singleton."""
-    from vibelens.services.evolution.store import EvolutionAnalysisStore
-
-    return _get_or_create(
-        "evolution_store",
-        lambda: EvolutionAnalysisStore(get_settings().skill_analysis_dir / "evolution"),
+        "personalization_store",
+        lambda: PersonalizationStore(get_settings().personalization_dir),
     )
 
 

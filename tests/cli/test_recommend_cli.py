@@ -1,4 +1,5 @@
 """Tests for the vibelens recommend CLI command."""
+
 import shutil
 
 from typer.testing import CliRunner
@@ -18,6 +19,7 @@ def test_recommend_help():
 
 def test_discover_finds_available_backends(monkeypatch):
     """discover_and_select_backend finds CLIs in PATH."""
+
     # Mock shutil.which to simulate 'gemini' being available
     def mock_which(name):
         if name == "gemini":

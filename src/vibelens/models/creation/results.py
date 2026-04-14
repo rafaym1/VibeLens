@@ -1,6 +1,5 @@
 """Creation pipeline analysis result model."""
 
-
 from pydantic import BaseModel, Field
 
 from vibelens.models.creation.creation import ElementCreation

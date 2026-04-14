@@ -4,7 +4,7 @@ Provides three subclasses of ContextExtractor, each targeting a different
 analysis use case:
 
 - **MetadataExtractor** — metadata header + first user prompt only.
-  Maximum compression for recommendation profile generation.
+  Concise compression for recommendation profile generation.
 - **SummaryExtractor** — uses compaction summaries as TLDRs when available.
   Falls back to all user prompts when no compaction agents exist.
 - **DetailExtractor** — full step-by-step detail with tool calls and
@@ -19,9 +19,9 @@ from vibelens.context.formatter import (
     summarize_tool_args,
 )
 from vibelens.context.params import (
+    PRESET_CONCISE,
     PRESET_DETAIL,
     PRESET_MEDIUM,
-    PRESET_RECOMMENDATION,
     ContextParams,
 )
 from vibelens.models.context import SessionContext
@@ -34,22 +34,20 @@ from vibelens.utils.content import content_to_text, is_error_content, truncate
 class MetadataExtractor(ContextExtractor):
     """Extracts only the metadata block and first user prompt.
 
-    Designed for recommendation profile generation where maximum compression
+    Designed for recommendation profile generation where concise compression
     is required. Ignores compaction agents entirely.
     """
 
-    def __init__(self, params: ContextParams = PRESET_RECOMMENDATION) -> None:
+    def __init__(self, params: ContextParams = PRESET_CONCISE) -> None:
         """Store extraction parameters.
 
         Args:
-            params: Context extraction parameters. Defaults to PRESET_RECOMMENDATION.
+            params: Context extraction parameters. Defaults to PRESET_CONCISE.
         """
         super().__init__(params=params)
 
     def extract(
-        self,
-        trajectory_group: list[Trajectory],
-        session_index: int | None = None,
+        self, trajectory_group: list[Trajectory], session_index: int | None = None
     ) -> SessionContext:
         """Extract metadata block and first user prompt only.
 
@@ -91,18 +89,6 @@ class MetadataExtractor(ContextExtractor):
             step_index2id=tracker.index_to_real_id,
         )
 
-    def format_step(self, step: Step, tracker: _IndexTracker) -> str:
-        """Return empty string — not used since extract() is overridden.
-
-        Args:
-            step: The trajectory step.
-            tracker: Index tracker.
-
-        Returns:
-            Always empty string.
-        """
-        return ""
-
     def _find_first_user_prompt(self, main: Trajectory) -> str:
         """Find and format the first user prompt in the trajectory.
 
@@ -117,6 +103,10 @@ class MetadataExtractor(ContextExtractor):
                 text = content_to_text(step.message).strip()
                 if text:
                     return format_user_prompt(text, self.params)
+        return ""
+
+    def format_step(self, step: Step, tracker: _IndexTracker) -> str:
+        """Not used — MetadataExtractor overrides extract() directly."""
         return ""
 
 
@@ -137,9 +127,7 @@ class SummaryExtractor(ContextExtractor):
         super().__init__(params=params)
 
     def extract(
-        self,
-        trajectory_group: list[Trajectory],
-        session_index: int | None = None,
+        self, trajectory_group: list[Trajectory], session_index: int | None = None
     ) -> SessionContext:
         """Extract context using compaction-as-TLDR strategy.
 

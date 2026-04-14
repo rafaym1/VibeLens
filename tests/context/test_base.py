@@ -61,17 +61,11 @@ def _make_step(
     return Step(step_id=step_id, source=source, message=message, timestamp=timestamp)
 
 
-# --- ABC enforcement ---
-
-
 def test_cannot_instantiate_abc() -> None:
     """ContextExtractor raises TypeError on direct instantiation."""
     with pytest.raises(TypeError):
         ContextExtractor(params=PRESET_DETAIL)  # type: ignore[abstract]
     print("PASS: ContextExtractor cannot be instantiated directly")
-
-
-# --- extract() return value ---
 
 
 def test_extract_returns_session_context() -> None:
@@ -83,9 +77,6 @@ def test_extract_returns_session_context() -> None:
     assert result.session_id == "sess-abc"
     assert result.context_text  # non-empty
     print(f"PASS: extract returns SessionContext for session {result.session_id!r}")
-
-
-# --- main trajectory detection ---
 
 
 def test_extract_finds_main_trajectory() -> None:
@@ -104,9 +95,6 @@ def test_extract_finds_main_trajectory() -> None:
     result = extractor.extract([sub_traj, main_traj])
     assert result.session_id == "sess-main"
     print(f"PASS: main trajectory found — session_id={result.session_id!r}")
-
-
-# --- compaction agent detection ---
 
 
 def test_extract_detects_compaction_agents() -> None:
@@ -138,9 +126,6 @@ def test_extract_detects_compaction_agents() -> None:
     print("PASS: compaction summary interleaved in context_text")
 
 
-# --- step index tracking ---
-
-
 def test_extract_step_index_tracking() -> None:
     """extract() builds a step_index2id mapping for USER steps."""
     steps = [
@@ -161,9 +146,6 @@ def test_extract_step_index_tracking() -> None:
     print(f"PASS: step_index2id = {result.step_index2id}")
 
 
-# --- chain refs ---
-
-
 def test_extract_chain_refs() -> None:
     """extract() propagates prev/next trajectory ref IDs to SessionContext."""
     prev_ref = TrajectoryRef(session_id="sess-prev")
@@ -181,9 +163,6 @@ def test_extract_chain_refs() -> None:
         f"PASS: chain refs — prev={result.prev_trajectory_ref_id!r}, "
         f"next={result.next_trajectory_ref_id!r}"
     )
-
-
-# --- _IndexTracker ---
 
 
 def test_index_tracker_sequential() -> None:

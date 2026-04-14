@@ -58,10 +58,10 @@ class Mitigation(BaseModel):
     )
     action: str = Field(description="How to address the friction (max 30 words).")
     rationale: str = Field(
-        default="",
         description=(
-            "One sentence (15 words), then 1-2 bullets starting with '\\n- ' (10 words each)."
-        ),
+            "One sentence (max 15 words), then 1-2 bullets "
+            "starting with '\\n- ' (max 10 words each). Plain language, no jargon."
+        )
     )
     confidence: float = Field(default=0.0, description="Confidence this will help. 0.0-1.0.")
 

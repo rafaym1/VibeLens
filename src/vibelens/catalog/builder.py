@@ -192,9 +192,9 @@ def print_stats(items: list[CatalogItem]) -> None:
     has_content = sum(1 for i in items if i.install_content)
     scores = [i.quality_score for i in items]
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Catalog Statistics: {len(items)} items")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print("\nType distribution:")
     for item_type, count in type_counts.most_common():
         print(f"  {item_type:12s} {count:4d}")
@@ -206,7 +206,10 @@ def print_stats(items: list[CatalogItem]) -> None:
         print(f"  {plat:15s} {count:4d}")
     avg_score = sum(scores) / len(scores)
     print(f"\nQuality scores: min={min(scores):.1f}, max={max(scores):.1f}, avg={avg_score:.1f}")
-    print(f"Installable (has content): {has_content}/{len(items)} ({100*has_content//len(items)}%)")
+    print(
+        f"Installable (has content): {has_content}/{len(items)} "
+        f"({100 * has_content // len(items)}%)"
+    )
     print(f"Total categories: {len(category_counts)}")
 
 

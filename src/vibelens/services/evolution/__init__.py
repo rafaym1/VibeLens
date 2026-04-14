@@ -1,5 +1,5 @@
-"""Evolution-related services — analysis persistence and mock data."""
+"""Evolution analysis services."""
 
-from vibelens.services.evolution.store import EvolutionAnalysisStore
+from vibelens.services.evolution.evolution import analyze_skill_evolution, estimate_skill_evolution
 
-__all__ = ["EvolutionAnalysisStore"]
+__all__ = ["analyze_skill_evolution", "estimate_skill_evolution"]

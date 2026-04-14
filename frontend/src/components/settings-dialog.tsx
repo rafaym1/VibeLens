@@ -124,10 +124,10 @@ export function SettingsDialog({ onClose, onShowOnboarding }: SettingsDialogProp
             </div>
           </div>
 
-          {/* Chat font */}
+          {/* Font */}
           <div>
             <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
-              Chat font
+              Font
             </h3>
             <div className="grid grid-cols-4 gap-2">
               {FONT_CARDS.map((card) => (

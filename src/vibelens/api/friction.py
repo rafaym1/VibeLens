@@ -11,7 +11,6 @@ from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
 from vibelens.schemas.friction import FrictionAnalysisRequest, FrictionMeta
 from vibelens.services.friction.analysis import analyze_friction, estimate_friction
-from vibelens.services.friction.mock import build_mock_friction_result
 from vibelens.services.job_tracker import (
     cancel_job,
     get_job,
@@ -56,11 +55,8 @@ async def friction_analysis(
         raise HTTPException(status_code=400, detail="session_ids must not be empty")
 
     if is_test_mode() or is_demo_mode():
-        result = build_mock_friction_result(body.session_ids)
-        return AnalysisJobResponse(
-            job_id="mock",
-            status="completed",
-            analysis_id=result.analysis_id,
+        raise HTTPException(
+            status_code=503, detail="Friction analysis unavailable in demo mode"
         )
 
     job_id = secrets.token_urlsafe(12)

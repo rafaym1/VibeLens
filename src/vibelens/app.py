@@ -139,7 +139,6 @@ async def _periodic_search_refresh() -> None:
             logger.warning("Search index refresh failed", exc_info=True)
 
 
-
 def _run_background_startup() -> None:
     """Run lightweight startup tasks in a background thread.
 

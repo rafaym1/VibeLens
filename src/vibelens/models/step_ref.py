@@ -1,6 +1,5 @@
 """StepRef — reusable locator for a step or step range within a session trajectory."""
 
-
 from pydantic import BaseModel, Field, model_validator
 
 

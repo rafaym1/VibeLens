@@ -1,4 +1,5 @@
 """Tests for recommendation prompt definitions."""
+
 from vibelens.prompts.recommendation import (
     RECOMMENDATION_PROFILE_PROMPT,
     RECOMMENDATION_RATIONALE_PROMPT,
@@ -7,9 +8,7 @@ from vibelens.prompts.recommendation import (
 
 def test_profile_prompt_renders():
     """L2 profile prompt renders system and user templates."""
-    system = RECOMMENDATION_PROFILE_PROMPT.render_system(
-        output_schema="{}", backend_rules=""
-    )
+    system = RECOMMENDATION_PROFILE_PROMPT.render_system(output_schema="{}", backend_rules="")
     assert "profile" in system.lower() or "workflow" in system.lower()
     print(f"Profile system prompt: {len(system)} chars")
 
@@ -23,9 +22,7 @@ def test_profile_prompt_renders():
 
 def test_rationale_prompt_renders():
     """L4 rationale prompt renders system and user templates."""
-    system = RECOMMENDATION_RATIONALE_PROMPT.render_system(
-        output_schema="{}", backend_rules=""
-    )
+    system = RECOMMENDATION_RATIONALE_PROMPT.render_system(output_schema="{}", backend_rules="")
     assert "rationale" in system.lower() or "recommend" in system.lower()
 
     user = RECOMMENDATION_RATIONALE_PROMPT.render_user(
@@ -49,4 +46,5 @@ def test_rationale_prompt_task_id():
 def test_recommendation_prompts_in_registry():
     """Recommendation prompts are registered in PROMPT_REGISTRY."""
     from vibelens.prompts import PROMPT_REGISTRY
+
     assert "recommendation_profile" in PROMPT_REGISTRY

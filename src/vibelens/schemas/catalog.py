@@ -16,12 +16,10 @@ class CatalogInstallRequest(BaseModel):
     """Request body for installing a catalog item."""
 
     target_platform: str = Field(
-        default="claude_code",
-        description="Target agent platform for installation.",
+        default="claude_code", description="Target agent platform for installation."
     )
     overwrite: bool = Field(
-        default=False,
-        description="Overwrite existing file if it already exists.",
+        default=False, description="Overwrite existing file if it already exists."
     )
 
 

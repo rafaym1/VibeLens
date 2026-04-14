@@ -1,7 +1,7 @@
-"""Shared utilities for skill analysis services.
+"""Shared utilities for personalization services.
 
 Constants, caching, skill gathering, pattern validation, and generic LLM
-output parsing used by retrieval, creation, and evolvement modules.
+output parsing used by creation and evolvement modules.
 """
 
 import hashlib
@@ -25,8 +25,8 @@ logger = get_logger(__name__)
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
-# Directory for detailed request/response skill analysis logs
-SKILL_LOG_DIR = Path("logs/skill")
+# Directory for detailed request/response personalization logs
+PERSONALIZATION_LOG_DIR = Path("logs/personalization")
 
 _cache: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL_SECONDS)
 
@@ -38,11 +38,11 @@ class SkillDetailLevel(Enum):
     FULL = "full"
 
 
-def skill_cache_key(session_ids: list[str], mode: SkillMode) -> str:
+def personalization_cache_key(session_ids: list[str], mode: SkillMode) -> str:
     """Generate a cache key from sorted session IDs and mode."""
     sorted_ids = ",".join(sorted(session_ids))
-    raw = f"skill:{mode}:{sorted_ids}"
-    return f"skill:{hashlib.sha256(raw.encode()).hexdigest()[:16]}"
+    raw = f"personalization:{mode}:{sorted_ids}"
+    return f"personalization:{hashlib.sha256(raw.encode()).hexdigest()[:16]}"
 
 
 def gather_installed_skills(

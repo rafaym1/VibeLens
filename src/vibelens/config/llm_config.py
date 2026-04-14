@@ -83,8 +83,19 @@ class LLMConfig(BaseModel):
     @field_validator("backend", mode="before")
     @classmethod
     def normalize_legacy_backend(cls, value: str) -> str:
-        """Map legacy backend strings to current BackendType values."""
+        """Map legacy backend strings to current BackendType values.
+
+        Handles two legacy formats:
+        - Old backend names (e.g. 'anthropic-api' -> 'litellm')
+        - Enum repr strings from Python <3.11 (e.g. 'BackendType.CLAUDE_CODE' -> 'claude_code')
+        """
         if isinstance(value, str):
+            if value.startswith("BackendType."):
+                member_name = value.removeprefix("BackendType.")
+                try:
+                    return BackendType[member_name].value
+                except KeyError:
+                    pass
             return LEGACY_BACKEND_ALIASES.get(value, value)
         return value
 
@@ -170,7 +181,7 @@ def save_llm_config(config: LLMConfig, config_path: Path) -> None:
             existing = {}
 
     existing["llm"] = {
-        "backend": str(config.backend),
+        "backend": config.backend.value,
         "model": config.model,
         "api_key": config.api_key,
         "base_url": config.base_url,

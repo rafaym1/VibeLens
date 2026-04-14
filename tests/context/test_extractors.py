@@ -2,11 +2,15 @@
 
 from datetime import datetime
 
-from vibelens.context.extractors import DetailExtractor, MetadataExtractor, SummaryExtractor
+from vibelens.context.extractors import (
+    DetailExtractor,
+    MetadataExtractor,
+    SummaryExtractor,
+)
 from vibelens.context.params import (
+    PRESET_CONCISE,
     PRESET_DETAIL,
     PRESET_MEDIUM,
-    PRESET_RECOMMENDATION,
     ContextParams,
 )
 from vibelens.models.enums import StepSource
@@ -17,10 +21,6 @@ from vibelens.models.trajectories.step import Step
 from vibelens.models.trajectories.tool_call import ToolCall
 from vibelens.models.trajectories.trajectory import Trajectory
 from vibelens.models.trajectories.trajectory_ref import TrajectoryRef
-
-# ---------------------------------------------------------------------------
-# Shared helpers
-# ---------------------------------------------------------------------------
 
 
 def _make_trajectory(
@@ -83,9 +83,7 @@ def _make_compaction_agent(
 
 
 def _make_tool_call(
-    tool_call_id: str,
-    function_name: str,
-    arguments: dict | None = None,
+    tool_call_id: str, function_name: str, arguments: dict | None = None
 ) -> ToolCall:
     """Build a ToolCall for testing."""
     return ToolCall(
@@ -95,26 +93,19 @@ def _make_tool_call(
     )
 
 
-def _make_observation(
-    tool_call_id: str,
-    content: str,
-) -> Observation:
+def _make_observation(tool_call_id: str, content: str) -> Observation:
     """Build an Observation with one result for testing."""
-    return Observation(
-        results=[ObservationResult(source_call_id=tool_call_id, content=content)]
-    )
+    return Observation(results=[ObservationResult(source_call_id=tool_call_id, content=content)])
 
 
 # ---------------------------------------------------------------------------
 # MetadataExtractor tests
 # ---------------------------------------------------------------------------
-
-
 def test_metadata_extractor_default_preset() -> None:
-    """MetadataExtractor defaults to PRESET_RECOMMENDATION."""
+    """MetadataExtractor defaults to PRESET_CONCISE."""
     extractor = MetadataExtractor()
-    assert extractor.params == PRESET_RECOMMENDATION
-    print("PASS: MetadataExtractor defaults to PRESET_RECOMMENDATION")
+    assert extractor.params == PRESET_CONCISE
+    print("PASS: MetadataExtractor defaults to PRESET_CONCISE")
 
 
 def test_metadata_extractor_first_prompt_only() -> None:
@@ -205,8 +196,6 @@ def test_metadata_extractor_has_metadata_block() -> None:
 # ---------------------------------------------------------------------------
 # SummaryExtractor tests
 # ---------------------------------------------------------------------------
-
-
 def test_summary_extractor_default_preset() -> None:
     """SummaryExtractor defaults to PRESET_MEDIUM."""
     extractor = SummaryExtractor()
@@ -286,8 +275,6 @@ def test_summary_extractor_without_compaction() -> None:
 # ---------------------------------------------------------------------------
 # DetailExtractor tests
 # ---------------------------------------------------------------------------
-
-
 def test_detail_extractor_default_preset() -> None:
     """DetailExtractor defaults to PRESET_DETAIL."""
     extractor = DetailExtractor()

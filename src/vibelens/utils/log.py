@@ -9,7 +9,7 @@ Two-tier logging architecture:
 Category log files:
   - ``parsers.log`` — all parser modules under ``vibelens.ingest.parsers.*``
   - ``analysis-friction.log`` — friction analysis and friction store
-  - ``analysis-skill.log`` — skill analysis and skill analysis store
+  - ``personalization.log`` — personalization analysis (creation, evolution)
   - ``donation.log`` — donation send/receive endpoints and service
 """
 
@@ -37,7 +37,9 @@ LOG_BACKUP_COUNT = 3
 # Prefix matching allows grouping related modules into one log file.
 CATEGORY_LOG_FILES: dict[str, str] = {
     "vibelens.ingest.parsers.": "parsers.log",
-    "vibelens.services.skill.": "analysis-skill.log",
+    "vibelens.services.personalization.": "personalization.log",
+    "vibelens.services.creation.": "personalization.log",
+    "vibelens.services.evolution.": "personalization.log",
     "vibelens.services.friction.": "analysis-friction.log",
     "vibelens.api.upload": "upload.log",
     "vibelens.services.upload.": "upload.log",

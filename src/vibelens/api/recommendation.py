@@ -25,7 +25,6 @@ from vibelens.services.recommendation import (
     estimate_recommendation,
 )
 from vibelens.services.recommendation.catalog import load_catalog
-from vibelens.services.recommendation.mock import build_mock_recommendation_result
 from vibelens.services.recommendation.store import RecommendationMeta
 from vibelens.utils.log import get_logger
 
@@ -98,10 +97,8 @@ async def recommendation_analyze(
         raise HTTPException(status_code=400, detail="session_ids must not be empty")
 
     if is_test_mode() or is_demo_mode():
-        result = build_mock_recommendation_result(body.session_ids)
-        get_recommendation_store().save(result, result.analysis_id)
-        return AnalysisJobResponse(
-            job_id="mock", status="completed", analysis_id=result.analysis_id
+        raise HTTPException(
+            status_code=503, detail="Recommendation analysis unavailable in demo mode"
         )
 
     job_id = secrets.token_urlsafe(12)

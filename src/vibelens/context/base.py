@@ -51,9 +51,7 @@ class ContextExtractor(ABC):
         self.params = params
 
     def extract(
-        self,
-        trajectory_group: list[Trajectory],
-        session_index: int | None = None,
+        self, trajectory_group: list[Trajectory], session_index: int | None = None
     ) -> SessionContext:
         """Extract compressed context from a session's trajectory group.
 
@@ -140,10 +138,7 @@ class ContextExtractor(ABC):
         return compaction
 
     def _extract_steps(
-        self,
-        main: Trajectory,
-        compaction_agents: list[Trajectory],
-        tracker: _IndexTracker,
+        self, main: Trajectory, compaction_agents: list[Trajectory], tracker: _IndexTracker
     ) -> str:
         """Dispatch to the appropriate step extraction strategy.
 
@@ -180,10 +175,7 @@ class ContextExtractor(ABC):
         return "\n\n".join(parts)
 
     def _extract_with_compactions(
-        self,
-        main: Trajectory,
-        compaction_agents: list[Trajectory],
-        tracker: _IndexTracker,
+        self, main: Trajectory, compaction_agents: list[Trajectory], tracker: _IndexTracker
     ) -> str:
         """Extract context for sessions with compaction sub-agents.
 
@@ -236,8 +228,7 @@ class ContextExtractor(ABC):
         return "\n\n".join(parts)
 
     def _build_compaction_boundaries(
-        self,
-        compaction_agents: list[Trajectory],
+        self, compaction_agents: list[Trajectory]
     ) -> list[tuple[datetime | None, str]]:
         """Extract timestamped summaries from compaction agents.
 

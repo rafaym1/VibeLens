@@ -1,4 +1,5 @@
 """Tests for the multi-signal recommendation scoring pipeline."""
+
 from vibelens.models.recommendation.catalog import CatalogItem, ItemType
 from vibelens.models.recommendation.profile import UserProfile
 from vibelens.services.recommendation.scoring import score_candidates

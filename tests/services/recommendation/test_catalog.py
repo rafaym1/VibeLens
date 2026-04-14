@@ -1,4 +1,5 @@
 """Tests for the recommendation catalog loader."""
+
 import json
 import tempfile
 from pathlib import Path
@@ -11,21 +12,23 @@ def _build_test_catalog(item_count: int = 3) -> dict:
     """Build a minimal catalog dict for testing."""
     items = []
     for i in range(item_count):
-        items.append({
-            "item_id": f"test-org/test-repo-{i}",
-            "item_type": "skill",
-            "name": f"test-skill-{i}",
-            "description": f"Test skill {i} description",
-            "tags": ["test", "skill"],
-            "category": "testing",
-            "platforms": ["claude-code"],
-            "quality_score": 75.0,
-            "popularity": 0.5,
-            "updated_at": "2026-04-01T00:00:00Z",
-            "source_url": f"https://github.com/test-org/test-repo-{i}",
-            "repo_full_name": f"test-org/test-repo-{i}",
-            "install_method": "skill_file",
-        })
+        items.append(
+            {
+                "item_id": f"test-org/test-repo-{i}",
+                "item_type": "skill",
+                "name": f"test-skill-{i}",
+                "description": f"Test skill {i} description",
+                "tags": ["test", "skill"],
+                "category": "testing",
+                "platforms": ["claude-code"],
+                "quality_score": 75.0,
+                "popularity": 0.5,
+                "updated_at": "2026-04-01T00:00:00Z",
+                "source_url": f"https://github.com/test-org/test-repo-{i}",
+                "repo_full_name": f"test-org/test-repo-{i}",
+                "install_method": "skill_file",
+            }
+        )
     return {
         "schema_version": 1,
         "version": "2026-04-10",

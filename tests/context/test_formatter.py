@@ -151,9 +151,6 @@ def test_build_metadata_block_timestamp() -> None:
     print(f"PASS: timestamp present — {block}")
 
 
-# --- format_user_prompt ---
-
-
 def test_format_user_prompt_short() -> None:
     """Short prompts within the limit are returned unchanged."""
     params = _make_params(user_prompt_max_chars=100)
@@ -178,9 +175,6 @@ def test_format_user_prompt_truncated() -> None:
     print(f"PASS: long prompt truncated with marker — {repr(result)}")
 
 
-# --- format_agent_message ---
-
-
 def test_format_agent_message_short() -> None:
     """Short agent messages within the limit are returned unchanged."""
     params = _make_params(agent_message_max_chars=200)
@@ -203,9 +197,6 @@ def test_format_agent_message_truncated() -> None:
     assert result.startswith("X" * 10)
     assert result.endswith("Z" * 5)
     print(f"PASS: long agent message truncated — {repr(result)}")
-
-
-# --- summarize_tool_args ---
 
 
 def test_summarize_tool_args_known_tool() -> None:
@@ -252,9 +243,6 @@ def test_summarize_tool_args_non_dict() -> None:
     result = summarize_tool_args("SomeTool", "raw string argument longer than limit", params)
     assert result.endswith("...")
     print(f"PASS: non-dict arguments truncated — {repr(result)}")
-
-
-# --- shorten_path ---
 
 
 def test_shorten_path_home_prefix() -> None:

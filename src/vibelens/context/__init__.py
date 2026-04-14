@@ -2,7 +2,7 @@
 
 Public API:
     - ContextExtractor (ABC), MetadataExtractor, SummaryExtractor, DetailExtractor
-    - ContextParams, PRESET_RECOMMENDATION, PRESET_CONCISE, PRESET_MEDIUM, PRESET_DETAIL
+    - ContextParams, PRESET_CONCISE, PRESET_MEDIUM, PRESET_DETAIL
     - build_batches
     - build_metadata_block, format_user_prompt, format_agent_message
 """
@@ -25,7 +25,6 @@ from vibelens.context.params import (
     PRESET_CONCISE,
     PRESET_DETAIL,
     PRESET_MEDIUM,
-    PRESET_RECOMMENDATION,
     ContextParams,
 )
 
@@ -35,7 +34,6 @@ __all__ = [
     "SummaryExtractor",
     "DetailExtractor",
     "ContextParams",
-    "PRESET_RECOMMENDATION",
     "PRESET_CONCISE",
     "PRESET_MEDIUM",
     "PRESET_DETAIL",

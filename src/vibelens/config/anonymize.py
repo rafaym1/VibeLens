@@ -23,17 +23,10 @@ class AnonymizeConfig(BaseModel):
         default=True,
         description="Redact API keys, tokens, JWTs, private keys, and database URLs.",
     )
-    redact_pii: bool = Field(
-        default=True,
-        description="Redact emails and public IP addresses.",
-    )
+    redact_pii: bool = Field(default=True, description="Redact emails and public IP addresses.")
     anonymize_paths: bool = Field(
         default=True,
         description="Hash usernames found in file paths (macOS /Users/X/, Linux /home/X/).",
-    )
-    redact_high_entropy: bool = Field(
-        default=False,
-        description="Deprecated — accepted but ignored. High-entropy heuristic removed in v0.9.15.",
     )
     placeholder: str = Field(
         default=REDACTED_PLACEHOLDER,

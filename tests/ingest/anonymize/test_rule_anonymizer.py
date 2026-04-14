@@ -126,11 +126,7 @@ class TestRuleAnonymizer:
         """When only credentials are enabled, PII and paths are untouched."""
         monkeypatch.setenv("USER", "testuser")
         config = AnonymizeConfig(
-            enabled=True,
-            redact_credentials=True,
-            redact_pii=False,
-            anonymize_paths=False,
-            redact_high_entropy=False,
+            enabled=True, redact_credentials=True, redact_pii=False, anonymize_paths=False
         )
         anon = RuleAnonymizer(config)
         t = _make_trajectory(

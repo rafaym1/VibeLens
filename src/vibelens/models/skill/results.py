@@ -1,4 +1,4 @@
-"""Service-layer result models with metadata for skill analysis."""
+"""Service-layer result models with metadata for personalization analysis."""
 
 
 from pydantic import BaseModel, Field
@@ -11,8 +11,8 @@ from vibelens.models.skill.retrieval import SkillRecommendation
 from vibelens.models.trajectories.metrics import Metrics
 
 
-class SkillAnalysisResult(BaseModel):
-    """Complete skill analysis result with service metadata.
+class PersonalizationResult(BaseModel):
+    """Complete personalization result with service metadata.
 
     Flattens mode-specific LLM output fields and adds session tracking,
     backend info, and cost metadata from the service layer.

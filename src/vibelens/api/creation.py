@@ -5,12 +5,12 @@ import secrets
 
 from fastapi import APIRouter, Header, HTTPException
 
-from vibelens.deps import get_skill_analysis_store, is_demo_mode, is_test_mode
-from vibelens.models.skill import SkillAnalysisResult, SkillMode
+from vibelens.deps import get_personalization_store, is_demo_mode, is_test_mode
+from vibelens.models.skill import PersonalizationResult
 from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
 from vibelens.schemas.creation import CreationAnalysisMeta, CreationAnalysisRequest
-from vibelens.services.creation.mock import build_mock_creation_result
+from vibelens.services.creation import analyze_skill_creation, estimate_skill_creation
 from vibelens.services.job_tracker import (
     cancel_job,
     get_job,
@@ -18,8 +18,6 @@ from vibelens.services.job_tracker import (
     mark_failed,
     submit_job,
 )
-from vibelens.services.skill import estimate_skill_analysis
-from vibelens.services.skill.creation import analyze_skill_creation
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -61,9 +59,7 @@ async def creation_estimate(
         raise HTTPException(status_code=400, detail="session_ids must not be empty")
 
     try:
-        est = estimate_skill_analysis(
-            body.session_ids, SkillMode.CREATION, session_token=x_session_token
-        )
+        est = estimate_skill_creation(body.session_ids, session_token=x_session_token)
     except ValueError as exc:
         status = 503 if "inference backend" in str(exc) else 400
         raise HTTPException(status_code=status, detail=str(exc)) from exc
@@ -97,10 +93,7 @@ async def creation_analysis(
         raise HTTPException(status_code=400, detail="session_ids must not be empty")
 
     if is_test_mode() or is_demo_mode():
-        result = build_mock_creation_result(body.session_ids)
-        return AnalysisJobResponse(
-            job_id="mock", status="completed", analysis_id=result.analysis_id
-        )
+        raise HTTPException(status_code=503, detail="Creation analysis unavailable in demo mode")
 
     job_id = secrets.token_urlsafe(12)
     try:
@@ -161,20 +154,20 @@ async def creation_job_cancel(job_id: str) -> AnalysisJobStatus:
 @router.get("/history")
 async def creation_analysis_history() -> list[CreationAnalysisMeta]:
     """List all persisted creation analyses, newest first."""
-    return get_skill_analysis_store().list_analyses()
+    return get_personalization_store().list_analyses()
 
 
 @router.get("/{analysis_id}")
-async def creation_analysis_load(analysis_id: str) -> SkillAnalysisResult:
+async def creation_analysis_load(analysis_id: str) -> PersonalizationResult:
     """Load a persisted creation analysis by ID.
 
     Args:
         analysis_id: Unique analysis identifier.
 
     Returns:
-        Full SkillAnalysisResult.
+        Full PersonalizationResult.
     """
-    result = get_skill_analysis_store().load(analysis_id)
+    result = get_personalization_store().load(analysis_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"Analysis {analysis_id} not found")
     return result
@@ -190,7 +183,7 @@ async def creation_analysis_delete(analysis_id: str) -> dict[str, bool]:
     Returns:
         Success status.
     """
-    deleted = get_skill_analysis_store().delete(analysis_id)
+    deleted = get_personalization_store().delete(analysis_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Analysis {analysis_id} not found")
     return {"deleted": True}
