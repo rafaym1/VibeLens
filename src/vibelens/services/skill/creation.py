@@ -14,7 +14,8 @@ from pathlib import Path
 
 from cachetools import TTLCache
 
-from vibelens.deps import get_skill_analysis_store
+from vibelens.context import DetailExtractor, SummaryExtractor, build_batches
+from vibelens.deps import get_settings, get_skill_analysis_store
 from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
 from vibelens.llm.tokenizer import count_tokens
@@ -34,7 +35,6 @@ from vibelens.prompts.creation import (
     SKILL_CREATION_PROPOSAL_SYNTHESIS_PROMPT,
 )
 from vibelens.services.analysis_store import generate_analysis_id
-from vibelens.services.context_params import PRESET_DETAIL, PRESET_MEDIUM
 from vibelens.services.inference_shared import (
     CACHE_TTL_SECONDS,
     build_digest_from_contexts,
@@ -47,7 +47,6 @@ from vibelens.services.inference_shared import (
     save_analysis_log,
     truncate_digest_to_fit,
 )
-from vibelens.services.session_batcher import build_batches
 from vibelens.services.skill.shared import (
     SKILL_LOG_DIR,
     _cache,
@@ -94,12 +93,12 @@ def estimate_skill_creation(
     """
     backend = require_backend()
     context_set = extract_all_contexts(
-        session_ids=session_ids, session_token=session_token, params=PRESET_MEDIUM
+        session_ids=session_ids, session_token=session_token, extractor=SummaryExtractor()
     )
     if not context_set:
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
 
-    batches = build_batches(context_set.contexts)
+    batches = build_batches(context_set.contexts, max_batch_tokens=get_settings().max_batch_tokens)
 
     # Proposal phase tokens
     proposal_system = SKILL_CREATION_PROPOSAL_PROMPT.render_system(
@@ -248,12 +247,12 @@ async def _infer_skill_creation_proposals(
         return _proposal_cache[cache_key]
 
     backend = require_backend()
-    context_set = extract_all_contexts(session_ids, session_token, PRESET_MEDIUM)
+    context_set = extract_all_contexts(session_ids, session_token, extractor=SummaryExtractor())
 
     if not context_set:
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
 
-    batches = build_batches(context_set.contexts)
+    batches = build_batches(context_set.contexts, max_batch_tokens=get_settings().max_batch_tokens)
     logger.info(
         "Skill proposals: %d sessions → %d batch(es)",
         len(context_set.session_ids),
@@ -346,7 +345,7 @@ async def _infer_skill_creation(
     """
     backend = require_backend()
     context_set = extract_all_contexts(
-        session_ids=session_ids, session_token=session_token, params=PRESET_DETAIL
+        session_ids=session_ids, session_token=session_token, extractor=DetailExtractor()
     )
 
     if not context_set:

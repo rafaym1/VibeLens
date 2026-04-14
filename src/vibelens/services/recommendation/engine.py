@@ -14,6 +14,7 @@ from pathlib import Path
 
 from cachetools import TTLCache
 
+from vibelens.context import MetadataExtractor
 from vibelens.deps import get_recommendation_store
 from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
@@ -32,7 +33,6 @@ from vibelens.prompts.recommendation import (
     RECOMMENDATION_RATIONALE_PROMPT,
 )
 from vibelens.services.analysis_store import generate_analysis_id
-from vibelens.services.context_params import PRESET_RECOMMENDATION
 from vibelens.services.inference_shared import (
     CACHE_MAXSIZE,
     CACHE_TTL_SECONDS,
@@ -87,7 +87,7 @@ def estimate_recommendation(
     """
     backend = require_backend()
     context_set = extract_all_contexts(
-        session_ids=session_ids, session_token=session_token, params=PRESET_RECOMMENDATION
+        session_ids=session_ids, session_token=session_token, extractor=MetadataExtractor()
     )
     if not context_set.contexts:
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
@@ -177,7 +177,7 @@ async def _run_pipeline(
     if session_ids:
         # Standard path: web UI with explicit session selection
         context_set = extract_all_contexts(
-            session_ids=session_ids, session_token=session_token, params=PRESET_RECOMMENDATION
+            session_ids=session_ids, session_token=session_token, extractor=MetadataExtractor()
         )
         if not context_set.contexts:
             raise ValueError(f"No sessions could be loaded from: {session_ids}")
