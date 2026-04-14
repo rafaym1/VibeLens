@@ -57,6 +57,9 @@ def parse_iso_timestamp(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
+        # Python < 3.11 doesn't support 'Z' suffix in fromisoformat
+        if value.endswith("Z"):
+            value = value[:-1] + "+00:00"
         dt = datetime.fromisoformat(value)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
@@ -115,6 +118,9 @@ def parse_metadata_timestamp(meta: dict) -> datetime | None:
         return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
     if isinstance(ts, str):
         try:
+            # Python < 3.11 doesn't support 'Z' suffix in fromisoformat
+            if ts.endswith("Z"):
+                ts = ts[:-1] + "+00:00"
             dt = datetime.fromisoformat(ts)
             return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
         except ValueError:

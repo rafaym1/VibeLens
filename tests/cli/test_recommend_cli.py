@@ -1,5 +1,6 @@
 """Tests for the vibelens recommend CLI command."""
 
+import re
 import shutil
 
 from typer.testing import CliRunner
@@ -8,13 +9,21 @@ from vibelens.cli import app
 
 runner = CliRunner()
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from text."""
+    return _ANSI_RE.sub("", text)
+
 
 def test_recommend_help():
     """vibelens recommend --help works."""
     result = runner.invoke(app, ["recommend", "--help"])
     assert result.exit_code == 0
-    assert "--top-n" in result.output
-    assert "--no-open" in result.output
+    output = _strip_ansi(result.output)
+    assert "--top-n" in output
+    assert "--no-open" in output
 
 
 def test_discover_finds_available_backends(monkeypatch):
