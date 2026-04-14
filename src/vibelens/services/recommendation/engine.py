@@ -38,14 +38,14 @@ from vibelens.services.inference_shared import (
     CACHE_TTL_SECONDS,
     build_system_kwargs,
     extract_all_contexts,
-    format_batch_digest,
+    format_context_batch,
     require_backend,
+    sample_contexts,
     save_analysis_log,
     truncate_digest_to_fit,
 )
 from vibelens.services.personalization.shared import parse_llm_output
 from vibelens.services.recommendation.catalog import CatalogSnapshot, load_catalog
-from vibelens.services.recommendation.extraction import extract_lightweight_digest
 from vibelens.services.recommendation.retrieval import KeywordRetrieval
 from vibelens.services.recommendation.scoring import score_candidates
 from vibelens.services.session.store_resolver import list_all_metadata
@@ -96,7 +96,7 @@ def estimate_recommendation(
     if not catalog or not catalog.items:
         raise ValueError("No catalog available for recommendations.")
 
-    digest = format_batch_digest(context_set)
+    digest = format_context_batch(context_set)
     profile_system = RECOMMENDATION_PROFILE_PROMPT.render_system()
     digest_tokens = count_tokens(digest)
 
@@ -164,7 +164,7 @@ async def _run_pipeline(
     Separated from analyze_recommendation for clean try/finally in caller.
 
     Args:
-        session_ids: Sessions to analyze. None triggers the lightweight path.
+        session_ids: Sessions to analyze. None discovers all local sessions.
         session_token: Browser tab token.
         analysis_id: Pre-generated analysis ID for log correlation.
 
@@ -174,25 +174,24 @@ async def _run_pipeline(
     backend = require_backend()
 
     # L1: Context extraction
-    if session_ids:
-        # Standard path: web UI with explicit session selection
-        context_set = extract_all_contexts(
-            session_ids=session_ids, session_token=session_token, extractor=MetadataExtractor()
-        )
-        if not context_set.contexts:
-            raise ValueError(f"No sessions could be loaded from: {session_ids}")
-        loaded_session_ids = context_set.session_ids
-        skipped_session_ids = context_set.skipped_session_ids
-        digest = format_batch_digest(context_set)
-    else:
-        # Lightweight path: CLI with all local sessions
+    if not session_ids:
+        # CLI path: discover all local sessions
         all_metadata = list_all_metadata(session_token)
         if not all_metadata:
             raise ValueError("No sessions found in local stores.")
-        digest, total_count, signal_count = extract_lightweight_digest(all_metadata)
-        loaded_session_ids = [m.get("session_id", "") for m in all_metadata]
-        skipped_session_ids = []
-        logger.info("Lightweight extraction: %d sessions, %d signals", total_count, signal_count)
+        session_ids = [m.get("session_id", "") for m in all_metadata if m.get("session_id")]
+
+    context_set = extract_all_contexts(
+        session_ids=session_ids, session_token=session_token, extractor=MetadataExtractor()
+    )
+    if not context_set.contexts:
+        raise ValueError(f"No sessions could be loaded from {len(session_ids)} session IDs")
+    loaded_session_ids = context_set.session_ids
+    skipped_session_ids = context_set.skipped_session_ids
+
+    # Smart sampling: select diverse, recent sessions within token budget
+    context_set = sample_contexts(context_set)
+    digest = format_context_batch(context_set)
 
     catalog = load_catalog()
     if not catalog or not catalog.items:

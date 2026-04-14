@@ -200,12 +200,7 @@ def recommend(
         )
         raise typer.Exit(code=1)
 
-    from vibelens.services.recommendation.extraction import find_compaction_files
-
-    compaction_count = sum(
-        1 for m in all_metadata if find_compaction_files(m.get("filepath") or "")
-    )
-    typer.echo(f" {len(all_metadata)} found ({compaction_count} with summaries)")
+    typer.echo(f" {len(all_metadata)} found")
 
     typer.echo("Running recommendation pipeline...")
     try:
