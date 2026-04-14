@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from vibelens.models.skill.patterns import WorkflowPattern
+from vibelens.models.session.patterns import WorkflowPattern
 
 
 class SkillRecommendation(BaseModel):

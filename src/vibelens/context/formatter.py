@@ -31,12 +31,15 @@ TOOL_ARG_KEYS: dict[str, list[str]] = {
 _PATH_ARG_KEYS = {"file_path", "path"}
 
 
-def build_metadata_block(main: Trajectory, session_index: int | None = None) -> str:
-    """Build shared metadata header: session ID, project, step counts, tool summary.
+def build_metadata_block(
+    main: Trajectory, session_index: int | None = None, include_details: bool = False
+) -> str:
+    """Build shared metadata header: session ID, project, timestamp, and optional details.
 
     Args:
         main: The main (non-sub-agent) trajectory.
         session_index: Optional 0-based index within the analysis batch.
+        include_details: If True, include STEPS and TOOLS lines.
 
     Returns:
         Multi-line metadata header string.
@@ -48,19 +51,20 @@ def build_metadata_block(main: Trajectory, session_index: int | None = None) -> 
         lines.append(f"PROJECT: {main.project_path}")
 
     if main.timestamp:
-        lines.append(f"TIMESTAMP: {main.timestamp.isoformat()}")
+        lines.append(f"TIMESTAMP: {main.timestamp.strftime('%Y-%m-%d %H:%M')}")
 
-    user_count = sum(1 for s in main.steps if s.source == StepSource.USER)
-    agent_count = sum(1 for s in main.steps if s.source == StepSource.AGENT)
-    lines.append(f"STEPS: {len(main.steps)} (user={user_count}, agent={agent_count})")
+    if include_details:
+        user_count = sum(1 for s in main.steps if s.source == StepSource.USER)
+        agent_count = sum(1 for s in main.steps if s.source == StepSource.AGENT)
+        lines.append(f"STEPS: {len(main.steps)} (user={user_count}, agent={agent_count})")
 
-    tool_counts: Counter[str] = Counter()
-    for step in main.steps:
-        for tc in step.tool_calls:
-            tool_counts[tc.function_name] += 1
-    if tool_counts:
-        tool_parts = [f"{name}({count})" for name, count in tool_counts.most_common()]
-        lines.append(f"TOOLS: {', '.join(tool_parts)}")
+        tool_counts: Counter[str] = Counter()
+        for step in main.steps:
+            for tc in step.tool_calls:
+                tool_counts[tc.function_name] += 1
+        if tool_counts:
+            tool_parts = [f"{name}({count})" for name, count in tool_counts.most_common()]
+            lines.append(f"TOOLS: {', '.join(tool_parts)}")
 
     return "\n".join(lines)
 

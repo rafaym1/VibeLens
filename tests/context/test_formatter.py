@@ -1,7 +1,7 @@
 """Tests for src/vibelens/context/formatter.py."""
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from vibelens.context.formatter import (
     build_metadata_block,
@@ -88,20 +88,20 @@ def test_build_metadata_block_contains_project() -> None:
 
 
 def test_build_metadata_block_step_counts() -> None:
-    """Metadata block shows total step count and per-source breakdown."""
+    """Metadata block shows total step count and per-source breakdown when include_details=True."""
     steps = [
         Step(step_id="s1", source=StepSource.USER, message="prompt"),
         Step(step_id="s2", source=StepSource.AGENT, message="response"),
         Step(step_id="s3", source=StepSource.USER, message="follow-up"),
     ]
     traj = _make_trajectory(steps=steps)
-    block = build_metadata_block(traj)
+    block = build_metadata_block(traj, include_details=True)
     assert "STEPS: 3 (user=2, agent=1)" in block
     print(f"PASS: step counts correct — {block}")
 
 
 def test_build_metadata_block_tool_summary() -> None:
-    """Metadata block shows tool usage counts sorted by frequency."""
+    """Metadata block shows tool usage counts sorted by frequency when include_details=True."""
     tc_bash1 = ToolCall(tool_call_id="tc1", function_name="Bash", arguments={"command": "ls"})
     tc_bash2 = ToolCall(tool_call_id="tc2", function_name="Bash", arguments={"command": "pwd"})
     tc_read = ToolCall(tool_call_id="tc3", function_name="Read", arguments={"file_path": "/a"})
@@ -115,7 +115,7 @@ def test_build_metadata_block_tool_summary() -> None:
         ),
     ]
     traj = _make_trajectory(steps=steps)
-    block = build_metadata_block(traj)
+    block = build_metadata_block(traj, include_details=True)
     # Bash(2) must appear before Read(1) since it's more frequent
     assert "Bash(2)" in block
     assert "Read(1)" in block
@@ -143,11 +143,11 @@ def test_build_metadata_block_with_index() -> None:
 
 
 def test_build_metadata_block_timestamp() -> None:
-    """Metadata block includes timestamp when set."""
+    """Metadata block includes timestamp in YYYY-MM-DD HH:MM format."""
     ts = datetime(2024, 6, 15, 12, 0, 0)
     traj = _make_trajectory(timestamp=ts)
     block = build_metadata_block(traj)
-    assert "TIMESTAMP: 2024-06-15T12:00:00" in block
+    assert "TIMESTAMP: 2024-06-15 12:00" in block
     print(f"PASS: timestamp present — {block}")
 
 
@@ -286,3 +286,74 @@ def test_shorten_path_no_trimming_when_zero_segments() -> None:
     result = shorten_path(path, params)
     assert result == path
     print(f"PASS: full path preserved when path_max_segments=0 — {repr(result)}")
+
+
+# --- build_metadata_block: header verbosity control ---
+
+
+def _make_mixed_steps(count: int = 10) -> list[Step]:
+    """Build a list of alternating USER/AGENT steps for verbosity tests."""
+    return [
+        Step(
+            step_id=f"step-{i}",
+            source=StepSource.USER if i % 3 == 0 else StepSource.AGENT,
+            message=f"msg {i}",
+        )
+        for i in range(count)
+    ]
+
+
+def test_compact_header_omits_steps_and_tools() -> None:
+    """Default (include_details=False) emits only SESSION, PROJECT, TIMESTAMP."""
+    traj = _make_trajectory(
+        session_id="test-session-001",
+        project_path="/home/user/myproject",
+        timestamp=datetime(2026, 4, 14, 10, 30, 0, tzinfo=timezone.utc),
+        steps=_make_mixed_steps(),
+    )
+    header = build_metadata_block(traj)
+
+    assert "SESSION: test-session-001" in header
+    assert "PROJECT:" in header
+    assert "TIMESTAMP:" in header
+    assert "STEPS:" not in header
+    assert "TOOLS:" not in header
+    print(f"Compact header:\n{header}")
+
+
+def test_detailed_header_includes_steps_and_tools() -> None:
+    """include_details=True adds STEPS and TOOLS lines."""
+    traj = _make_trajectory(
+        session_id="test-session-001",
+        project_path="/home/user/myproject",
+        timestamp=datetime(2026, 4, 14, 10, 30, 0, tzinfo=timezone.utc),
+        steps=_make_mixed_steps(),
+    )
+    header = build_metadata_block(traj, include_details=True)
+
+    assert "SESSION: test-session-001" in header
+    assert "STEPS:" in header
+    print(f"Detailed header:\n{header}")
+
+
+def test_compact_timestamp_format() -> None:
+    """Compact header uses YYYY-MM-DD HH:MM format, not full ISO."""
+    traj = _make_trajectory(
+        timestamp=datetime(2026, 4, 14, 10, 30, 0, tzinfo=timezone.utc),
+    )
+    header = build_metadata_block(traj)
+
+    assert "2026-04-14 10:30" in header
+    # Should NOT contain full ISO with seconds and timezone
+    assert "+00:00" not in header
+    ts_lines = [line for line in header.splitlines() if "TIMESTAMP" in line]
+    print(f"Timestamp line: {ts_lines}")
+
+
+def test_session_index_suffix() -> None:
+    """Session index suffix still works in compact mode."""
+    traj = _make_trajectory()
+    header = build_metadata_block(traj, session_index=3)
+
+    assert "(index=3)" in header
+    print(f"Indexed header:\n{header}")

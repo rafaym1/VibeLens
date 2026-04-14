@@ -70,7 +70,7 @@ class ContextExtractor(ABC):
         tracker = _IndexTracker()
 
         context_text = self._extract_steps(main, compaction_agents, tracker)
-        header = build_metadata_block(main, session_index=session_index)
+        header = build_metadata_block(main, session_index=session_index, include_details=True)
         full_text = f"{header}\n\n{context_text}"
 
         return SessionContext(

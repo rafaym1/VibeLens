@@ -176,7 +176,7 @@ def test_metadata_extractor_custom_params() -> None:
 
 
 def test_metadata_extractor_has_metadata_block() -> None:
-    """MetadataExtractor output includes SESSION header, STEPS, and TOOLS lines."""
+    """MetadataExtractor output includes compact header (SESSION, PROJECT) without STEPS/TOOLS."""
     tc = _make_tool_call("tc1", "Edit", {"file_path": "/a/b.py"})
     steps = [
         _make_step("s1", StepSource.USER, "do something"),
@@ -187,10 +187,9 @@ def test_metadata_extractor_has_metadata_block() -> None:
     result = extractor.extract([traj], session_index=0)
 
     assert "=== SESSION: abc123 (index=0) ===" in result.context_text
-    assert "STEPS:" in result.context_text
-    assert "TOOLS:" in result.context_text
-    assert "Edit(1)" in result.context_text
-    print(f"PASS: metadata block present — {result.context_text.splitlines()[:5]}")
+    assert "STEPS:" not in result.context_text
+    assert "TOOLS:" not in result.context_text
+    print(f"PASS: compact metadata block present — {result.context_text.splitlines()[:5]}")
 
 
 # ---------------------------------------------------------------------------
