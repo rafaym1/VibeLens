@@ -1,5 +1,7 @@
 import { Coins, Layers, Play, Sparkles } from "lucide-react";
+import { useState } from "react";
 import type { CostEstimate } from "../types";
+import { ConsentSection } from "./consent-section";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "./modal";
 
 export function CostEstimateDialog({
@@ -13,6 +15,8 @@ export function CostEstimateDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const [agreed, setAgreed] = useState(false);
+
   return (
     <Modal onClose={onCancel} maxWidth="max-w-md">
       <ModalHeader onClose={onCancel}>
@@ -50,6 +54,7 @@ export function CostEstimateDialog({
               </p>
             )}
           </div>
+          <ConsentSection agreed={agreed} onAgreeChange={setAgreed} />
         </div>
       </ModalBody>
       <ModalFooter>
@@ -61,7 +66,8 @@ export function CostEstimateDialog({
         </button>
         <button
           onClick={onConfirm}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded-md transition"
+          disabled={!agreed}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded-md transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Play className="w-3 h-3" />
           Run Analysis
