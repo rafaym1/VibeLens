@@ -342,3 +342,28 @@ class TestLoadSnapshotPattern:
         group = source.load("session-001")
         assert group is not None
         print("load() survived concurrent invalidation via snapshot pattern")
+
+
+class TestCacheHitOrRebuild:
+    """Test that _try_load_from_cache is binary: perfect hit or full rebuild."""
+
+    def test_stale_file_triggers_full_rebuild(self, test_settings, sample_history, sample_sessions):
+        """When any file changed since cache was written, _try_load_from_cache returns False."""
+        settings, _, test_project = test_settings
+        source = LocalSource(settings=settings)
+
+        # Build initial index and warm cache
+        source.list_metadata()
+
+        # Invalidate in-memory state
+        source._metadata_cache = None
+        source._index = {}
+        source._discover_files()
+
+        # Modify one file to make it stale
+        session_file = test_project / "session-001.jsonl"
+        session_file.write_text(session_file.read_text() + "\n")
+
+        result = source._try_load_from_cache()
+        assert result is False, "Stale files should trigger full rebuild, not incremental update"
+        print("Stale file correctly triggers full rebuild (returns False)")

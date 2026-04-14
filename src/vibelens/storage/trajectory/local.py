@@ -14,7 +14,6 @@ from vibelens.ingest.fast_metrics import scan_session_metrics
 from vibelens.ingest.index_builder import build_session_index
 from vibelens.ingest.index_cache import (
     collect_file_mtimes,
-    detect_stale_files,
     load_cache,
     save_cache,
 )
@@ -45,6 +44,33 @@ def _extract_session_id(filepath: Path, agent_type: AgentType) -> str:
     if agent_type == AgentType.CLAUDE_CODE:
         return stem
     return f"{agent_type.value}:{stem}"
+
+
+def _has_stale_files(
+    file_index: dict[str, tuple[Path, BaseParser]], cached_mtimes: dict[str, float]
+) -> bool:
+    """Check whether any files changed or were removed since the cache was written.
+
+    Args:
+        file_index: Current session_id -> (filepath, parser) map.
+        cached_mtimes: filepath_str -> mtime_ns from previous cache.
+
+    Returns:
+        True if any file is new, changed, or removed.
+    """
+    current_paths: set[str] = set()
+    for _sid, (fpath, _parser) in file_index.items():
+        path_str = str(fpath)
+        current_paths.add(path_str)
+        try:
+            current_mtime = fpath.stat().st_mtime_ns
+        except OSError:
+            return True
+        cached_mtime = cached_mtimes.get(path_str)
+        if cached_mtime is None or current_mtime != cached_mtime:
+            return True
+
+    return bool(set(cached_mtimes.keys()) - current_paths)
 
 
 class LocalTrajectoryStore(BaseTrajectoryStore):
@@ -104,8 +130,9 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
         """Clear in-memory index cache, keeping persistent cache.
 
         The persistent cache (~/.vibelens/session_index.json) is preserved
-        because _build_index will revalidate it via mtime checks. Only
-        stale/new files trigger re-parsing; unchanged files load from cache.
+        because _build_index will revalidate it via mtime checks. If all
+        files are unchanged, the cache is restored directly; otherwise a
+        full rebuild runs.
         """
         super().invalidate_index()
 
@@ -138,11 +165,10 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
                 self._index[session_id] = (filepath, parser)
 
     def _try_load_from_cache(self) -> bool:
-        """Attempt to load index from persistent cache, returning True on hit.
+        """Load index from persistent cache if no files changed.
 
-        Uses incremental updates: if only a few files changed, re-parses
-        just those files while keeping cached entries for unchanged files.
-        Falls back to full rebuild only when cache is missing or corrupt.
+        Returns True only on a perfect cache hit (zero stale files).
+        Any staleness falls through to _full_rebuild.
         """
         cache = load_cache()
         if not cache:
@@ -151,116 +177,19 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
         cached_mtimes = cache.get("file_mtimes", {})
         cached_entries = cache.get("entries", {})
         cached_path_map = cache.get("path_to_session_id", {})
-        stale_sids, removed_paths = detect_stale_files(self._index, cached_mtimes)
 
-        if not stale_sids and not removed_paths:
-            # Perfect cache hit — restore everything from cache
-            self._remap_index(cached_path_map)
-            self._metadata_cache = {}
-            for sid in self._index:
-                if sid in cached_entries:
-                    meta = cached_entries[sid]
-                    meta["filepath"] = str(self._index[sid][0])
-                    self._metadata_cache[sid] = meta
-            logger.info("Loaded %d sessions from index cache", len(self._metadata_cache))
-            return True
-
-        # Incremental update: re-parse only stale files, keep the rest
-        total_files = len(self._index)
-        stale_ratio = len(stale_sids) / max(total_files, 1)
-
-        # If more than 30% of files changed, a full rebuild is more efficient
-        # because index parsing + continuation scanning benefits from bulk access
-        INCREMENTAL_THRESHOLD = 0.3
-        if stale_ratio > INCREMENTAL_THRESHOLD:
-            logger.info(
-                "Index cache stale: %d/%d changed (%.0f%%) — full rebuild",
-                len(stale_sids),
-                total_files,
-                stale_ratio * 100,
-            )
+        if _has_stale_files(self._index, cached_mtimes):
             return False
 
-        logger.info(
-            "Index cache: %d changed, %d removed — incremental update",
-            len(stale_sids),
-            len(removed_paths),
-        )
-        self._incremental_update(cache, stale_sids, removed_paths)
-        return True
-
-    def _incremental_update(
-        self, cache: dict, stale_sids: set[str], removed_paths: set[str]
-    ) -> None:
-        """Re-parse only stale files and merge with cached entries.
-
-        Restores cached metadata for unchanged files, then re-parses stale
-        files individually to update their entries. Writes the merged result
-        back to the persistent cache.
-
-        Args:
-            cache: Full cache dict from load_cache().
-            stale_sids: Session IDs whose files changed since last cache.
-            removed_paths: File paths in cache that no longer exist on disk.
-        """
-        cached_entries = cache.get("entries", {})
-        cached_path_map = cache.get("path_to_session_id", {})
-
-        # Remap index to use real session IDs for unchanged files
         self._remap_index(cached_path_map)
-
-        # Start with cached metadata for non-stale sessions
         self._metadata_cache = {}
         for sid in self._index:
-            if sid not in stale_sids and sid in cached_entries:
+            if sid in cached_entries:
                 meta = cached_entries[sid]
                 meta["filepath"] = str(self._index[sid][0])
                 self._metadata_cache[sid] = meta
-
-        # Re-parse stale files and enrich with fast metrics
-        reparsed = 0
-        for sid in stale_sids:
-            entry = self._index.get(sid)
-            if not entry:
-                continue
-            fpath, parser = entry
-            try:
-                trajs = parser.parse_file(fpath)
-                if not trajs or not trajs[0].first_message:
-                    self._index.pop(sid, None)
-                    continue
-                traj = trajs[0]
-                traj.steps = []
-
-                # Enrich with fast-scanned metrics
-                metrics = scan_session_metrics(fpath)
-                if metrics:
-                    _apply_scanned_metrics(traj, metrics)
-
-                # Remap session ID if parser produced a different one
-                real_sid = traj.session_id
-                if real_sid != sid:
-                    self._index.pop(sid, None)
-                    self._index[real_sid] = (fpath, parser)
-
-                meta = traj.model_dump(exclude={"steps"}, mode="json")
-                meta["filepath"] = str(fpath)
-                self._metadata_cache[real_sid] = meta
-                reparsed += 1
-            except Exception:
-                logger.debug("Failed to re-parse stale file %s", fpath, exc_info=True)
-
-        logger.info(
-            "Incremental update: %d cached, %d re-parsed",
-            len(self._metadata_cache) - reparsed,
-            reparsed,
-        )
-
-        # Write merged cache back to disk
-        mtimes = collect_file_mtimes(self._index)
-        path_to_sid = {str(fp): s for s, (fp, _p) in self._index.items()}
-        continuation_map = _extract_continuation_map(self._metadata_cache)
-        save_cache(self._metadata_cache, mtimes, continuation_map, path_to_sid)
+        logger.info("Loaded %d sessions from index cache", len(self._metadata_cache))
+        return True
 
     def _remap_index(self, path_to_session_id: dict[str, str]) -> None:
         """Remap _index keys using the cached path -> real session_id mapping.
