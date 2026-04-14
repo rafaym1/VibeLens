@@ -21,7 +21,7 @@ from vibelens.schemas.skills import (
     SkillSyncRequest,
     SkillWriteRequest,
 )
-from vibelens.services.analysis_shared import CACHE_TTL_SECONDS
+from vibelens.services.inference_shared import CACHE_TTL_SECONDS
 from vibelens.services.skill.download import download_skill_directory
 from vibelens.storage.skill.agent import AGENT_SKILL_REGISTRY
 from vibelens.storage.skill.disk import DiskSkillStore

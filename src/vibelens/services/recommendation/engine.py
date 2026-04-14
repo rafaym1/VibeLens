@@ -31,7 +31,9 @@ from vibelens.prompts.recommendation import (
     RECOMMENDATION_PROFILE_PROMPT,
     RECOMMENDATION_RATIONALE_PROMPT,
 )
-from vibelens.services.analysis_shared import (
+from vibelens.services.analysis_store import generate_analysis_id
+from vibelens.services.context_params import PRESET_RECOMMENDATION
+from vibelens.services.inference_shared import (
     CACHE_MAXSIZE,
     CACHE_TTL_SECONDS,
     build_system_kwargs,
@@ -41,8 +43,6 @@ from vibelens.services.analysis_shared import (
     save_analysis_log,
     truncate_digest_to_fit,
 )
-from vibelens.services.analysis_store import generate_analysis_id
-from vibelens.services.context_params import PRESET_RECOMMENDATION
 from vibelens.services.recommendation.catalog import CatalogSnapshot, load_catalog
 from vibelens.services.recommendation.extraction import extract_lightweight_digest
 from vibelens.services.recommendation.retrieval import KeywordRetrieval

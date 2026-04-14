@@ -33,7 +33,9 @@ from vibelens.prompts.creation import (
     SKILL_CREATION_PROPOSAL_PROMPT,
     SKILL_CREATION_PROPOSAL_SYNTHESIS_PROMPT,
 )
-from vibelens.services.analysis_shared import (
+from vibelens.services.analysis_store import generate_analysis_id
+from vibelens.services.context_params import PRESET_DETAIL, PRESET_MEDIUM
+from vibelens.services.inference_shared import (
     CACHE_TTL_SECONDS,
     build_digest_from_contexts,
     build_system_kwargs,
@@ -45,8 +47,6 @@ from vibelens.services.analysis_shared import (
     save_analysis_log,
     truncate_digest_to_fit,
 )
-from vibelens.services.analysis_store import generate_analysis_id
-from vibelens.services.context_params import PRESET_DETAIL, PRESET_MEDIUM
 from vibelens.services.session_batcher import build_batches
 from vibelens.services.skill.shared import (
     SKILL_LOG_DIR,

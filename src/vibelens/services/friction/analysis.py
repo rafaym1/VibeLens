@@ -31,7 +31,9 @@ from vibelens.prompts.friction_analysis import (
     FRICTION_ANALYSIS_PROMPT,
     FRICTION_SYNTHESIS_PROMPT,
 )
-from vibelens.services.analysis_shared import (
+from vibelens.services.analysis_store import generate_analysis_id
+from vibelens.services.context_params import PRESET_DETAIL
+from vibelens.services.inference_shared import (
     CACHE_MAXSIZE,
     CACHE_TTL_SECONDS,
     build_system_kwargs,
@@ -43,8 +45,6 @@ from vibelens.services.analysis_shared import (
     save_analysis_log,
     truncate_digest_to_fit,
 )
-from vibelens.services.analysis_store import generate_analysis_id
-from vibelens.services.context_params import PRESET_DETAIL
 from vibelens.services.session_batcher import build_batches
 from vibelens.services.skill.shared import parse_llm_output
 from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id

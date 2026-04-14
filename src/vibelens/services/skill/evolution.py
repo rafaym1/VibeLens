@@ -31,7 +31,9 @@ from vibelens.prompts.evolution import (
     SKILL_EVOLUTION_PROPOSAL_PROMPT,
     SKILL_EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT,
 )
-from vibelens.services.analysis_shared import (
+from vibelens.services.analysis_store import generate_analysis_id
+from vibelens.services.context_params import PRESET_DETAIL, PRESET_MEDIUM
+from vibelens.services.inference_shared import (
     build_digest_from_contexts,
     build_system_kwargs,
     extract_all_contexts,
@@ -42,8 +44,6 @@ from vibelens.services.analysis_shared import (
     save_analysis_log,
     truncate_digest_to_fit,
 )
-from vibelens.services.analysis_store import generate_analysis_id
-from vibelens.services.context_params import PRESET_DETAIL, PRESET_MEDIUM
 from vibelens.services.session_batcher import build_batches
 from vibelens.services.skill.shared import (
     SKILL_LOG_DIR,
@@ -150,9 +150,7 @@ def estimate_skill_evolution(
 
 
 async def analyze_skill_evolution(
-    session_ids: list[str],
-    session_token: str | None = None,
-    skill_names: list[str] | None = None,
+    session_ids: list[str], session_token: str | None = None, skill_names: list[str] | None = None
 ) -> SkillAnalysisResult:
     """Run evolvement-mode skill analysis: propose then deep-edit installed skills.
 

@@ -12,7 +12,6 @@ from vibelens.models.dashboard.dashboard import (
     ToolUsageStat,
 )
 from vibelens.models.trajectories import Trajectory
-from vibelens.services.analysis_shared import CACHE_MAXSIZE, CACHE_TTL_SECONDS
 from vibelens.services.dashboard.analytics import compute_session_analytics
 from vibelens.services.dashboard.stats import (
     compute_dashboard_stats,
@@ -20,6 +19,7 @@ from vibelens.services.dashboard.stats import (
     filter_metadata,
 )
 from vibelens.services.dashboard.tool_usage import compute_tool_usage
+from vibelens.services.inference_shared import CACHE_MAXSIZE, CACHE_TTL_SECONDS
 from vibelens.services.session.store_resolver import (
     get_metadata_from_stores,
     list_all_metadata,

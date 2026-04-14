@@ -17,7 +17,7 @@ from vibelens.deps import get_central_skill_store
 from vibelens.llm.backend import InferenceError
 from vibelens.models.context import SessionContextBatch
 from vibelens.models.skill import SkillMode, WorkflowPattern
-from vibelens.services.analysis_shared import CACHE_MAXSIZE, CACHE_TTL_SECONDS
+from vibelens.services.inference_shared import CACHE_MAXSIZE, CACHE_TTL_SECONDS
 from vibelens.utils.json import extract_json_from_llm_output
 from vibelens.utils.log import get_logger
 

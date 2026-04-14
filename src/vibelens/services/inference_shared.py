@@ -10,14 +10,13 @@ import json
 from collections.abc import Coroutine
 from pathlib import Path
 
+from vibelens.context import ContextExtractor, DetailExtractor
 from vibelens.deps import get_inference_backend
 from vibelens.llm.backend import InferenceBackend, InferenceError
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContext, SessionContextBatch
 from vibelens.models.llm.inference import BackendType
 from vibelens.models.llm.prompts import AnalysisPrompt
-from vibelens.services.context_extraction import extract_session_context
-from vibelens.services.context_params import PRESET_DETAIL, ContextParams
 from vibelens.services.session.store_resolver import (
     get_metadata_from_stores,
     load_from_stores,
@@ -63,7 +62,9 @@ def require_backend() -> InferenceBackend:
 
 
 def extract_all_contexts(
-    session_ids: list[str], session_token: str | None, params: ContextParams = PRESET_DETAIL
+    session_ids: list[str],
+    session_token: str | None,
+    extractor: ContextExtractor | None = None,
 ) -> SessionContextBatch:
     """Load sessions and extract compressed contexts.
 
@@ -73,11 +74,13 @@ def extract_all_contexts(
     Args:
         session_ids: Sessions to load.
         session_token: Browser tab token for upload scoping.
-        params: Context extraction parameters controlling detail level.
+        extractor: Context extractor to use; defaults to DetailExtractor.
 
     Returns:
         SessionContextBatch wrapping extracted contexts and load status.
     """
+    if extractor is None:
+        extractor = DetailExtractor()
     contexts: list[SessionContext] = []
     loaded_ids: list[str] = []
     skipped_ids: list[str] = []
@@ -96,8 +99,8 @@ def extract_all_contexts(
             skipped_ids.append(sid)
             continue
 
-        ctx = extract_session_context(
-            trajectory_group=trajectories, params=params, session_index=len(contexts)
+        ctx = extractor.extract(
+            trajectory_group=trajectories, session_index=len(contexts)
         )
         contexts.append(ctx)
         loaded_ids.append(sid)
