@@ -16,6 +16,7 @@ import {
 } from "./personalization-view";
 import { PersonalizationHistory } from "./personalization-history";
 import { RecommendationView } from "./recommendation-results-view";
+import { RecommendConsentDialog } from "./recommend-consent-dialog";
 
 const TAB_CONFIG: { id: SkillTab; label: string; tooltip: string }[] = [
   { id: "local", label: "Local Skills", tooltip: "Manage installed SKILL.md files" },
@@ -148,6 +149,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
   const selectedSkillNamesRef = useRef<string[] | undefined>(undefined);
   const resolvedSessionIdsRef = useRef<string[]>([]);
   const [showSkillSelector, setShowSkillSelector] = useState(false);
+  const [showRecommendConsent, setShowRecommendConsent] = useState(false);
 
   const fetchAllSessionIds = useCallback(async (): Promise<string[]> => {
     const res = await fetchWithToken("/api/sessions");
@@ -250,7 +252,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
           return;
         }
         setAnalysisLoading(false);
-        await handleConfirmAnalysis();
+        setShowRecommendConsent(true);
         return;
       }
       if (mode === "evolution") {
@@ -570,6 +572,15 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
           fetchWithToken={fetchWithToken}
           onConfirm={handleSkillSelectionConfirm}
           onCancel={() => setShowSkillSelector(false)}
+        />
+      )}
+      {showRecommendConsent && (
+        <RecommendConsentDialog
+          onConfirm={() => {
+            setShowRecommendConsent(false);
+            handleConfirmAnalysis();
+          }}
+          onCancel={() => setShowRecommendConsent(false)}
         />
       )}
     </div>
