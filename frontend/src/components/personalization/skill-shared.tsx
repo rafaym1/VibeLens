@@ -119,12 +119,12 @@ export function ConfidenceBar({ confidence, accentColor = "emerald" }: { confide
 
   const HIGH_COLORS: Record<string, { bar: string; text: string }> = {
     emerald: { bar: "bg-emerald-500", text: "text-accent-emerald" },
-    amber: { bar: "bg-amber-500", text: "text-amber-700 dark:text-amber-400" },
+    amber: { bar: "bg-amber-500", text: "text-accent-amber" },
     teal: { bar: "bg-teal-500", text: "text-accent-teal" },
   };
   const high = HIGH_COLORS[accentColor];
-  const barColor = isHigh ? high.bar : isMedium ? "bg-amber-500" : "bg-zinc-600";
-  const textColor = isHigh ? high.text : isMedium ? "text-amber-700 dark:text-amber-400" : "text-dimmed";
+  const barColor = isHigh ? high.bar : isMedium ? "bg-amber-500" : "bg-control-hover";
+  const textColor = isHigh ? high.text : isMedium ? "text-accent-amber" : "text-dimmed";
 
   return (
     <Tooltip text={`${pct}% confidence`}>

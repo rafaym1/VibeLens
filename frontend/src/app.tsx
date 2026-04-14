@@ -409,7 +409,7 @@ export function App() {
           <div className="px-6 pt-4 shrink-0">
             <button
               onClick={handleRecBack}
-              className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              className="flex items-center gap-1.5 text-sm text-dimmed hover:text-secondary transition-colors"
             >
               <span>&larr;</span> Back to sessions
             </button>
@@ -507,8 +507,8 @@ export function App() {
                   onClick={() => setMainView("browse")}
                   className={`min-w-[100px] text-center px-4 py-1.5 text-sm font-semibold rounded-md transition ${
                     mainView === "browse"
-                      ? "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary"
-                      : "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30"
+                      ? "bg-control/70 text-primary"
+                      : "text-muted hover:text-secondary hover:bg-control/40"
                   }`}
                 >
                   Conversation
@@ -520,8 +520,8 @@ export function App() {
                   onClick={() => setMainView("analyze")}
                   className={`min-w-[100px] text-center px-4 py-1.5 text-sm font-semibold rounded-md transition ${
                     mainView === "analyze"
-                      ? "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary"
-                      : "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30"
+                      ? "bg-control/70 text-primary"
+                      : "text-muted hover:text-secondary hover:bg-control/40"
                   }`}
                 >
                   Dashboard
@@ -533,8 +533,8 @@ export function App() {
                   onClick={() => setMainView("skills")}
                   className={`min-w-[100px] text-center px-4 py-1.5 text-sm font-semibold rounded-md transition ${
                     mainView === "skills"
-                      ? "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary"
-                      : "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30"
+                      ? "bg-control/70 text-primary"
+                      : "text-muted hover:text-secondary hover:bg-control/40"
                   }`}
                 >
                   Personalization
@@ -546,8 +546,8 @@ export function App() {
                   onClick={() => setMainView("friction")}
                   className={`min-w-[100px] text-center px-4 py-1.5 text-sm font-semibold rounded-md transition ${
                     mainView === "friction"
-                      ? "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary"
-                      : "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30"
+                      ? "bg-control/70 text-primary"
+                      : "text-muted hover:text-secondary hover:bg-control/40"
                   }`}
                 >
                   Productivity Tips

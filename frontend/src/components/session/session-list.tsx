@@ -295,7 +295,7 @@ export function SessionList({
           <Tooltip text={viewMode === "project" ? "Switch to time view" : "Switch to project view"}>
             <button
               onClick={() => handleSetViewMode(viewMode === "project" ? "time" : "project")}
-              className="flex items-center justify-center gap-1 w-[90px] px-2 py-1 text-[11px] font-medium text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/60 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 border border-cyan-200/80 dark:border-cyan-700/50 rounded-md shadow-sm shadow-cyan-500/5 dark:shadow-cyan-400/5 transition"
+              className="flex items-center justify-center gap-1 w-[90px] px-2 py-1 text-[11px] font-medium text-accent-cyan bg-accent-cyan-subtle hover:bg-accent-cyan-muted border border-accent-cyan-border rounded-md transition"
             >
               {viewMode === "project" ? (
                 <FolderOpen className="w-3 h-3 shrink-0" />
@@ -365,7 +365,7 @@ export function SessionList({
                   </button>
                   <button
                     onClick={() => toggleProjectExpanded(projectName)}
-                    className="flex-1 flex items-center gap-2 pr-3 py-2 hover:text-primary hover:bg-zinc-200/50 dark:hover:bg-zinc-700/30 rounded transition min-w-0"
+                    className="flex-1 flex items-center gap-2 pr-3 py-2 hover:text-primary hover:bg-control/40 rounded transition min-w-0"
                   >
                     {expandedProjects.has(projectName) ? (
                       <ChevronDown className="w-3.5 h-3.5 shrink-0" />

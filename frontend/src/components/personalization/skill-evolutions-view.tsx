@@ -150,7 +150,7 @@ function EvolutionCard({
   }, [fetchWithToken, suggestion.skill_name]);
 
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700/30 rounded-xl bg-zinc-50/50 dark:bg-zinc-800/20 overflow-hidden">
+    <div className="border border-default rounded-xl bg-control/20 overflow-hidden">
       {/* Header: Name + Badges + Confidence + Action */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
@@ -183,7 +183,7 @@ function EvolutionCard({
                 </button>
               </Tooltip>
             )}
-            {fetchError && <span className="text-xs text-red-600 dark:text-red-400">{fetchError}</span>}
+            {fetchError && <span className="text-xs text-accent-rose">{fetchError}</span>}
           </div>
         </div>
         {suggestion.description && (
@@ -195,7 +195,7 @@ function EvolutionCard({
       </div>
 
       {/* Why this helps */}
-      <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
+      <div className="px-5 py-3 border-t border-default/20">
         <button
           onClick={() => setRationaleExpanded(!rationaleExpanded)}
           className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
@@ -213,7 +213,7 @@ function EvolutionCard({
 
       {/* Toggleable What this covers */}
       {matchedPatterns.length > 0 && (
-        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
+        <div className="px-5 py-3 border-t border-default/20">
           <button
             onClick={() => setPatternsExpanded(!patternsExpanded)}
             className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
@@ -228,7 +228,7 @@ function EvolutionCard({
           {patternsExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedPatterns.map((p, i) => (
-                <div key={i} className="border-l-2 border-teal-300 dark:border-teal-700/50 pl-3 space-y-1.5">
+                <div key={i} className="border-l-2 border-accent-teal-border pl-3 space-y-1.5">
                   <h6 className="text-sm font-semibold text-primary">{p.title}</h6>
                   <BulletText text={p.description} className="text-sm text-secondary leading-relaxed" />
                   <StepRefList refs={p.example_refs} />
@@ -240,7 +240,7 @@ function EvolutionCard({
       )}
 
       {/* Toggleable Proposed Edits */}
-      <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
+      <div className="px-5 py-3 border-t border-default/20">
         <button
           onClick={handleExpand}
           className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"

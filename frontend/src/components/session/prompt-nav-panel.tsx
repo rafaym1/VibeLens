@@ -239,13 +239,13 @@ export function PromptNavPanel({
       {/* Mode Toggle */}
       {hasPrompts && hasSubAgents && (
         <div className="shrink-0 px-3 pb-2">
-          <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-800/60 p-0.5">
+          <div className="flex rounded-lg bg-control p-0.5">
             <Tooltip text="Navigate user prompts and plan entries" className="flex-1 min-w-0">
               <button
                 onClick={() => onNavModeChange("prompts")}
                 className={`w-full flex items-center justify-center text-xs py-1.5 rounded-md transition ${
                   navMode === "prompts"
-                    ? "bg-white dark:bg-zinc-700 text-primary font-semibold shadow-sm"
+                    ? "bg-panel text-primary font-semibold shadow-sm"
                     : "text-muted hover:text-secondary"
                 }`}
               >
@@ -257,7 +257,7 @@ export function PromptNavPanel({
                 onClick={() => onNavModeChange("sub-agents")}
                 className={`w-full flex items-center justify-center text-xs py-1.5 rounded-md transition ${
                   navMode === "sub-agents"
-                    ? "bg-white dark:bg-zinc-700 text-primary font-semibold shadow-sm"
+                    ? "bg-panel text-primary font-semibold shadow-sm"
                     : "text-muted hover:text-secondary"
                 }`}
               >

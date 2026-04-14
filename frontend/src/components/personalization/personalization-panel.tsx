@@ -1,7 +1,7 @@
 import { Check, History, Info, PanelRightClose, PanelRightOpen, Search, Sparkles, Square, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppContext } from "../../app";
-import type { AnalysisJobResponse, AnalysisJobStatus, CostEstimate, LLMStatus, SkillAnalysisResult, SkillInfo, SkillMode } from "../../types";
+import type { AnalysisJobResponse, AnalysisJobStatus, CostEstimate, LLMStatus, PersonalizationResult, SkillInfo, SkillMode } from "../../types";
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from "../../styles";
 import { AnalysisWelcomePage, TutorialBanner } from "../analysis-welcome";
 import { CostEstimateDialog } from "../cost-estimate-dialog";
@@ -13,7 +13,7 @@ import {
   AnalysisLoadingState,
   AnalysisResultView,
   type SkillTab,
-} from "./skill-analysis-view";
+} from "./personalization-view";
 import { PersonalizationHistory } from "./personalization-history";
 import { RecommendationView } from "./recommendation-results-view";
 
@@ -25,8 +25,8 @@ const TAB_CONFIG: { id: SkillTab; label: string; tooltip: string }[] = [
   { id: "evolve", label: "Evolve", tooltip: "Improve existing skills from usage" },
 ];
 
-const ACTIVE_TAB_STYLE = "bg-zinc-200/70 dark:bg-zinc-700/50 text-primary";
-const INACTIVE_TAB_STYLE = "text-muted hover:text-secondary hover:bg-zinc-200/40 dark:hover:bg-zinc-700/30";
+const ACTIVE_TAB_STYLE = "bg-control/70 text-primary";
+const INACTIVE_TAB_STYLE = "text-muted hover:text-secondary hover:bg-control/40";
 
 const MODE_MAP: Record<string, SkillMode> = {
   retrieve: "retrieval",
@@ -90,7 +90,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
     if (stored && TAB_CONFIG.some((t) => t.id === stored)) return stored as SkillTab;
     return "local";
   });
-  const [analysisResult, setAnalysisResult] = useState<SkillAnalysisResult | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<PersonalizationResult | null>(null);
   const [recommendationAnalysisId, setRecommendationAnalysisId] = useState<string | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -271,7 +271,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
     [proceedToEstimate],
   );
 
-  const handleHistorySelect = useCallback((loaded: SkillAnalysisResult) => {
+  const handleHistorySelect = useCallback((loaded: PersonalizationResult) => {
     const tabMap: Record<SkillMode, SkillTab> = {
       retrieval: "retrieve",
       creation: "create",
@@ -311,7 +311,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
         } else {
           const loadRes = await fetchWithToken(`${apiBase}/${match.analysis_id}`);
           if (!loadRes.ok) return;
-          const result: SkillAnalysisResult = await loadRes.json();
+          const result: PersonalizationResult = await loadRes.json();
           setAnalysisResult(result);
           setRecommendationAnalysisId(null);
         }
@@ -350,7 +350,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
         } else {
           const loadRes = await fetchWithToken(`${apiBase}/${match.analysis_id}`);
           if (!loadRes.ok) return;
-          const result: SkillAnalysisResult = await loadRes.json();
+          const result: PersonalizationResult = await loadRes.json();
           handleHistorySelect(result);
         }
       } catch {

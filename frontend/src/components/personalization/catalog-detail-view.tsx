@@ -184,7 +184,7 @@ export function CatalogDetailView({ item, isInstalled, onBack, onInstalled }: Ca
                 {item.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                    className="text-[10px] px-1.5 py-0.5 rounded-full bg-control text-dimmed"
                   >
                     {tag}
                   </span>
@@ -206,7 +206,7 @@ export function CatalogDetailView({ item, isInstalled, onBack, onInstalled }: Ca
               </button>
             )}
             {installed && (
-              <span className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-300/40 rounded-lg">
+              <span className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent-emerald border border-accent-emerald-border rounded-lg">
                 <Check className="w-4 h-4" />
                 Installed
               </span>
@@ -218,8 +218,8 @@ export function CatalogDetailView({ item, isInstalled, onBack, onInstalled }: Ca
 
         {/* Install command */}
         {item.install_command && (
-          <div className="mt-4 flex items-center gap-2 bg-zinc-900 rounded-lg px-4 py-2.5 border border-zinc-700/50">
-            <code className="flex-1 text-sm font-mono text-zinc-300 overflow-x-auto">{item.install_command}</code>
+          <div className="mt-4 flex items-center gap-2 bg-panel rounded-lg px-4 py-2.5 border border-default">
+            <code className="flex-1 text-sm font-mono text-secondary overflow-x-auto">{item.install_command}</code>
             <CopyButton text={item.install_command} />
           </div>
         )}

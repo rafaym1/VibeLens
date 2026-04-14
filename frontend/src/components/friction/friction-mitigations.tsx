@@ -60,7 +60,7 @@ export function MitigationCard({ mitigation, frictionTypes }: { mitigation: Miti
   );
 
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700/30 rounded-xl bg-zinc-50/50 dark:bg-zinc-800/20 overflow-hidden">
+    <div className="border border-default rounded-xl bg-subtle overflow-hidden">
       {/* Header: Title + Confidence */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
@@ -75,7 +75,7 @@ export function MitigationCard({ mitigation, frictionTypes }: { mitigation: Miti
 
       {/* Rationale */}
       {mitigation.rationale && (
-        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
+        <div className="px-5 py-3 border-t border-default">
           <button
             onClick={() => setRationaleExpanded(!rationaleExpanded)}
             className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
@@ -94,7 +94,7 @@ export function MitigationCard({ mitigation, frictionTypes }: { mitigation: Miti
 
       {/* Addressed Friction Types */}
       {matchedTypes.length > 0 && (
-        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
+        <div className="px-5 py-3 border-t border-default">
           <button
             onClick={() => setTypesExpanded(!typesExpanded)}
             className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
@@ -109,7 +109,7 @@ export function MitigationCard({ mitigation, frictionTypes }: { mitigation: Miti
           {typesExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedTypes.map((ft) => (
-                <div key={ft.type_name} className="border-l-2 border-amber-300 dark:border-amber-700/50 pl-3 space-y-1.5">
+                <div key={ft.type_name} className="border-l-2 border-accent-amber-border pl-3 space-y-1.5">
                   <h6 className="text-base font-semibold text-primary">
                     {frictionTypeLabel(ft.type_name)}
                   </h6>

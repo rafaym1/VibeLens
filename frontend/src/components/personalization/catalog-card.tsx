@@ -31,13 +31,13 @@ function TagList({ tags, max }: { tags: string[]; max: number }) {
       {visible.map((tag) => (
         <span
           key={tag}
-          className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+          className="text-[10px] px-1.5 py-0.5 rounded-full bg-control text-dimmed"
         >
           {tag}
         </span>
       ))}
       {overflow > 0 && (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-control text-dimmed">
           +{overflow}
         </span>
       )}
@@ -68,7 +68,7 @@ function QualityBar({ score }: { score: number }) {
   return (
     <Tooltip text={`Quality: ${score}/100`}>
       <span className="flex items-center gap-1">
-        <span className="inline-block w-12 h-1 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+        <span className="inline-block w-12 h-1 rounded-full bg-control-hover overflow-hidden">
           <span className="block h-full bg-teal-500 rounded-full" style={{ width: `${score}%` }} />
         </span>
         {Math.round(score)}
@@ -131,7 +131,7 @@ export function CatalogCard({
   );
 
   const borderClass = installed
-    ? "border-emerald-300/40 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20"
+    ? "border-accent-emerald-border bg-accent-emerald-subtle/50"
     : "border-card bg-panel hover:bg-control/80";
 
   if (viewMode === "card") {
@@ -145,7 +145,7 @@ export function CatalogCard({
             <span className="font-mono text-sm font-semibold text-primary truncate">{item.name}</span>
             <TypeBadge itemType={item.item_type} />
             {installed && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700/30 font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-emerald-subtle text-accent-emerald border border-accent-emerald-border font-medium">
                 Installed
               </span>
             )}
@@ -181,7 +181,7 @@ export function CatalogCard({
                 <InstallButton installing={installing} onInstall={handleInstall} />
               )}
               {installed && (
-                <span className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium text-accent-emerald">
                   <Check className="w-3 h-3" />
                 </span>
               )}
@@ -203,7 +203,7 @@ export function CatalogCard({
             <span className="font-mono text-sm font-semibold text-primary truncate">{item.name}</span>
             <TypeBadge itemType={item.item_type} />
             {installed && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700/30 font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-emerald-subtle text-accent-emerald border border-accent-emerald-border font-medium">
                 Installed
               </span>
             )}
@@ -239,7 +239,7 @@ export function CatalogCard({
             <InstallButton installing={installing} onInstall={handleInstall} />
           )}
           {installed && (
-            <span className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+            <span className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium text-accent-emerald">
               <Check className="w-3 h-3" />
             </span>
           )}

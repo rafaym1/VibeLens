@@ -26,7 +26,7 @@ export function SessionRow({
       className={`flex items-center border-b border-card transition-all duration-200 ${
         selectedId === session.session_id
           ? "bg-accent-cyan-subtle border-l-2 border-l-accent-cyan"
-          : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border-l-2 border-l-transparent"
+          : "hover:bg-control border-l-2 border-l-transparent"
       }`}
     >
       {/* Checkbox — indented under project header chevron when nested */}

@@ -104,7 +104,7 @@ function CreatedSkillCard({
   );
 
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700/30 rounded-xl bg-zinc-50/50 dark:bg-zinc-800/20 overflow-hidden">
+    <div className="border border-default rounded-xl bg-control/20 overflow-hidden">
       {/* Header: Name + Confidence + Action */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
@@ -137,7 +137,7 @@ function CreatedSkillCard({
       </div>
 
       {/* Why this helps */}
-      <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
+      <div className="px-5 py-3 border-t border-default/20">
         <button
           onClick={() => setRationaleExpanded(!rationaleExpanded)}
           className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
@@ -155,7 +155,7 @@ function CreatedSkillCard({
 
       {/* Toggleable What this covers */}
       {matchedPatterns.length > 0 && (
-        <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-700/20">
+        <div className="px-5 py-3 border-t border-default/20">
           <button
             onClick={() => setPatternsExpanded(!patternsExpanded)}
             className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
@@ -170,7 +170,7 @@ function CreatedSkillCard({
           {patternsExpanded && (
             <div className="mt-2.5 space-y-3">
               {matchedPatterns.map((p, i) => (
-                <div key={i} className="border-l-2 border-emerald-300 dark:border-emerald-700/50 pl-3 space-y-1.5">
+                <div key={i} className="border-l-2 border-accent-emerald-border pl-3 space-y-1.5">
                   <h6 className="text-sm font-semibold text-primary">{p.title}</h6>
                   <BulletText text={p.description} className="text-sm text-secondary leading-relaxed" />
                   <StepRefList refs={p.example_refs} />

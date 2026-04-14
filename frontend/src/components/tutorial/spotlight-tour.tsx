@@ -22,11 +22,11 @@ const TRANSITION_DURATION = "0.3s";
 const ICON_MAP: Record<string, React.ReactNode> = {
   eye: <Eye className="w-5 h-5 text-accent-cyan" />,
   list: <List className="w-5 h-5 text-accent-cyan" />,
-  message: <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />,
+  message: <MessageSquare className="w-5 h-5 text-accent-indigo" />,
   layout: <LayoutGrid className="w-5 h-5 text-accent-cyan" />,
   "bar-chart": <BarChart3 className="w-5 h-5 text-accent-cyan" />,
-  lightbulb: <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
-  wand: <Wand2 className="w-5 h-5 text-teal-600 dark:text-teal-400" />,
+  lightbulb: <Lightbulb className="w-5 h-5 text-accent-amber" />,
+  wand: <Wand2 className="w-5 h-5 text-accent-teal" />,
   upload: <Upload className="w-5 h-5 text-accent-violet" />,
 };
 
@@ -253,7 +253,7 @@ export function SpotlightTour({ onComplete, appMode }: SpotlightTourProps) {
                     ? "bg-cyan-400"
                     : i < currentIdx
                       ? "bg-cyan-600/50"
-                      : "bg-zinc-600"
+                      : "bg-control-hover"
                 }`}
               />
             ))}

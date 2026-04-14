@@ -163,14 +163,14 @@ function UserAnchor({
 }) {
   const isAuto = data.isAutoPrompt;
   const borderClass = isAuto
-    ? "border-zinc-200 dark:border-teal-500/20 bg-zinc-50/50 dark:bg-teal-950/20 hover:border-zinc-300 dark:hover:border-teal-400/35"
-    : "border-zinc-200 dark:border-cyan-500/25 bg-zinc-50/50 dark:bg-cyan-950/20 hover:border-zinc-300 dark:hover:border-cyan-400/40";
+    ? "border-accent-teal-border bg-accent-teal-subtle hover:border-accent-teal"
+    : "border-accent-cyan-border bg-accent-cyan-subtle hover:border-accent-cyan";
   const iconBg = isAuto
-    ? "bg-zinc-100 border-zinc-200/50 dark:bg-teal-500/20 dark:border-teal-400/15"
-    : "bg-zinc-100 border-zinc-200/50 dark:bg-cyan-500/20 dark:border-cyan-400/15";
-  const iconText = isAuto ? "text-zinc-500 dark:text-teal-300" : "text-zinc-500 dark:text-cyan-300";
-  const labelText = isAuto ? "text-primary dark:text-teal-100" : "text-primary dark:text-cyan-100";
-  const indexText = isAuto ? "text-teal-600/70 dark:text-teal-400/70" : "text-cyan-600/70 dark:text-cyan-400/70";
+    ? "bg-accent-teal-subtle border-accent-teal-border"
+    : "bg-accent-cyan-subtle border-accent-cyan-border";
+  const iconText = isAuto ? "text-accent-teal" : "text-accent-cyan";
+  const labelText = "text-primary";
+  const indexText = isAuto ? "text-accent-teal/70" : "text-accent-cyan/70";
 
   return (
     <div
@@ -291,7 +291,7 @@ function AgentCard({
   }, [tools]);
 
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-cyan-500/20 bg-zinc-50/50 dark:bg-cyan-950/20 hover:border-zinc-300 dark:hover:border-cyan-400/35 transition-colors">
+    <div className="rounded-lg border border-accent-cyan-border bg-accent-cyan-subtle hover:border-accent-cyan transition-colors">
       {/* Agent message */}
       <div
         className="px-4 py-3 flex items-start gap-3"
@@ -299,20 +299,20 @@ function AgentCard({
         onMouseMove={onMove}
         onMouseLeave={onLeave}
       >
-        <span className="shrink-0 mt-0.5 w-6 h-6 rounded-md bg-zinc-100 border border-zinc-200/50 dark:bg-cyan-500/20 dark:border-cyan-400/15 flex items-center justify-center">
-          <svg className="w-3 h-3 text-zinc-500 dark:text-cyan-300" viewBox="0 0 16 16" fill="currentColor">
+        <span className="shrink-0 mt-0.5 w-6 h-6 rounded-md bg-accent-cyan-subtle border border-accent-cyan-border flex items-center justify-center">
+          <svg className="w-3 h-3 text-accent-cyan" viewBox="0 0 16 16" fill="currentColor">
             <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zM3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.58 26.58 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25.14 25.14 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135z"/>
             <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5z"/>
           </svg>
         </span>
-        <p className="text-[13px] leading-relaxed text-primary dark:text-cyan-100 min-w-0 break-words">
+        <p className="text-[13px] leading-relaxed text-primary min-w-0 break-words">
           {label}
         </p>
       </div>
 
       {/* Tool calls section */}
       {tools.length > 0 && (
-        <div className="border-t border-zinc-200 dark:border-cyan-500/10 mx-3 px-1 py-2.5">
+        <div className="border-t border-accent-cyan-border/50 mx-3 px-1 py-2.5">
           {/* Header with count and category breakdown */}
           <div className="flex items-center gap-1.5 mb-2 px-1">
             <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">
@@ -389,11 +389,11 @@ function ToolChip({
     const toolName = parts[0] || tool.name;
     const argsText = parts.slice(1).join("\n").trim();
     if (!argsText) {
-      return <span className="font-mono text-[12px] text-cyan-700 dark:text-cyan-300">{toolName}</span>;
+      return <span className="font-mono text-[12px] text-accent-cyan">{toolName}</span>;
     }
     return (
       <div>
-        <div className="font-mono text-[12px] font-semibold text-cyan-700 dark:text-cyan-300 mb-1.5">{toolName}</div>
+        <div className="font-mono text-[12px] font-semibold text-accent-cyan mb-1.5">{toolName}</div>
         <pre className="font-mono text-[11px] text-secondary leading-snug whitespace-pre-wrap break-all m-0">
           {argsText}
         </pre>

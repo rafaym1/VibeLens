@@ -12,17 +12,17 @@ function ProfilePills({ profile }: { profile: RecommendationResult["user_profile
   return (
     <div className="flex flex-wrap gap-1.5">
       {profile.domains.map((d) => (
-        <span key={d} className="px-2 py-0.5 text-xs rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400">
+        <span key={d} className="px-2 py-0.5 text-xs rounded-full bg-accent-cyan-subtle text-accent-cyan">
           {d}
         </span>
       ))}
       {profile.languages.map((l) => (
-        <span key={l} className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+        <span key={l} className="px-2 py-0.5 text-xs rounded-full bg-accent-emerald-subtle text-accent-emerald">
           {l}
         </span>
       ))}
       {profile.frameworks.map((f) => (
-        <span key={f} className="px-2 py-0.5 text-xs rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+        <span key={f} className="px-2 py-0.5 text-xs rounded-full bg-accent-violet-subtle text-accent-violet">
           {f}
         </span>
       ))}
@@ -39,7 +39,7 @@ function MetadataLine({ result }: { result: RecommendationResult }) {
     result.model,
     costStr,
   ].filter(Boolean);
-  return <p className="text-xs text-zinc-400 dark:text-zinc-500">{metaParts.join(" \u00b7 ")}</p>;
+  return <p className="text-xs text-dimmed">{metaParts.join(" \u00b7 ")}</p>;
 }
 
 export function RecommendationView({ analysisId, fetchWithToken }: RecommendationResultsViewProps) {
@@ -69,7 +69,7 @@ export function RecommendationView({ analysisId, fetchWithToken }: Recommendatio
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-6 h-6 animate-spin text-zinc-400 dark:text-cyan-400/60" />
+        <Loader2 className="w-6 h-6 animate-spin text-accent-cyan" />
       </div>
     );
   }
@@ -77,7 +77,7 @@ export function RecommendationView({ analysisId, fetchWithToken }: Recommendatio
   if (error || !result) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{error ?? "No result found"}</p>
+        <p className="text-sm text-dimmed">{error ?? "No result found"}</p>
       </div>
     );
   }
@@ -85,9 +85,9 @@ export function RecommendationView({ analysisId, fetchWithToken }: Recommendatio
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="border-b border-zinc-200 dark:border-zinc-700 px-6 py-4 space-y-2 shrink-0">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{result.title}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">{result.summary}</p>
+      <div className="border-b border-default px-6 py-4 space-y-2 shrink-0">
+        <h1 className="text-xl font-semibold text-primary">{result.title}</h1>
+        <p className="text-sm text-secondary">{result.summary}</p>
         <ProfilePills profile={result.user_profile} />
         <MetadataLine result={result} />
       </div>
@@ -95,7 +95,7 @@ export function RecommendationView({ analysisId, fetchWithToken }: Recommendatio
       {/* Card list */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
         {result.recommendations.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">
+          <p className="text-sm text-dimmed text-center py-8">
             No recommendations found.
           </p>
         ) : (

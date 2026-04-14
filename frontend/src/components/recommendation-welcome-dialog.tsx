@@ -13,7 +13,7 @@ export function RecommendationWelcomeDialog({ onTryNow, onDismiss }: Recommendat
         <div className="flex flex-col items-center text-center py-4 gap-5">
           <button
             onClick={onDismiss}
-            className="absolute top-3 right-3 p-1 text-zinc-400 hover:text-zinc-200 transition"
+            className="absolute top-3 right-3 p-1 text-muted hover:text-primary transition"
           >
             <X className="w-4 h-4" />
           </button>

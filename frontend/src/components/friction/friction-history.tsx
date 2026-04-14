@@ -66,7 +66,7 @@ export function FrictionHistory({ onSelect, refreshTrigger, activeJobId }: Frict
   if (loading) {
     return (
       <div className="flex items-center justify-center py-6">
-        <Loader2 className="w-4 h-4 text-zinc-400 dark:text-cyan-400/60 animate-spin" />
+        <Loader2 className="w-4 h-4 text-muted animate-spin" />
       </div>
     );
   }
@@ -127,7 +127,7 @@ function HistoryCard({
   return (
     <div
       onClick={onSelect}
-      className="group relative px-3 py-2.5 border-b border-card hover:bg-zinc-100 dark:hover:bg-zinc-800/60 cursor-pointer transition"
+      className="group relative px-3 py-2.5 border-b border-card hover:bg-control cursor-pointer transition"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0 space-y-1">
@@ -140,7 +140,7 @@ function HistoryCard({
               {item.session_ids.length} session{item.session_ids.length !== 1 ? "s" : ""}
             </span>
             {(item.is_example || item.model.startsWith("mock/")) && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700/50 text-amber-600 dark:text-amber-400">Example</span>
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent-amber-subtle border border-accent-amber-border text-accent-amber">Example</span>
             )}
           </div>
           <div className="flex items-center gap-2.5 text-[10px] text-muted">
@@ -176,7 +176,7 @@ function HistoryCard({
             guardAction(() => setShowConfirm(true));
           }}
           disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 p-1 text-dimmed hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition"
+          className="opacity-0 group-hover:opacity-100 p-1 text-dimmed hover:text-accent-rose hover:bg-accent-rose-subtle rounded transition"
         >
           {deleting ? (
             <Loader2 className="w-3 h-3 animate-spin" />

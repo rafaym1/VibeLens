@@ -46,7 +46,7 @@ export function ToolDistribution({
         pct: total > 0 ? (otherCount / total) * 100 : 0,
         avgPerSession: 0,
         errorRate: 0,
-        color: "bg-zinc-600",
+        color: "bg-control-hover",
       });
     }
     return segs;
@@ -95,7 +95,7 @@ export function ToolDistribution({
             onMouseLeave={onLeave}
           >
             <span
-              className={`w-3 h-3 rounded-sm shrink-0 ${seg.name === "Other" ? "bg-zinc-600" : TOOL_COLORS[i % TOOL_COLORS.length]}`}
+              className={`w-3 h-3 rounded-sm shrink-0 ${seg.name === "Other" ? "bg-control-hover" : TOOL_COLORS[i % TOOL_COLORS.length]}`}
             />
             <span className="flex-1 text-secondary truncate" title={seg.name}>
               {seg.name}

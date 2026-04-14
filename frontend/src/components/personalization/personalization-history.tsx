@@ -2,7 +2,7 @@ import { Calendar, Clock, Coins, Layers, Loader2, Timer, Trash2, Workflow } from
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppContext } from "../../app";
 import { useDemoGuard } from "../../hooks/use-demo-guard";
-import type { SkillAnalysisMeta, SkillAnalysisResult, SkillMode } from "../../types";
+import type { PersonalizationMeta, PersonalizationResult, SkillMode } from "../../types";
 import { ConfirmDialog } from "../confirm-dialog";
 import { InstallLocallyDialog } from "../install-locally-dialog";
 
@@ -30,7 +30,7 @@ function HistoryCard({
   onSelect,
   onDelete,
 }: {
-  meta: SkillAnalysisMeta;
+  meta: PersonalizationMeta;
   isLoading: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -70,7 +70,7 @@ function HistoryCard({
         className={`group relative w-full text-left px-3 py-2.5 border-b border-card cursor-pointer transition ${
           isLoading
             ? "bg-accent-teal-subtle/50"
-            : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+            : "hover:bg-control"
         }`}
       >
         <div className="flex items-start justify-between gap-2">
@@ -84,7 +84,7 @@ function HistoryCard({
                 {meta.session_ids.length} session{meta.session_ids.length !== 1 ? "s" : ""}
               </span>
               {(meta.is_example || meta.model.startsWith("mock/")) && (
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700/50 text-amber-600 dark:text-amber-400">Example</span>
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent-amber-subtle border border-accent-amber-border text-accent-amber">Example</span>
               )}
             </div>
             <div className="flex items-center gap-2.5 text-[10px] text-muted">
@@ -116,7 +116,7 @@ function HistoryCard({
             role="button"
             tabIndex={-1}
             onClick={handleDeleteClick}
-            className={`opacity-0 group-hover:opacity-100 p-1 text-dimmed hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition ${deleting ? "opacity-100" : ""}`}
+            className={`opacity-0 group-hover:opacity-100 p-1 text-dimmed hover:text-accent-rose hover:bg-accent-rose-subtle rounded transition ${deleting ? "opacity-100" : ""}`}
           >
             {deleting ? (
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -153,13 +153,13 @@ export function PersonalizationHistory({
   filterMode,
   activeJobId,
 }: {
-  onSelect: (result: SkillAnalysisResult) => void;
+  onSelect: (result: PersonalizationResult) => void;
   refreshTrigger: number;
   filterMode: SkillMode | null;
   activeJobId?: string | null;
 }) {
   const { fetchWithToken } = useAppContext();
-  const [analyses, setAnalyses] = useState<SkillAnalysisMeta[]>([]);
+  const [analyses, setAnalyses] = useState<PersonalizationMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -169,7 +169,7 @@ export function PersonalizationHistory({
       const apiBase = filterMode ? MODE_API_BASE[filterMode] : "/api/recommendation";
       const res = await fetchWithToken(`${apiBase}/history`);
       if (res.ok) {
-        const data: SkillAnalysisMeta[] = await res.json();
+        const data: PersonalizationMeta[] = await res.json();
         setAnalyses(data);
       }
     } catch {
@@ -189,13 +189,13 @@ export function PersonalizationHistory({
   }, [analyses, filterMode]);
 
   const handleSelect = useCallback(
-    async (meta: SkillAnalysisMeta) => {
+    async (meta: PersonalizationMeta) => {
       setLoadingId(meta.analysis_id);
       try {
         const apiBase = MODE_API_BASE[meta.mode];
         const res = await fetchWithToken(`${apiBase}/${meta.analysis_id}`);
         if (res.ok) {
-          const result: SkillAnalysisResult = await res.json();
+          const result: PersonalizationResult = await res.json();
           onSelect(result);
         }
       } catch {

@@ -262,7 +262,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
                   </p>
                   {commandLoading ? (
                     <div className="flex items-center justify-center py-4 bg-canvas border border-default rounded-lg">
-                      <Loader2 className="w-4 h-4 text-zinc-400 dark:text-cyan-400/60 animate-spin" />
+                      <Loader2 className="w-4 h-4 text-muted animate-spin" />
                     </div>
                   ) : (
                     <div className="relative">
@@ -298,7 +298,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
                 }`}
               >
                 <FileArchive
-                  className={`w-7 h-7 ${dragOver ? "text-violet-600 dark:text-violet-400" : "text-dimmed"}`}
+                  className={`w-7 h-7 ${dragOver ? "text-accent-violet" : "text-dimmed"}`}
                 />
                 <p className="text-sm text-secondary">Drop .zip file here</p>
                 <p className="text-xs text-dimmed">or click to browse (max {maxZipMB} MB)</p>
@@ -315,9 +315,9 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
               {file && (
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs text-secondary truncate min-w-0">
-                    <FileArchive className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                    <FileArchive className="w-3.5 h-3.5 text-accent-violet shrink-0" />
                     <span className="truncate">{file.name}</span>
-                    <span className={`shrink-0 ${fileTooLarge ? "text-rose-600 dark:text-rose-400" : "text-dimmed"}`}>
+                    <span className={`shrink-0 ${fileTooLarge ? "text-accent-rose" : "text-dimmed"}`}>
                       ({(file.size / (1024 * 1024)).toFixed(1)} MB)
                     </span>
                     <button
@@ -326,7 +326,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
                         setFile(null);
                         setResult(null);
                       }}
-                      className="text-dimmed hover:text-rose-600 dark:hover:text-rose-400 transition shrink-0"
+                      className="text-dimmed hover:text-accent-rose transition shrink-0"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -344,7 +344,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
 
               {/* Size warning */}
               {file && fileTooLarge && (
-                <p className="text-xs text-rose-600 dark:text-rose-400">
+                <p className="text-xs text-accent-rose">
                   File exceeds the {maxZipMB} MB limit. Try excluding large sessions or splitting the archive.
                 </p>
               )}
@@ -359,7 +359,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
 
               <div className="bg-subtle border border-card rounded-lg p-4 space-y-2.5">
                 <div className="flex items-center gap-2 text-sm text-secondary">
-                  <FileArchive className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+                  <FileArchive className="w-4 h-4 text-accent-violet shrink-0" />
                   <span className="truncate">{file.name}</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-muted">
@@ -393,7 +393,7 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
                   <div className="flex flex-col items-center gap-4 py-6">
                     <div className="relative">
                       <div className="w-16 h-16 rounded-full border-2 border-violet-500/30 flex items-center justify-center">
-                        <Loader2 className="w-7 h-7 text-violet-600 dark:text-violet-400 animate-spin" />
+                        <Loader2 className="w-7 h-7 text-accent-violet animate-spin" />
                       </div>
                     </div>
                     <div className="text-center">
@@ -430,15 +430,15 @@ export function UploadDialog({ onClose, onComplete }: UploadDialogProps) {
                   {result.errors.length > 0 && result.sessions_parsed === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-4">
                       <div className="w-14 h-14 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-                        <AlertCircle className="w-7 h-7 text-rose-600 dark:text-rose-400" />
+                        <AlertCircle className="w-7 h-7 text-accent-rose" />
                       </div>
-                      <p className="text-base font-semibold text-rose-700 dark:text-rose-300">Upload failed</p>
+                      <p className="text-base font-semibold text-accent-rose">Upload failed</p>
                       <p className="text-xs text-muted">No sessions could be imported from this file.</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-3 py-4">
                       <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                        <CheckCircle2 className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+                        <CheckCircle2 className="w-7 h-7 text-accent-emerald" />
                       </div>
                       <div className="text-center">
                         <p className="text-base font-semibold text-primary">Upload complete</p>
@@ -476,7 +476,7 @@ function WebExportInstructions() {
       <div className="bg-canvas border border-default rounded-lg p-3 space-y-2">
         {WEB_EXPORT_STEPS.map((s) => (
           <div key={s.num} className="flex items-start gap-2.5">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-violet-600/20 text-violet-600 dark:text-violet-400 text-[10px] font-bold shrink-0 mt-px">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-violet-600/20 text-accent-violet text-[10px] font-bold shrink-0 mt-px">
               {s.num}
             </span>
             <span className="text-xs text-secondary">{s.text}</span>
@@ -487,7 +487,7 @@ function WebExportInstructions() {
         href="https://claude.ai/settings"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-700 dark:text-violet-600 dark:text-violet-400 dark:hover:text-violet-300 transition"
+        className="inline-flex items-center gap-1.5 text-xs text-accent-violet hover:text-accent-violet/80 transition"
       >
         Open claude.ai Settings
         <ExternalLink className="w-3 h-3" />
