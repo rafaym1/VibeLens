@@ -83,3 +83,13 @@ class SessionPhase(StrEnum):
     VERIFICATION = "verification"
     DEBUGGING = "debugging"
     MIXED = "mixed"
+
+
+class AgentExtensionType(StrEnum):
+    """Types of agent extensions that can be discovered, installed, and managed."""
+
+    SKILL = "skill"
+    SUBAGENT = "subagent"
+    COMMAND = "command"
+    HOOK = "hook"
+    REPO = "repo"
