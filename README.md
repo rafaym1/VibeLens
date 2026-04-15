@@ -110,7 +110,19 @@ VibeLens auto-detects the agent format. Just point it at your session directory 
 
 ### pip (recommended)
 
-The simplest way to install. Requires **Python 3.10+**.
+The simplest way to install. Requires **Python 3.10+** — check with `python3 --version`. If you need to install or upgrade Python:
+
+```bash
+# macOS (Homebrew)
+brew install python@3.12
+
+# Ubuntu/Debian
+sudo apt update && sudo apt install python3.12
+
+# Windows — download from https://www.python.org/downloads/
+```
+
+Then install and run VibeLens:
 
 ```bash
 pip install vibelens
