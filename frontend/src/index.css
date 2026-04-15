@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import '@fontsource/opendyslexic/400.css';
-@import '@fontsource/opendyslexic/700.css';
+@import '@fontsource/atkinson-hyperlegible/400.css';
+@import '@fontsource/atkinson-hyperlegible/700.css';
 @import 'highlight.js/styles/github.css';
 
 :root {
@@ -234,7 +234,7 @@
   }
 
   body {
-    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -312,16 +312,16 @@
 .dark .hljs-deletion { color: #ffdcd7; background-color: #67060c; }
 
 /* Font family switching — classes applied to <html> like dark mode */
-.font-sans body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+.font-serif body {
+  font-family: Georgia, 'Times New Roman', Times, serif;
 }
 
-.font-system body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', system-ui, sans-serif;
+.font-mono body {
+  font-family: 'Geist Mono', 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
 }
 
-.font-dyslexic body {
-  font-family: 'OpenDyslexic', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+.font-readable body {
+  font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* User message markdown inherits white text */

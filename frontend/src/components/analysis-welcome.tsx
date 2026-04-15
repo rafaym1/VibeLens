@@ -14,6 +14,12 @@ const ACCENT_BUTTON: Record<AccentColor, string> = {
   cyan: "bg-cyan-600 hover:bg-cyan-500",
 };
 
+const ACCENT_BUTTON_OUTLINE: Record<AccentColor, string> = {
+  amber: "border border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10",
+  teal: "border border-teal-500/50 text-teal-600 dark:text-teal-400 hover:bg-teal-500/10",
+  cyan: "border border-cyan-500/50 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10",
+};
+
 const ACCENT_LINK: Record<AccentColor, string> = {
   amber: "text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300",
   teal: "text-teal-600 hover:text-teal-500 dark:text-teal-400 dark:hover:text-teal-300",
@@ -187,28 +193,29 @@ export function AnalysisWelcomePage({
           </div>
         )}
 
-        <div className="flex flex-col items-center gap-3">
-          <Tooltip text={checkedCount === 0 ? "Use the checkboxes in the session list to select sessions for analysis." : ""}>
-            <button
-              onClick={isDemo ? () => setShowInstallDialog(true) : onRun}
-              disabled={checkedCount === 0 || overLimit || (!isConnected && !isMock)}
-              className={`inline-flex items-center gap-2 px-5 py-2.5 ${ACCENT_BUTTON[accentColor]} text-white text-sm font-medium rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed`}
-            >
-              <Play className="w-4 h-4" />
-              {checkedCount > 0
-                ? `Analyze ${checkedCount} session${checkedCount !== 1 ? "s" : ""}`
-                : "Select sessions first"}
-            </button>
-          </Tooltip>
+        <div className="flex items-center justify-center gap-3">
           {onRunAll && (
             <button
               onClick={isDemo ? () => setShowInstallDialog(true) : onRunAll}
               disabled={!isConnected && !isMock}
-              className="text-xs text-muted hover:text-secondary transition disabled:opacity-60 disabled:cursor-not-allowed"
+              className={`inline-flex items-center gap-1.5 px-4 py-2 ${ACCENT_BUTTON[accentColor]} text-white text-sm font-medium rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed`}
             >
-              or analyze all sessions
+              <Play className="w-3.5 h-3.5" />
+              Start with all sessions
             </button>
           )}
+          <Tooltip text={checkedCount === 0 ? "Use the checkboxes in the session list to select sessions for analysis." : ""}>
+            <button
+              onClick={isDemo ? () => setShowInstallDialog(true) : onRun}
+              disabled={checkedCount === 0 || overLimit || (!isConnected && !isMock)}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 ${ACCENT_BUTTON_OUTLINE[accentColor]} text-sm font-medium rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed`}
+            >
+              <Play className="w-3.5 h-3.5" />
+              {checkedCount > 0
+                ? `Analyze ${checkedCount} selected`
+                : "Select sessions first"}
+            </button>
+          </Tooltip>
         </div>
       </div>
 

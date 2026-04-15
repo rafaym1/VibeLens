@@ -20,7 +20,7 @@ export function MitigationsSection({ mitigations, frictionTypes }: { mitigations
       <Tooltip text="Concrete steps you can take to avoid these issues in the future">
         <div className="flex items-center gap-2 mb-3 cursor-help">
           <span className="text-accent-amber"><Lightbulb className="w-5 h-5" /></span>
-          <h3 className="text-lg font-semibold text-primary">Productivity Tips</h3>
+          <h3 className="text-xl font-semibold text-primary">Productivity Tips</h3>
         </div>
       </Tooltip>
       <div className="space-y-3">
@@ -51,7 +51,7 @@ export function ConfidenceBar({ confidence }: { confidence: number }) {
 }
 
 export function MitigationCard({ mitigation, frictionTypes }: { mitigation: Mitigation; frictionTypes: FrictionType[] }) {
-  const [rationaleExpanded, setRationaleExpanded] = useState(true);
+  const [rationaleExpanded, setRationaleExpanded] = useState(false);
   const [typesExpanded, setTypesExpanded] = useState(false);
 
   const addressedTypes = mitigation.addressed_friction_types ?? [];

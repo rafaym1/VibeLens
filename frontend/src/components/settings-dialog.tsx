@@ -55,10 +55,10 @@ Why would this improvement matter?`,
 };
 
 const FONT_CARDS: { key: FontFamily; label: string; fontFamily: string }[] = [
-  { key: "default", label: "Default", fontFamily: "Georgia, 'Times New Roman', Times, serif" },
   { key: "sans", label: "Sans", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" },
-  { key: "system", label: "System", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', system-ui, sans-serif" },
-  { key: "dyslexic", label: "Dyslexic friendly", fontFamily: "'OpenDyslexic', sans-serif" },
+  { key: "serif", label: "Serif", fontFamily: "Georgia, 'Times New Roman', Times, serif" },
+  { key: "mono", label: "Mono", fontFamily: "'Geist Mono', 'SF Mono', 'Fira Code', monospace" },
+  { key: "readable", label: "Readable", fontFamily: "'Atkinson Hyperlegible', sans-serif" },
 ];
 
 interface SettingsDialogProps {

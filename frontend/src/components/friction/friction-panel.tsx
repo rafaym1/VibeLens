@@ -36,7 +36,7 @@ interface FrictionPanelProps {
 }
 
 export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: FrictionPanelProps) {
-  const { fetchWithToken, appMode, maxAnalysisSessions } = useAppContext();
+  const { fetchWithToken, appMode, maxSessions } = useAppContext();
   const [result, setResult] = useState<FrictionAnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -335,7 +335,7 @@ export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: Fricti
             fetchWithToken={fetchWithToken}
             onLlmConfigured={refreshLlmStatus}
             checkedCount={checkedIds.size}
-            maxSessions={maxAnalysisSessions}
+            maxSessions={maxSessions}
             error={error}
             onRun={handleRequestAnalysis}
             isDemo={appMode === "demo"}

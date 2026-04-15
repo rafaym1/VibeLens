@@ -148,7 +148,7 @@ Geist Mono is loaded via Google Fonts at weights 400, 500, and 600.
 
 **Skill Card (Local/Explore)**
 - Container: `border border-card rounded-lg bg-panel hover:bg-control/80 transition`
-- Title: `font-mono text-sm font-semibold text-primary`
+- Title: `font-mono text-base font-bold text-primary`
 - Description: `text-sm text-secondary mt-1 line-clamp-2`
 - Icon container: `p-1.5 rounded-md bg-accent-teal-subtle`
 

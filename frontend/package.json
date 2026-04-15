@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/atkinson-hyperlegible": "^5.2.8",
     "@fontsource/opendyslexic": "^5.2.5",
     "@types/diff": "^7.0.2",
     "diff": "^8.0.3",

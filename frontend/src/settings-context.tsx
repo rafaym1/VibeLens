@@ -3,16 +3,16 @@ import type { ReactNode } from "react";
 
 export type FontScale = "90%" | "100%" | "110%" | "120%" | "130%";
 export type ThemePreference = "system" | "light" | "dark";
-export type FontFamily = "default" | "sans" | "system" | "dyslexic";
+export type FontFamily = "sans" | "serif" | "mono" | "readable";
 
 const FONT_SCALE_OPTIONS: FontScale[] = ["90%", "100%", "110%", "120%", "130%"];
 const THEME_OPTIONS: ThemePreference[] = ["system", "light", "dark"];
-const FONT_FAMILY_OPTIONS: FontFamily[] = ["default", "sans", "system", "dyslexic"];
+const FONT_FAMILY_OPTIONS: FontFamily[] = ["sans", "serif", "mono", "readable"];
 const FONT_FAMILY_CLASSES: Record<FontFamily, string | null> = {
-  default: null,
-  sans: "font-sans",
-  system: "font-system",
-  dyslexic: "font-dyslexic",
+  sans: null,
+  serif: "font-serif",
+  mono: "font-mono",
+  readable: "font-readable",
 };
 
 const STORAGE_KEY = "vibelens-settings";
@@ -43,7 +43,7 @@ const SettingsContext = createContext<SettingsValue>({
   theme: "system",
   setTheme: () => {},
   themeOptions: THEME_OPTIONS,
-  fontFamily: "system",
+  fontFamily: "sans",
   setFontFamily: () => {},
   fontFamilyOptions: FONT_FAMILY_OPTIONS,
 });
@@ -83,7 +83,7 @@ function loadPersistedFontFamily(): FontFamily {
   if (parsed.fontFamily && FONT_FAMILY_OPTIONS.includes(parsed.fontFamily as FontFamily)) {
     return parsed.fontFamily as FontFamily;
   }
-  return "system";
+  return "sans";
 }
 
 function persistSettings(fontScale: FontScale, theme: ThemePreference, fontFamily: FontFamily): void {

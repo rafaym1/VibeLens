@@ -5,9 +5,12 @@ import rehypeHighlight from "rehype-highlight";
 import type { Components } from "react-markdown";
 import { CopyButton } from "./copy-button";
 
+export type MarkdownVariant = "compact" | "document";
+
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  variant?: MarkdownVariant;
 }
 
 function extractLanguage(className: string | undefined): string {
@@ -16,28 +19,70 @@ function extractLanguage(className: string | undefined): string {
   return match ? match[1] : "";
 }
 
-function MarkdownRendererInner({ content, className = "" }: MarkdownRendererProps) {
+export function headingSlug(children: React.ReactNode): string {
+  const text = typeof children === "string"
+    ? children
+    : Array.isArray(children)
+      ? children.map((c) => (typeof c === "string" ? c : "")).join("")
+      : String(children ?? "");
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+
+const HEADING_STYLES: Record<MarkdownVariant, Record<string, string>> = {
+  compact: {
+    h1: "text-lg font-semibold text-primary mt-4 mb-2",
+    h2: "text-base font-semibold text-primary mt-3 mb-1.5",
+    h3: "text-sm font-semibold text-primary mt-2.5 mb-1",
+    h4: "text-sm font-medium text-secondary mt-2 mb-1",
+    h5: "text-xs font-medium text-secondary mt-1.5 mb-0.5",
+    h6: "text-xs font-medium text-secondary mt-1.5 mb-0.5",
+    p: "leading-relaxed text-secondary my-1.5",
+    ul: "list-disc list-outside pl-5 space-y-0.5 my-1.5 text-secondary",
+    ol: "list-decimal list-outside pl-5 space-y-0.5 my-1.5 text-secondary",
+    li: "leading-relaxed [&>p]:my-0 [&>p]:inline",
+    blockquote: "border-l-2 border-hover pl-3 my-2 italic text-muted",
+  },
+  document: {
+    h1: "text-2xl font-bold text-primary mt-8 mb-3 first:mt-0",
+    h2: "text-xl font-bold text-primary mt-7 mb-2.5",
+    h3: "text-lg font-semibold text-primary mt-5 mb-2",
+    h4: "text-base font-semibold text-primary mt-4 mb-1.5",
+    h5: "text-sm font-medium text-secondary mt-3 mb-1",
+    h6: "text-sm font-medium text-secondary mt-3 mb-1",
+    p: "text-[15px] leading-[1.75] text-secondary my-2.5",
+    ul: "list-disc list-outside pl-6 space-y-1.5 my-3 text-secondary text-[15px] leading-[1.75]",
+    ol: "list-decimal list-outside pl-6 space-y-1.5 my-3 text-secondary text-[15px] leading-[1.75]",
+    li: "leading-[1.75] [&>p]:my-0 [&>p]:inline",
+    blockquote: "border-l-3 border-hover pl-4 my-4 italic text-muted",
+  },
+};
+
+function MarkdownRendererInner({ content, className = "", variant = "compact" }: MarkdownRendererProps) {
+  const s = HEADING_STYLES[variant];
   const components: Components = {
     h1: ({ children }) => (
-      <h1 className="text-lg font-semibold text-primary mt-4 mb-2">{children}</h1>
+      <h1 id={headingSlug(children)} className={s.h1}>{children}</h1>
     ),
     h2: ({ children }) => (
-      <h2 className="text-base font-semibold text-primary mt-3 mb-1.5">{children}</h2>
+      <h2 id={headingSlug(children)} className={s.h2}>{children}</h2>
     ),
     h3: ({ children }) => (
-      <h3 className="text-sm font-semibold text-primary mt-2.5 mb-1">{children}</h3>
+      <h3 id={headingSlug(children)} className={s.h3}>{children}</h3>
     ),
     h4: ({ children }) => (
-      <h4 className="text-sm font-medium text-secondary mt-2 mb-1">{children}</h4>
+      <h4 id={headingSlug(children)} className={s.h4}>{children}</h4>
     ),
     h5: ({ children }) => (
-      <h5 className="text-xs font-medium text-secondary mt-1.5 mb-0.5">{children}</h5>
+      <h5 id={headingSlug(children)} className={s.h5}>{children}</h5>
     ),
     h6: ({ children }) => (
-      <h6 className="text-xs font-medium text-secondary mt-1.5 mb-0.5">{children}</h6>
+      <h6 id={headingSlug(children)} className={s.h6}>{children}</h6>
     ),
     p: ({ children }) => (
-      <p className="leading-relaxed text-secondary my-1.5">{children}</p>
+      <p className={s.p}>{children}</p>
     ),
     a: ({ href, children }) => (
       <a
@@ -95,16 +140,16 @@ function MarkdownRendererInner({ content, className = "" }: MarkdownRendererProp
       );
     },
     ul: ({ children }) => (
-      <ul className="list-disc list-outside pl-5 space-y-0.5 my-1.5 text-secondary">{children}</ul>
+      <ul className={s.ul}>{children}</ul>
     ),
     ol: ({ children }) => (
-      <ol className="list-decimal list-outside pl-5 space-y-0.5 my-1.5 text-secondary">{children}</ol>
+      <ol className={s.ol}>{children}</ol>
     ),
     li: ({ children }) => (
-      <li className="leading-relaxed [&>p]:my-0 [&>p]:inline">{children}</li>
+      <li className={s.li}>{children}</li>
     ),
     blockquote: ({ children }) => (
-      <blockquote className="border-l-2 border-hover pl-3 my-2 italic text-muted">
+      <blockquote className={s.blockquote}>
         {children}
       </blockquote>
     ),
