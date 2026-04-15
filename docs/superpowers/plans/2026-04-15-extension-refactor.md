@@ -1121,6 +1121,7 @@ Create `src/vibelens/services/extensions/base.py`:
 ```python
 """Base handler for file-based extensions (skill, subagent, command, hook)."""
 
+import shutil
 from pathlib import Path
 
 from vibelens.models.extension import ExtensionItem
@@ -1170,8 +1171,6 @@ class FileBasedHandler:
         Returns:
             True if removed, False if not found.
         """
-        import shutil
-
         target = target_dir / name
         if target.is_dir():
             shutil.rmtree(target)
@@ -1477,33 +1476,39 @@ In `src/vibelens/services/recommendation/catalog.py`:
 - Update imports: `from vibelens.models.extension import ExtensionItem`
 - Update all `CatalogItem` references → `ExtensionItem`
 
-- [ ] **Step 4: Update app.py router registration**
+- [ ] **Step 4: Update api/__init__.py router registration**
+
+In `src/vibelens/api/__init__.py`:
+- Change `from vibelens.api.catalog import router as catalog_router` → `from vibelens.api.extensions import router as extensions_router`
+- Change `routers.include_router(catalog_router)` → `routers.include_router(extensions_router)`
+
+This is critical — without this update the app will fail to start after the file rename.
+
+- [ ] **Step 5: Update app.py if it references catalog imports**
 
 In `src/vibelens/app.py`:
-- Change `from vibelens.api.catalog import router as catalog_router` → `from vibelens.api.extensions import router as extensions_router`
-- Change `app.include_router(catalog_router)` → `app.include_router(extensions_router)`
 - Update `import_agent_skills` import from `vibelens.services.skill.importer` (this will be updated or kept temporarily)
 
-- [ ] **Step 5: Update all downstream imports**
+- [ ] **Step 6: Update all downstream imports**
 
 Files referencing `from vibelens.services.recommendation.catalog import`:
 - `src/vibelens/api/extensions.py` — update to `load_extensions`, `ExtensionSnapshot`
 - `src/vibelens/services/recommendation/engine.py` — update references
 - `src/vibelens/services/recommendation/retrieval.py` — update references
 
-- [ ] **Step 6: Delete old services/catalog/**
+- [ ] **Step 7: Delete old services/catalog/**
 
 ```bash
 rm -rf src/vibelens/services/catalog/
 ```
 
-- [ ] **Step 7: Run linter and test suite**
+- [ ] **Step 8: Run linter and test suite**
 
 Run: `ruff check src/ tests/`
 Run: `pytest tests/ -v -s --tb=short 2>&1 | head -100`
 Expected: Pass (fix any remaining import errors)
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add -A
@@ -1717,6 +1722,9 @@ In `frontend/src/types.ts`:
 - Rename `CatalogItemSummary` → `ExtensionItemSummary`
 - Rename `CatalogListResponse` → `ExtensionListResponse`
 - Rename `CatalogMetaResponse` → `ExtensionMetaResponse`
+- Rename `CatalogInstallResponse` → `ExtensionInstallResponse`
+- Rename `CatalogRecommendation` → `ExtensionRecommendation`
+- In `RecommendationResult`: rename `catalog_version` → `extension_catalog_version`, update `recommendations: ExtensionRecommendation[]`
 - In `ExtensionItemSummary`: rename `item_id` → `extension_id`, `item_type` → `extension_type`
 - In `RecommendationItem`: rename `item_id` → `extension_id`, `item_type` → `extension_type`
 - Rename `SkillInfo` → `ExtensionInfo`, `SkillSourceInfo` → `ExtensionSourceInfo`, `SkillSource` → `ExtensionSource` (frontend interfaces)
@@ -1876,8 +1884,9 @@ rg "BaseSkillStore\|DiskSkillStore\|CentralSkillStore" src/ tests/ --type py
 rg "AGENT_SKILL_REGISTRY" src/ tests/ --type py
 rg "/api/catalog" frontend/src/ --type ts --type tsx
 rg "item_type\|item_id" frontend/src/types.ts
-rg "CatalogItemSummary" frontend/src/ --type ts --type tsx
+rg "CatalogItemSummary\|CatalogRecommendation\|CatalogListResponse\|CatalogMetaResponse\|CatalogInstallResponse" frontend/src/ --type ts --type tsx
 rg "ITEM_TYPE_LABELS\|ITEM_TYPE_COLORS" frontend/src/ --type ts --type tsx
+rg "catalog_router" src/vibelens/api/ --type py
 ```
 
 Fix any remaining references found.
@@ -1897,7 +1906,15 @@ Expected: No errors
 Run: `cd frontend && npm run build`
 Expected: Build succeeds with zero TypeScript errors
 
-- [ ] **Step 5: Update CLAUDE.md project structure**
+- [ ] **Step 5: Update cli.py catalog commands**
+
+In `src/vibelens/cli.py`:
+- Rename `update_catalog()` → `update_extensions()` (or keep as placeholder if not fully implemented)
+- Rename `build_catalog()` → `build_extensions()` (or keep as placeholder if not fully implemented)
+- Update any imports of `CatalogItem`, `ItemType`, or catalog-related modules
+- Update command names in the Typer app if they reference "catalog"
+
+- [ ] **Step 6: Update CLAUDE.md project structure**
 
 Update the project structure section to reflect:
 - `models/extension.py` — ExtensionItem model
@@ -1907,7 +1924,7 @@ Update the project structure section to reflect:
 - `api/extensions.py` — replaces api/catalog.py
 - Delete references to `catalog/`, `services/catalog/`, `services/skill/`, `storage/skill/`
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add -A
