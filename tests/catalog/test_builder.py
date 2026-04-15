@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+from vibelens.catalog import ItemType
 from vibelens.catalog.builder import build_catalog
-from vibelens.models.recommendation.catalog import ItemType
 
 
 def _noop_validate(items):

@@ -9,6 +9,7 @@ class PersonalizationMode(StrEnum):
     CREATION = "creation"
     RETRIEVAL = "retrieval"
     EVOLUTION = "evolution"
+    RECOMMENDATION = "recommendation"
 
 
 class PersonalizationElementType(StrEnum):

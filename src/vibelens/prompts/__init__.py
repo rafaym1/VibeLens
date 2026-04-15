@@ -2,7 +2,7 @@
 
 from vibelens.models.llm.prompts import AnalysisPrompt
 from vibelens.prompts.evolution import EVOLUTION_PROPOSAL_PROMPT
-from vibelens.prompts.friction_analysis import FRICTION_PROMPT
+from vibelens.prompts.friction import FRICTION_PROMPT
 from vibelens.prompts.recommendation import RECOMMENDATION_PROFILE_PROMPT
 
 PROMPT_REGISTRY: dict[str, AnalysisPrompt] = {

@@ -279,9 +279,9 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
       evolution: "evolve",
     };
     const tab = tabMap[loaded.mode] || "retrieve";
-    if (loaded.mode === "retrieval" && loaded.analysis_id) {
+    if (loaded.mode === "retrieval" && loaded.id) {
       setAnalysisResult(null);
-      setRecommendationAnalysisId(loaded.analysis_id);
+      setRecommendationAnalysisId(loaded.id);
     } else {
       setRecommendationAnalysisId(null);
       setAnalysisResult(loaded);
@@ -291,7 +291,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
   }, []);
 
   // In demo mode, auto-load the most recent analysis for a given mode
-  const demoHistoryRef = useRef<{ analysis_id: string; mode: SkillMode }[] | null>(null);
+  const demoHistoryRef = useRef<{ id: string; mode: SkillMode }[] | null>(null);
 
   const loadDemoAnalysis = useCallback(
     async (mode: SkillMode) => {
@@ -307,10 +307,10 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
         const match = demoHistoryRef.current?.find((h) => h.mode === mode);
         if (!match) return;
         if (mode === "retrieval") {
-          setRecommendationAnalysisId(match.analysis_id);
+          setRecommendationAnalysisId(match.id);
           setAnalysisResult(null);
         } else {
-          const loadRes = await fetchWithToken(`${apiBase}/${match.analysis_id}`);
+          const loadRes = await fetchWithToken(`${apiBase}/${match.id}`);
           if (!loadRes.ok) return;
           const result: PersonalizationResult = await loadRes.json();
           setAnalysisResult(result);
@@ -340,16 +340,16 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
       try {
         const res = await fetchWithToken(`${apiBase}/history`);
         if (!res.ok) return;
-        const history: { analysis_id: string; mode: SkillMode }[] = await res.json();
+        const history: { id: string; mode: SkillMode }[] = await res.json();
         demoHistoryRef.current = history;
         if (history.length === 0) return;
         const match = history.find((h) => h.mode === targetMode) ?? history[0];
         if (targetMode === "retrieval") {
-          setRecommendationAnalysisId(match.analysis_id);
+          setRecommendationAnalysisId(match.id);
           setActiveTab("retrieve");
           localStorage.setItem("vibelens-skills-tab", "retrieve");
         } else {
-          const loadRes = await fetchWithToken(`${apiBase}/${match.analysis_id}`);
+          const loadRes = await fetchWithToken(`${apiBase}/${match.id}`);
           if (!loadRes.ok) return;
           const result: PersonalizationResult = await loadRes.json();
           handleHistorySelect(result);

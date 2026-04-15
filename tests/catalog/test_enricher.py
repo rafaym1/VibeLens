@@ -1,10 +1,10 @@
 """Tests for catalog GitHub enrichment."""
 
+from vibelens.catalog import CatalogItem, ItemType
 from vibelens.catalog.enricher import (
     _construct_source_url,
     _extract_repo_full_name,
 )
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
 
 
 def _make_item(item_id: str, source_url: str = "", item_type: str = "skill") -> CatalogItem:

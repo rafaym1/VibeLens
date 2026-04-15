@@ -3,7 +3,7 @@
 import math
 from datetime import datetime, timezone
 
-from vibelens.models.recommendation.catalog import CatalogItem
+from vibelens.catalog.catalog import CatalogItem
 
 WEIGHT_DESCRIPTION = 0.30
 WEIGHT_SOURCE = 0.25

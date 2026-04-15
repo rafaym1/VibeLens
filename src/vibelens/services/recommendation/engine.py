@@ -8,25 +8,27 @@ Pipeline:
 """
 
 import hashlib
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from cachetools import TTLCache
 
-from vibelens.context import MetadataExtractor
-from vibelens.deps import get_recommendation_store
+from vibelens.catalog import CatalogItem
+from vibelens.context import MetadataExtractor, sample_contexts
+from vibelens.deps import get_personalization_store
 from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.llm.inference import InferenceRequest
-from vibelens.models.recommendation.catalog import ITEM_TYPE_LABELS, CatalogItem
-from vibelens.models.recommendation.profile import UserProfile
-from vibelens.models.recommendation.results import (
-    CatalogRecommendation,
+from vibelens.models.personalization.enums import PersonalizationMode
+from vibelens.models.personalization.recommendation import (
+    RankedRecommendationItem,
     RationaleOutput,
-    RecommendationResult,
+    RecommendationItem,
+    UserProfile,
 )
+from vibelens.models.personalization.results import PersonalizationResult
+from vibelens.models.trajectories.final_metrics import FinalMetrics
 from vibelens.models.trajectories.metrics import Metrics
 from vibelens.prompts.recommendation import (
     RECOMMENDATION_PROFILE_PROMPT,
@@ -40,8 +42,7 @@ from vibelens.services.inference_shared import (
     extract_all_contexts,
     format_context_batch,
     require_backend,
-    sample_contexts,
-    save_analysis_log,
+    save_inference_log,
     truncate_digest_to_fit,
 )
 from vibelens.services.personalization.shared import parse_llm_output
@@ -49,14 +50,23 @@ from vibelens.services.recommendation.catalog import CatalogSnapshot, load_catal
 from vibelens.services.recommendation.retrieval import KeywordRetrieval
 from vibelens.services.recommendation.scoring import score_candidates
 from vibelens.services.session.store_resolver import list_all_metadata
+from vibelens.utils.content import truncate
 from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 
 logger = get_logger(__name__)
 
 # L3 retrieval: how many raw TF-IDF candidates to fetch
-RETRIEVAL_TOP_K = 30
-# L3 scoring: how many candidates survive weighted scoring
-SCORING_TOP_K = 15
+RETRIEVAL_TOP_K = 200
+# L3 scoring: how many candidates survive weighted scoring for L4 input
+SCORING_TOP_K = 100
+# L4: maximum recommendations to return (CLI --top-n can override, capped here)
+RATIONALE_MAX_RESULTS = 15
+# Absolute upper bound for top_n
+RATIONALE_MAX_RESULTS_LIMIT = 50
+# L4: minimum relevance for inclusion
+RATIONALE_MIN_RELEVANCE = 0.6
+# Max chars for candidate descriptions sent to L4
+DESCRIPTION_MAX_CHARS = 150
 # Max output tokens for each LLM call (profile + rationale)
 RECOMMENDATION_OUTPUT_TOKENS = 4096
 # Timeout per LLM call (seconds)
@@ -117,8 +127,10 @@ def estimate_recommendation(
 
 
 async def analyze_recommendation(
-    session_ids: list[str] | None = None, session_token: str | None = None
-) -> RecommendationResult:
+    session_ids: list[str] | None = None,
+    session_token: str | None = None,
+    top_n: int = RATIONALE_MAX_RESULTS,
+) -> PersonalizationResult:
     """Run the full L1-L4 recommendation pipeline.
 
     L1: Extract session contexts (no LLM)
@@ -129,36 +141,40 @@ async def analyze_recommendation(
     Args:
         session_ids: Sessions to analyze.
         session_token: Browser tab token for upload scoping.
+        top_n: Maximum recommendations to return (capped at RATIONALE_MAX_RESULTS_LIMIT).
 
     Returns:
-        RecommendationResult with ranked, rationalized recommendations.
+        PersonalizationResult with ranked, rationalized recommendations.
 
     Raises:
         ValueError: If no sessions loaded or no catalog available.
         InferenceError: If LLM backend fails.
     """
+    top_n = min(max(top_n, 1), RATIONALE_MAX_RESULTS_LIMIT)
+
     cache_key = _recommendation_cache_key(session_ids)
     if cache_key in _cache:
         return _cache[cache_key]
 
-    start_time = time.monotonic()
     analysis_id = generate_analysis_id()
     set_analysis_id(analysis_id)
 
     try:
-        result = await _run_pipeline(session_ids, session_token, analysis_id)
+        result = await _run_pipeline(session_ids, session_token, analysis_id, top_n=top_n)
     finally:
         clear_analysis_id()
 
-    result.duration_seconds = round(time.monotonic() - start_time, 2)
-    get_recommendation_store().save(result, analysis_id)
+    get_personalization_store().save(result, analysis_id)
     _cache[cache_key] = result
     return result
 
 
 async def _run_pipeline(
-    session_ids: list[str] | None, session_token: str | None, analysis_id: str
-) -> RecommendationResult:
+    session_ids: list[str] | None,
+    session_token: str | None,
+    analysis_id: str,
+    top_n: int = RATIONALE_MAX_RESULTS,
+) -> PersonalizationResult:
     """Execute L1-L4 pipeline steps.
 
     Separated from analyze_recommendation for clean try/finally in caller.
@@ -167,9 +183,10 @@ async def _run_pipeline(
         session_ids: Sessions to analyze. None discovers all local sessions.
         session_token: Browser tab token.
         analysis_id: Pre-generated analysis ID for log correlation.
+        top_n: Maximum recommendations for L4 to return.
 
     Returns:
-        RecommendationResult with all pipeline outputs.
+        PersonalizationResult with all pipeline outputs.
     """
     backend = require_backend()
 
@@ -224,35 +241,37 @@ async def _run_pipeline(
             skipped_session_ids=skipped_session_ids,
             backend=backend,
             reason="No matching catalog items found",
-            profile=profile,
-            catalog_version=catalog.version,
         )
 
     # L4: Rationale generation (1 LLM call)
     rationale_output, rationale_cost = await _generate_rationales(
-        backend, profile, scored_candidates, log_dir
+        backend, profile, scored_candidates, log_dir, top_n=top_n
     )
 
     total_cost = profile_cost + rationale_cost
-    recommendations = _merge_scores_and_rationales(scored_candidates, rationale_output)
+    ranked_items = _merge_and_rank(scored_candidates, rationale_output)
 
-    title = f"Top {len(recommendations)} recommendations for your workflow"
-    if len(recommendations) == 1:
+    title = f"Top {len(ranked_items)} recommendations for your workflow"
+    if len(ranked_items) == 1:
         title = "1 recommendation for your workflow"
 
-    return RecommendationResult(
-        analysis_id=analysis_id,
+    return PersonalizationResult(
+        id=analysis_id,
+        mode=PersonalizationMode.RECOMMENDATION,
         session_ids=loaded_session_ids,
         skipped_session_ids=skipped_session_ids,
         title=title,
-        summary=_build_summary(profile, len(recommendations)),
         user_profile=profile,
-        recommendations=recommendations,
-        backend_id=backend.backend_id,
+        ranked_recommendations=ranked_items,
+        backend=backend.backend_id,
         model=backend.model,
         created_at=datetime.now(timezone.utc).isoformat(),
-        metrics=Metrics(cost_usd=total_cost if total_cost > 0 else None),
-        catalog_version=catalog.version,
+        batch_count=2,
+        batch_metrics=[
+            Metrics(cost_usd=profile_cost if profile_cost > 0 else None),
+            Metrics(cost_usd=rationale_cost if rationale_cost > 0 else None),
+        ],
+        final_metrics=FinalMetrics(total_cost_usd=total_cost if total_cost > 0 else None),
     )
 
 
@@ -290,11 +309,11 @@ async def _generate_profile(
         json_schema=RECOMMENDATION_PROFILE_PROMPT.output_json_schema(),
     )
 
-    save_analysis_log(log_dir, "profile_system.txt", system_prompt)
-    save_analysis_log(log_dir, "profile_user.txt", user_prompt)
+    save_inference_log(log_dir, "profile_system.txt", system_prompt)
+    save_inference_log(log_dir, "profile_user.txt", user_prompt)
 
     result = await backend.generate(request)
-    save_analysis_log(log_dir, "profile_output.txt", result.text)
+    save_inference_log(log_dir, "profile_output.txt", result.text)
 
     profile = parse_llm_output(result.text, UserProfile, "recommendation profile")
     cost = result.cost_usd or 0.0
@@ -340,6 +359,7 @@ async def _generate_rationales(
     profile: UserProfile,
     scored_candidates: list[tuple[CatalogItem, float]],
     log_dir: Path,
+    top_n: int = RATIONALE_MAX_RESULTS,
 ) -> tuple[RationaleOutput, float]:
     """L4: Generate personalized rationales for top candidates.
 
@@ -348,16 +368,23 @@ async def _generate_rationales(
         profile: User profile from L2.
         scored_candidates: Scored (CatalogItem, score) pairs from L3.
         log_dir: Timestamped directory for saving prompts and outputs.
+        top_n: Maximum recommendations for L4 to return.
 
     Returns:
         Tuple of (RationaleOutput, cost in USD).
     """
     candidates_for_template = [
-        {"item_id": item.item_id, "name": item.name, "description": item.description}
+        {
+            "item_id": item.item_id,
+            "name": item.name,
+            "description": truncate(item.description, max_chars=DESCRIPTION_MAX_CHARS),
+        }
         for item, _ in scored_candidates
     ]
 
     system_kwargs = build_system_kwargs(RECOMMENDATION_RATIONALE_PROMPT, backend)
+    system_kwargs["max_results"] = top_n
+    system_kwargs["min_relevance"] = RATIONALE_MIN_RELEVANCE
     system_prompt = RECOMMENDATION_RATIONALE_PROMPT.render_system(**system_kwargs)
     user_prompt = RECOMMENDATION_RATIONALE_PROMPT.render_user(
         user_profile=profile.model_dump(), candidates=candidates_for_template
@@ -371,11 +398,11 @@ async def _generate_rationales(
         json_schema=RECOMMENDATION_RATIONALE_PROMPT.output_json_schema(),
     )
 
-    save_analysis_log(log_dir, "rationale_system.txt", system_prompt)
-    save_analysis_log(log_dir, "rationale_user.txt", user_prompt)
+    save_inference_log(log_dir, "rationale_system.txt", system_prompt)
+    save_inference_log(log_dir, "rationale_user.txt", user_prompt)
 
     result = await backend.generate(request)
-    save_analysis_log(log_dir, "rationale_output.txt", result.text)
+    save_inference_log(log_dir, "rationale_output.txt", result.text)
 
     rationale_output = parse_llm_output(result.text, RationaleOutput, "recommendation rationale")
     cost = result.cost_usd or 0.0
@@ -383,47 +410,56 @@ async def _generate_rationales(
     return rationale_output, cost
 
 
-def _merge_scores_and_rationales(
+def _merge_and_rank(
     scored_candidates: list[tuple[CatalogItem, float]], rationale_output: RationaleOutput
-) -> list[CatalogRecommendation]:
-    """Combine L3 scores with L4 rationales into final recommendations.
+) -> list[RankedRecommendationItem]:
+    """Combine L3 scores with L4 ranked rationales into final recommendations.
 
-    Items without a matching rationale get a generic fallback.
-    Order follows the L3 scoring rank.
+    L4 list order determines final ranking (first = best).
+    Items in the rationale output that don't match a scored candidate are skipped.
 
     Args:
         scored_candidates: Ranked (CatalogItem, score) pairs from L3.
-        rationale_output: LLM rationales from L4.
+        rationale_output: LLM rationales from L4 (ordered by rank).
 
     Returns:
-        Ordered list of CatalogRecommendation.
+        Ordered list of RankedRecommendationItem.
     """
-    rationale_map = {r.item_id: r for r in rationale_output.rationales}
+    score_map = {item.item_id: score for item, score in scored_candidates}
+    quality_map = {item.item_id: item.quality_score for item, _ in scored_candidates}
+    item_map = {item.item_id: item for item, _ in scored_candidates}
 
-    recommendations: list[CatalogRecommendation] = []
-    for item, score in scored_candidates:
-        rationale_item = rationale_map.get(item.item_id)
-        rationale_text = rationale_item.rationale if rationale_item else "Matches your workflow."
-        confidence = rationale_item.confidence if rationale_item else 0.5
-
-        recommendations.append(
-            CatalogRecommendation(
-                item_id=item.item_id,
-                item_type=item.item_type,
-                user_label=ITEM_TYPE_LABELS.get(item.item_type, item.item_type.value),
-                name=item.name,
-                description=item.description,
-                rationale=rationale_text,
-                confidence=confidence,
-                quality_score=item.quality_score,
-                score=round(score, 4),
-                install_method=item.install_method,
-                install_command=item.install_command,
-                has_content=item.install_content is not None,
-                source_url=item.source_url,
+    results: list[RankedRecommendationItem] = []
+    for r in rationale_output.rationales:
+        cat = item_map.get(r.item_id)
+        if not cat:
+            continue
+        results.append(
+            RankedRecommendationItem(
+                item=RecommendationItem(
+                    item_id=cat.item_id,
+                    item_type=cat.item_type,
+                    name=cat.name,
+                    description=cat.description,
+                    tags=cat.tags,
+                    updated_at=cat.updated_at,
+                    source_url=cat.source_url,
+                    repo_name=cat.repo_full_name,
+                    stars=cat.stars,
+                    forks=cat.forks,
+                    license=cat.license_name,
+                    install_command=cat.install_command,
+                    language=cat.language,
+                ),
+                rationale=r.rationale,
+                scores={
+                    "relevance": r.relevance,
+                    "quality": quality_map.get(r.item_id, 0.0),
+                    "composite": score_map.get(r.item_id, 0.0),
+                },
             )
         )
-    return recommendations
+    return results
 
 
 def _build_empty_result(
@@ -432,9 +468,7 @@ def _build_empty_result(
     skipped_session_ids: list[str],
     backend: InferenceBackend,
     reason: str,
-    profile: UserProfile | None = None,
-    catalog_version: str = "unknown",
-) -> RecommendationResult:
+) -> PersonalizationResult:
     """Build a result with zero recommendations.
 
     Args:
@@ -443,50 +477,21 @@ def _build_empty_result(
         skipped_session_ids: Session IDs that could not be loaded.
         backend: Inference backend (for metadata).
         reason: Why no recommendations were generated.
-        profile: Optional user profile (if L2 completed before failure).
-        catalog_version: Catalog version string.
 
     Returns:
-        RecommendationResult with empty recommendations list.
+        PersonalizationResult with empty ranked_recommendations.
     """
-    empty_profile = profile or UserProfile(
-        domains=[],
-        languages=[],
-        frameworks=[],
-        agent_platforms=[],
-        bottlenecks=[],
-        workflow_style="unknown",
-        search_keywords=[],
-    )
-    return RecommendationResult(
-        analysis_id=analysis_id,
+    return PersonalizationResult(
+        id=analysis_id,
+        mode=PersonalizationMode.RECOMMENDATION,
         session_ids=session_ids,
         skipped_session_ids=skipped_session_ids,
-        title="No recommendations available",
-        summary=reason,
-        user_profile=empty_profile,
-        recommendations=[],
-        backend_id=backend.backend_id,
+        title=reason,
+        ranked_recommendations=[],
+        backend=backend.backend_id,
         model=backend.model,
         created_at=datetime.now(timezone.utc).isoformat(),
-        catalog_version=catalog_version,
-    )
-
-
-def _build_summary(profile: UserProfile, count: int) -> str:
-    """Build a 1-2 sentence narrative summary from the profile.
-
-    Args:
-        profile: Extracted user profile.
-        count: Number of recommendations generated.
-
-    Returns:
-        Plain-language summary string.
-    """
-    domains_text = ", ".join(profile.domains[:3]) if profile.domains else "general development"
-    return (
-        f"Based on {domains_text} sessions, found {count} "
-        f"tool{'s' if count != 1 else ''} that match your workflow."
+        batch_count=0,
     )
 
 

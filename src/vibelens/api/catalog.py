@@ -6,9 +6,9 @@ import httpx
 from cachetools import TTLCache
 from fastapi import APIRouter, HTTPException, Query
 
-from vibelens.deps import get_recommendation_store
-from vibelens.models.recommendation.catalog import CatalogItem
-from vibelens.models.recommendation.profile import UserProfile
+from vibelens.catalog import CatalogItem
+from vibelens.deps import get_personalization_store
+from vibelens.models.personalization.recommendation import UserProfile
 from vibelens.schemas.catalog import (
     CatalogInstallRequest,
     CatalogInstallResponse,
@@ -113,7 +113,7 @@ def _load_latest_profile() -> UserProfile | None:
     Returns:
         UserProfile if a recommendation analysis exists, else None.
     """
-    store = get_recommendation_store()
+    store = get_personalization_store()
     analyses = store.list_analyses()
     if not analyses:
         return None

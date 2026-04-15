@@ -6,10 +6,10 @@ import secrets
 from fastapi import APIRouter, Header, HTTPException
 
 from vibelens.deps import get_personalization_store, is_demo_mode, is_test_mode
-from vibelens.models.personalization.results import PersonalizationResult
+from vibelens.models.personalization.results import PersonalizationMeta, PersonalizationResult
 from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
-from vibelens.schemas.creation import CreationAnalysisMeta, CreationAnalysisRequest
+from vibelens.schemas.personalization import PersonalizationRequest
 from vibelens.services.creation import analyze_skill_creation, estimate_skill_creation
 from vibelens.services.job_tracker import (
     cancel_job,
@@ -44,7 +44,7 @@ async def _run_creation_analysis(
 
 @router.post("/estimate")
 async def creation_estimate(
-    body: CreationAnalysisRequest, x_session_token: str | None = Header(None)
+    body: PersonalizationRequest, x_session_token: str | None = Header(None)
 ) -> CostEstimateResponse:
     """Pre-flight cost estimate for creation analysis.
 
@@ -78,7 +78,7 @@ async def creation_estimate(
 
 @router.post("")
 async def creation_analysis(
-    body: CreationAnalysisRequest, x_session_token: str | None = Header(None)
+    body: PersonalizationRequest, x_session_token: str | None = Header(None)
 ) -> AnalysisJobResponse:
     """Run creation analysis on specified sessions.
 
@@ -152,7 +152,7 @@ async def creation_job_cancel(job_id: str) -> AnalysisJobStatus:
 
 
 @router.get("/history")
-async def creation_analysis_history() -> list[CreationAnalysisMeta]:
+async def creation_analysis_history() -> list[PersonalizationMeta]:
     """List all persisted creation analyses, newest first."""
     return get_personalization_store().list_analyses()
 

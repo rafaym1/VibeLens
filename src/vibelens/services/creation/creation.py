@@ -39,10 +39,10 @@ from vibelens.services.inference_shared import (
     build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
-    log_analysis_summary,
+    log_inference_summary,
     require_backend,
     run_batches_concurrent,
-    save_analysis_log,
+    save_inference_log,
     truncate_digest_to_fit,
 )
 from vibelens.services.personalization.shared import (
@@ -252,7 +252,7 @@ async def _infer_skill_creation_proposals(
         len(context_set.session_ids),
         len(batches),
     )
-    log_analysis_summary(context_set, batches, backend)
+    log_inference_summary(context_set, batches, backend)
 
     if log_dir is None:
         run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -385,11 +385,11 @@ async def _infer_skill_creation(
         log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
 
     suffix = f"_{proposal_index}" if proposal_index is not None else ""
-    save_analysis_log(log_dir, f"skill_creation{suffix}_system.txt", system_prompt)
-    save_analysis_log(log_dir, f"skill_creation{suffix}_user.txt", user_prompt)
+    save_inference_log(log_dir, f"skill_creation{suffix}_system.txt", system_prompt)
+    save_inference_log(log_dir, f"skill_creation{suffix}_user.txt", user_prompt)
 
     result = await backend.generate(request)
-    save_analysis_log(log_dir, f"skill_creation{suffix}_output.txt", result.text)
+    save_inference_log(log_dir, f"skill_creation{suffix}_output.txt", result.text)
 
     creation = parse_llm_output(result.text, PersonalizationCreation, "deep creation")
     creation.confidence = proposal_confidence
@@ -446,11 +446,11 @@ async def _infer_skill_creation_proposal_batch(
     )
 
     if batch_index == 0:
-        save_analysis_log(log_dir, "skill_creation_proposal_system.txt", system_prompt)
-    save_analysis_log(log_dir, f"skill_creation_proposal_user_{batch_index}.txt", user_prompt)
+        save_inference_log(log_dir, "skill_creation_proposal_system.txt", system_prompt)
+    save_inference_log(log_dir, f"skill_creation_proposal_user_{batch_index}.txt", user_prompt)
 
     result = await backend.generate(request)
-    save_analysis_log(log_dir, f"skill_creation_proposal_output_{batch_index}.txt", result.text)
+    save_inference_log(log_dir, f"skill_creation_proposal_output_{batch_index}.txt", result.text)
 
     proposal_output = parse_llm_output(result.text, CreationProposalBatch, "proposal")
     cost = result.cost_usd or 0.0
@@ -513,14 +513,12 @@ async def _synthesize_skill_creation_proposals(
         json_schema=synthesis_prompt.output_json_schema(),
     )
 
-    save_analysis_log(log_dir, "skill_creation_proposal_synthesis_system.txt", system_prompt)
-    save_analysis_log(log_dir, "skill_creation_proposal_synthesis_user.txt", user_prompt)
+    save_inference_log(log_dir, "skill_creation_proposal_synthesis_system.txt", system_prompt)
+    save_inference_log(log_dir, "skill_creation_proposal_synthesis_user.txt", user_prompt)
 
     result = await backend.generate(request)
-    save_analysis_log(log_dir, "skill_creation_proposal_synthesis_output.txt", result.text)
+    save_inference_log(log_dir, "skill_creation_proposal_synthesis_output.txt", result.text)
 
-    synthesis_output = parse_llm_output(
-        result.text, CreationProposalBatch, "proposal synthesis"
-    )
+    synthesis_output = parse_llm_output(result.text, CreationProposalBatch, "proposal synthesis")
     cost = result.cost_usd or 0.0
     return synthesis_output, cost

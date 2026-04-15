@@ -1,16 +1,41 @@
-"""Service-layer result models with metadata for personalization analysis."""
+"""Service-layer result and metadata models for personalization analysis."""
 
 from pydantic import BaseModel, Field
 
 from vibelens.models.llm.inference import BackendType
-from vibelens.models.personalization.constants import TITLE_DESCRIPTION
+from vibelens.models.personalization.constants import DESCRIPTION_TITLE
 from vibelens.models.personalization.creation import PersonalizationCreation
 from vibelens.models.personalization.enums import PersonalizationMode
 from vibelens.models.personalization.evolution import PersonalizationEvolution
+from vibelens.models.personalization.recommendation import (
+    RankedRecommendationItem,
+    UserProfile,
+)
 from vibelens.models.session.patterns import WorkflowPattern
 from vibelens.models.skill.retrieval import SkillRecommendation
 from vibelens.models.trajectories.final_metrics import FinalMetrics
 from vibelens.models.trajectories.metrics import Metrics
+
+
+class PersonalizationMeta(BaseModel):
+    """Lightweight metadata for a persisted personalization analysis."""
+
+    id: str = Field(description="Unique analysis ID.")
+    mode: PersonalizationMode = Field(description="Analysis mode used.")
+    session_count: int = Field(description="Number of sessions analyzed.")
+    title: str = Field(default="", description=DESCRIPTION_TITLE)
+    item_count: int = Field(
+        default=0,
+        description="Number of output items (recommendations, creations, or evolutions).",
+    )
+    backend: BackendType = Field(description="Inference backend used.")
+    model: str = Field(description="Model identifier.")
+    created_at: str = Field(description="ISO timestamp of analysis completion.")
+    batch_count: int = Field(default=1, description="Number of LLM batches used.")
+    final_metrics: FinalMetrics = Field(
+        default_factory=FinalMetrics, description="Aggregate cost and token totals."
+    )
+    is_example: bool = Field(default=False, description="Whether this is a bundled example.")
 
 
 class PersonalizationResult(BaseModel):
@@ -28,7 +53,7 @@ class PersonalizationResult(BaseModel):
     skipped_session_ids: list[str] = Field(
         default_factory=list, description="Session IDs that could not be loaded."
     )
-    title: str = Field(description=TITLE_DESCRIPTION)
+    title: str = Field(description=DESCRIPTION_TITLE)
     workflow_patterns: list[WorkflowPattern] = Field(
         default_factory=list, description="Detected workflow patterns from trajectory analysis."
     )
@@ -40,6 +65,12 @@ class PersonalizationResult(BaseModel):
     )
     evolutions: list[PersonalizationEvolution] = Field(
         default_factory=list, description="Evolution suggestions (evolution mode)."
+    )
+    user_profile: UserProfile | None = Field(
+        default=None, description="User profile from L2 generation (recommendation mode)."
+    )
+    ranked_recommendations: list[RankedRecommendationItem] = Field(
+        default_factory=list, description="Ranked catalog recommendations (recommendation mode)."
     )
     backend: BackendType = Field(description="Inference backend used.")
     model: str = Field(description="Model identifier.")

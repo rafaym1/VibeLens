@@ -1,8 +1,6 @@
-"""Skill and personalization API schemas — request models and lightweight metadata."""
+"""Skill API schemas — request models for skill management."""
 
 from pydantic import BaseModel, Field
-
-from vibelens.models.personalization.enums import PersonalizationMode
 
 
 class SkillWriteRequest(BaseModel):
@@ -33,22 +31,4 @@ class FeaturedSkillInstallRequest(BaseModel):
     targets: list[str] = Field(
         default_factory=list,
         description="Agent interface keys to install to. Empty = central only.",
-    )
-
-
-class PersonalizationMeta(BaseModel):
-    """Lightweight metadata for a persisted personalization analysis."""
-
-    analysis_id: str = Field(description="Unique ID for this analysis.")
-    mode: PersonalizationMode = Field(description="Analysis mode used.")
-    title: str = Field(default="", description="LLM-generated analysis title.")
-    session_ids: list[str] = Field(description="Sessions that were analyzed.")
-    created_at: str = Field(description="ISO timestamp of analysis.")
-    model: str = Field(description="Model used for analysis.")
-    cost_usd: float | None = Field(default=None, description="Inference cost.")
-    duration_seconds: float | None = Field(
-        default=None, description="Wall-clock analysis duration in seconds."
-    )
-    is_example: bool = Field(
-        default=False, description="Whether this is a bundled example analysis."
     )

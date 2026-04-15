@@ -5,14 +5,11 @@ import secrets
 
 from fastapi import APIRouter, Header, HTTPException
 
-from vibelens.deps import get_recommendation_store, is_demo_mode, is_test_mode
-from vibelens.models.recommendation.results import RecommendationResult
+from vibelens.deps import get_personalization_store, is_demo_mode, is_test_mode
+from vibelens.models.personalization.results import PersonalizationMeta, PersonalizationResult
 from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
-from vibelens.schemas.recommendation import (
-    CatalogStatusResponse,
-    RecommendationAnalyzeRequest,
-)
+from vibelens.schemas.personalization import CatalogStatusResponse, PersonalizationRequest
 from vibelens.services.job_tracker import (
     cancel_job,
     get_job,
@@ -25,7 +22,6 @@ from vibelens.services.recommendation import (
     estimate_recommendation,
 )
 from vibelens.services.recommendation.catalog import load_catalog
-from vibelens.services.recommendation.store import RecommendationMeta
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -37,7 +33,7 @@ async def _run_recommendation(job_id: str, session_ids: list[str], token: str | 
     """Background wrapper that runs recommendation analysis and updates job status."""
     try:
         result = await analyze_recommendation(session_ids, session_token=token)
-        mark_completed(job_id, result.analysis_id or "")
+        mark_completed(job_id, result.id or "")
     except asyncio.CancelledError:
         logger.info("Recommendation job %s was cancelled", job_id)
         raise
@@ -48,7 +44,7 @@ async def _run_recommendation(job_id: str, session_ids: list[str], token: str | 
 
 @router.post("/estimate")
 async def recommendation_estimate(
-    body: RecommendationAnalyzeRequest, x_session_token: str | None = Header(None)
+    body: PersonalizationRequest, x_session_token: str | None = Header(None)
 ) -> CostEstimateResponse:
     """Pre-flight cost estimate for recommendation analysis.
 
@@ -82,7 +78,7 @@ async def recommendation_estimate(
 
 @router.post("")
 async def recommendation_analyze(
-    body: RecommendationAnalyzeRequest, x_session_token: str | None = Header(None)
+    body: PersonalizationRequest, x_session_token: str | None = Header(None)
 ) -> AnalysisJobResponse:
     """Start recommendation analysis on specified sessions.
 
@@ -155,9 +151,9 @@ async def recommendation_job_cancel(job_id: str) -> AnalysisJobStatus:
 
 
 @router.get("/history")
-async def recommendation_history() -> list[RecommendationMeta]:
+async def recommendation_history() -> list[PersonalizationMeta]:
     """List all persisted recommendation analyses, newest first."""
-    return get_recommendation_store().list_analyses()
+    return get_personalization_store().list_analyses()
 
 
 @router.get("/catalog/status")
@@ -178,7 +174,7 @@ async def catalog_status() -> CatalogStatusResponse:
 
 
 @router.get("/{analysis_id}")
-async def recommendation_load(analysis_id: str) -> RecommendationResult:
+async def recommendation_load(analysis_id: str) -> PersonalizationResult:
     """Load a persisted recommendation analysis by ID.
 
     Args:
@@ -187,7 +183,7 @@ async def recommendation_load(analysis_id: str) -> RecommendationResult:
     Returns:
         Full RecommendationResult.
     """
-    result = get_recommendation_store().load(analysis_id)
+    result = get_personalization_store().load(analysis_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"Analysis {analysis_id} not found")
     return result
@@ -203,7 +199,7 @@ async def recommendation_delete(analysis_id: str) -> dict[str, bool]:
     Returns:
         Success status.
     """
-    deleted = get_recommendation_store().delete(analysis_id)
+    deleted = get_personalization_store().delete(analysis_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Analysis {analysis_id} not found")
     return {"deleted": True}

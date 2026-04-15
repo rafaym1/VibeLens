@@ -4,7 +4,7 @@ import json
 import math
 from pathlib import Path
 
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
+from vibelens.catalog.catalog import CatalogItem, ItemType
 
 SOURCE_PREFIX = "featured"
 DEFAULT_PLATFORMS = ["claude_code"]

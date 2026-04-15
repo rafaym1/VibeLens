@@ -28,7 +28,7 @@ from vibelens.models.llm.inference import InferenceRequest
 from vibelens.models.step_ref import StepRef
 from vibelens.models.trajectories import Trajectory
 from vibelens.models.trajectories.metrics import Metrics
-from vibelens.prompts.friction_analysis import (
+from vibelens.prompts.friction import (
     FRICTION_PROMPT,
     FRICTION_SYNTHESIS_PROMPT,
 )
@@ -39,10 +39,10 @@ from vibelens.services.inference_shared import (
     build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
-    log_analysis_summary,
+    log_inference_summary,
     require_backend,
     run_batches_concurrent,
-    save_analysis_log,
+    save_inference_log,
     truncate_digest_to_fit,
 )
 from vibelens.services.personalization.shared import parse_llm_output
@@ -140,7 +140,7 @@ async def analyze_friction(
 
     run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     log_dir = FRICTION_LOG_DIR / run_timestamp
-    log_analysis_summary(context_set, batches, backend)
+    log_inference_summary(context_set, batches, backend)
 
     # Step 1: Concurrent LLM inference per batch
     tasks = [
@@ -224,17 +224,17 @@ async def _infer_friction_analysis_batch(
     )
 
     if batch_index == 0:
-        save_analysis_log(log_dir, "friction_analysis_system.txt", system_prompt)
-    save_analysis_log(log_dir, f"friction_analysis_user_{batch_index}.txt", user_prompt)
+        save_inference_log(log_dir, "friction_analysis_system.txt", system_prompt)
+    save_inference_log(log_dir, f"friction_analysis_user_{batch_index}.txt", user_prompt)
 
     try:
         result = await backend.generate(request)
     except Exception:
         error_file = f"friction_analysis_error_{batch_index}.txt"
-        save_analysis_log(log_dir, error_file, "LLM inference failed.")
+        save_inference_log(log_dir, error_file, "LLM inference failed.")
         raise
 
-    save_analysis_log(log_dir, f"friction_analysis_output_{batch_index}.txt", result.text)
+    save_inference_log(log_dir, f"friction_analysis_output_{batch_index}.txt", result.text)
 
     batch_output = parse_llm_output(result.text, FrictionAnalysisOutput, "friction analysis")
     cost = result.cost_usd or 0.0
@@ -304,11 +304,11 @@ async def _synthesize_friction_analysis(
         json_schema=FRICTION_SYNTHESIS_PROMPT.output_json_schema(),
     )
 
-    save_analysis_log(log_dir, "friction_synthesis_system.txt", system_prompt)
-    save_analysis_log(log_dir, "friction_synthesis_user.txt", user_prompt)
+    save_inference_log(log_dir, "friction_synthesis_system.txt", system_prompt)
+    save_inference_log(log_dir, "friction_synthesis_user.txt", user_prompt)
 
     result = await backend.generate(request)
-    save_analysis_log(log_dir, "friction_synthesis_output.txt", result.text)
+    save_inference_log(log_dir, "friction_synthesis_output.txt", result.text)
 
     synthesis = parse_llm_output(result.text, FrictionAnalysisOutput, "friction synthesis")
     cost = result.cost_usd or 0.0

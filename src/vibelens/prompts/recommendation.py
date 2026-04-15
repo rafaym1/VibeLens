@@ -6,8 +6,7 @@ Two LLM calls:
 """
 
 from vibelens.models.llm.prompts import AnalysisPrompt, load_template
-from vibelens.models.recommendation.profile import UserProfile
-from vibelens.models.recommendation.results import RationaleOutput
+from vibelens.models.personalization.recommendation import RationaleOutput, UserProfile
 
 # L2: Profile generation from session transcripts
 RECOMMENDATION_PROFILE_PROMPT = AnalysisPrompt(

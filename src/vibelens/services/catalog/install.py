@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
+from vibelens.catalog import CatalogItem, ItemType
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)

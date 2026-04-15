@@ -2,11 +2,11 @@
 
 from datetime import datetime, timedelta, timezone
 
+from vibelens.context import sample_contexts
 from vibelens.models.context import SessionContext, SessionContextBatch
 from vibelens.models.trajectories.agent import Agent
 from vibelens.models.trajectories.step import Step
 from vibelens.models.trajectories.trajectory import Trajectory
-from vibelens.services.inference_shared import sample_contexts
 
 _TEST_AGENT = Agent(name="test-agent")
 

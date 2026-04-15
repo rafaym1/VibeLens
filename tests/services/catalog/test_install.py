@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
+from vibelens.catalog import CatalogItem, ItemType
 from vibelens.services.catalog.install import install_catalog_item
 
 DEFAULT_SKILL_CONTENT = "# Test Skill\nContent"

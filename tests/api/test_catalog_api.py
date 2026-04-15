@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from vibelens.app import create_app
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
+from vibelens.catalog import CatalogItem, ItemType
 from vibelens.services.recommendation.catalog import CatalogSnapshot
 
 

@@ -4,8 +4,8 @@ import contextlib
 import json
 from pathlib import Path
 
+from vibelens.catalog.catalog import CatalogItem, ItemType
 from vibelens.catalog.frontmatter import extract_tags, parse_frontmatter
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
 
 SOURCE_PREFIX = "bwc"
 DEFAULT_PLATFORMS = ["claude_code"]

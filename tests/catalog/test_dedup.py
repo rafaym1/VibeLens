@@ -1,6 +1,6 @@
 """Tests for catalog deduplication."""
+from vibelens.catalog import CatalogItem, ItemType
 from vibelens.catalog.dedup import deduplicate
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
 
 
 def _make_item(

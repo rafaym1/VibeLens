@@ -8,7 +8,7 @@ import subprocess
 
 import httpx
 
-from vibelens.models.recommendation.catalog import CatalogItem
+from vibelens.catalog.catalog import CatalogItem
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)

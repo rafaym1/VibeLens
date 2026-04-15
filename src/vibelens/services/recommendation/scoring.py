@@ -4,8 +4,8 @@ Combines retrieval relevance, quality, platform match, popularity,
 and composability into a final score per candidate.
 """
 
-from vibelens.models.recommendation.catalog import CatalogItem
-from vibelens.models.recommendation.profile import UserProfile
+from vibelens.catalog import CatalogItem
+from vibelens.models.personalization.recommendation import UserProfile
 
 # Signal weights from spec
 WEIGHT_RELEVANCE = 0.40

@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from vibelens.models.recommendation.catalog import CatalogItem
+from vibelens.catalog import CatalogItem
 from vibelens.services.recommendation.catalog import load_catalog_from_path
 
 

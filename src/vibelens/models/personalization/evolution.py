@@ -4,9 +4,9 @@ from pydantic import BaseModel, Field
 
 from vibelens.models.llm.inference import BackendType
 from vibelens.models.personalization.constants import (
-    CONFIDENCE_DESCRIPTION,
-    RATIONALE_DESCRIPTION,
-    TITLE_DESCRIPTION,
+    DESCRIPTION_CONFIDENCE,
+    DESCRIPTION_RATIONALE,
+    DESCRIPTION_TITLE,
 )
 from vibelens.models.session.patterns import WorkflowPattern
 from vibelens.models.trajectories.final_metrics import FinalMetrics
@@ -41,7 +41,7 @@ class EvolutionProposal(BaseModel):
     addressed_patterns: list[str] = Field(
         default_factory=list, description="Workflow pattern titles this proposal addresses."
     )
-    rationale: str = Field(description=RATIONALE_DESCRIPTION)
+    rationale: str = Field(description=DESCRIPTION_RATIONALE)
     confidence: float = Field(
         default=0.0, description="Confidence this evolution is needed. 0.0-1.0."
     )
@@ -50,7 +50,7 @@ class EvolutionProposal(BaseModel):
 class EvolutionProposalBatch(BaseModel):
     """LLM output from the evolution proposal step."""
 
-    title: str = Field(description=TITLE_DESCRIPTION)
+    title: str = Field(description=DESCRIPTION_TITLE)
     workflow_patterns: list[WorkflowPattern] = Field(
         default_factory=list, description="Detected workflow patterns from trajectory analysis."
     )
@@ -101,5 +101,5 @@ class PersonalizationEvolution(BaseModel):
     addressed_patterns: list[str] = Field(
         default_factory=list, description="Workflow pattern titles addressed."
     )
-    rationale: str = Field(description=RATIONALE_DESCRIPTION)
-    confidence: float = Field(default=0.0, description=CONFIDENCE_DESCRIPTION)
+    rationale: str = Field(description=DESCRIPTION_RATIONALE)
+    confidence: float = Field(default=0.0, description=DESCRIPTION_CONFIDENCE)

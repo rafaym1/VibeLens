@@ -81,23 +81,23 @@ function HistoryCard({
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1 text-[10px] text-accent-cyan/70">
                 <Layers className="w-2.5 h-2.5" />
-                {meta.session_ids.length} session{meta.session_ids.length !== 1 ? "s" : ""}
+                {meta.session_count} session{meta.session_count !== 1 ? "s" : ""}
               </span>
               {(meta.is_example || meta.model.startsWith("mock/")) && (
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent-amber-subtle border border-accent-amber-border text-accent-amber">Example</span>
               )}
             </div>
             <div className="flex items-center gap-2.5 text-[10px] text-muted">
-              {meta.cost_usd != null && (
+              {meta.final_metrics?.total_cost_usd != null && (
                 <span className="inline-flex items-center gap-1">
                   <Coins className="w-2.5 h-2.5" />
-                  ${meta.cost_usd.toFixed(3)}
+                  ${meta.final_metrics.total_cost_usd.toFixed(3)}
                 </span>
               )}
-              {meta.duration_seconds != null && (
+              {meta.final_metrics?.duration != null && meta.final_metrics.duration > 0 && (
                 <span className="inline-flex items-center gap-1">
                   <Timer className="w-2.5 h-2.5" />
-                  {formatDuration(meta.duration_seconds)}
+                  {formatDuration(meta.final_metrics.duration)}
                 </span>
               )}
             </div>
@@ -190,10 +190,10 @@ export function PersonalizationHistory({
 
   const handleSelect = useCallback(
     async (meta: PersonalizationMeta) => {
-      setLoadingId(meta.analysis_id);
+      setLoadingId(meta.id);
       try {
         const apiBase = MODE_API_BASE[meta.mode];
-        const res = await fetchWithToken(`${apiBase}/${meta.analysis_id}`);
+        const res = await fetchWithToken(`${apiBase}/${meta.id}`);
         if (res.ok) {
           const result: PersonalizationResult = await res.json();
           onSelect(result);
@@ -214,7 +214,7 @@ export function PersonalizationHistory({
         await fetchWithToken(`${apiBase}/${analysisId}`, {
           method: "DELETE",
         });
-        setAnalyses((prev) => prev.filter((a) => a.analysis_id !== analysisId));
+        setAnalyses((prev) => prev.filter((a) => a.id !== analysisId));
       } catch {
         // Ignore delete errors
       }
@@ -255,11 +255,11 @@ export function PersonalizationHistory({
       )}
       {filteredAnalyses.map((meta) => (
         <HistoryCard
-          key={meta.analysis_id}
+          key={meta.id}
           meta={meta}
-          isLoading={loadingId === meta.analysis_id}
+          isLoading={loadingId === meta.id}
           onSelect={() => handleSelect(meta)}
-          onDelete={() => handleDelete(meta.analysis_id, meta.mode)}
+          onDelete={() => handleDelete(meta.id, meta.mode)}
         />
       ))}
     </div>

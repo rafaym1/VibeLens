@@ -10,13 +10,13 @@ from pathlib import Path
 
 import httpx
 
+from vibelens.catalog.catalog import CatalogItem
 from vibelens.catalog.dedup import deduplicate
 from vibelens.catalog.enricher import enrich_from_github
 from vibelens.catalog.scoring import score_items
 from vibelens.catalog.sources.buildwithclaude import parse_buildwithclaude
 from vibelens.catalog.sources.featured import parse_featured
 from vibelens.catalog.sources.templates import parse_templates
-from vibelens.models.recommendation.catalog import CatalogItem
 from vibelens.services.recommendation.catalog import load_catalog_from_path
 from vibelens.utils.log import get_logger
 

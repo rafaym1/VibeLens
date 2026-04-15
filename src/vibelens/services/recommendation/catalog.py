@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, PrivateAttr
 
-from vibelens.models.recommendation.catalog import CatalogItem
+from vibelens.catalog import CatalogItem
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)

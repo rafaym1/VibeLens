@@ -14,7 +14,7 @@ from vibelens.models.personalization.evolution import (
     PersonalizationEdit,
     PersonalizationEvolution,
 )
-from vibelens.models.personalization.results import PersonalizationResult
+from vibelens.models.personalization.results import PersonalizationMeta, PersonalizationResult
 
 __all__ = [
     "CreationProposal",
@@ -27,6 +27,7 @@ __all__ = [
     "PersonalizationEdit",
     "PersonalizationElementType",
     "PersonalizationEvolution",
+    "PersonalizationMeta",
     "PersonalizationMode",
     "PersonalizationResult",
 ]

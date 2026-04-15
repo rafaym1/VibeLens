@@ -399,7 +399,7 @@ export interface SkillEvolution {
 }
 
 export interface PersonalizationResult {
-  analysis_id: string | null;
+  id: string | null;
   mode: SkillMode;
   title: string;
   workflow_patterns: WorkflowPattern[];
@@ -418,15 +418,24 @@ export interface PersonalizationResult {
 }
 
 
+export interface PersonalizationFinalMetrics {
+  duration: number;
+  total_cost_usd: number | null;
+  total_prompt_tokens: number | null;
+  total_completion_tokens: number | null;
+}
+
 export interface PersonalizationMeta {
-  analysis_id: string;
+  id: string;
   mode: SkillMode;
+  session_count: number;
   title: string;
-  session_ids: string[];
-  created_at: string;
+  item_count: number;
+  backend: string;
   model: string;
-  cost_usd: number | null;
-  duration_seconds: number | null;
+  created_at: string;
+  batch_count: number;
+  final_metrics: PersonalizationFinalMetrics;
   is_example?: boolean;
 }
 
@@ -493,7 +502,7 @@ export interface CatalogRecommendation {
 }
 
 export interface RecommendationResult {
-  analysis_id: string;
+  id: string;
   title: string;
   summary: string;
   user_profile: UserProfile;

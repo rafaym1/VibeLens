@@ -27,6 +27,7 @@ from vibelens.context.params import (
     PRESET_MEDIUM,
     ContextParams,
 )
+from vibelens.context.sampler import sample_contexts
 
 __all__ = [
     "ContextExtractor",
@@ -41,6 +42,7 @@ __all__ = [
     "build_metadata_block",
     "format_user_prompt",
     "format_agent_message",
+    "sample_contexts",
     "shorten_path",
     "summarize_tool_args",
 ]

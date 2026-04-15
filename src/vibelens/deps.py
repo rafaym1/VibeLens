@@ -117,18 +117,9 @@ def get_personalization_store():
     from vibelens.services.personalization.store import PersonalizationStore
 
     return _get_or_create(
-        "personalization_store",
-        lambda: PersonalizationStore(get_settings().personalization_dir),
+        "personalization_store", lambda: PersonalizationStore(get_settings().personalization_dir)
     )
 
-
-def get_recommendation_store():
-    """Return cached RecommendationStore singleton."""
-    from vibelens.services.recommendation.store import RecommendationStore
-
-    return _get_or_create(
-        "recommendation_store", lambda: RecommendationStore(get_settings().recommendation_dir)
-    )
 
 
 def get_llm_config() -> LLMConfig:

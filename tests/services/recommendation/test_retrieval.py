@@ -1,6 +1,6 @@
 """Tests for TF-IDF keyword retrieval backend."""
 
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
+from vibelens.catalog import CatalogItem, ItemType
 from vibelens.services.recommendation.retrieval import KeywordRetrieval
 
 

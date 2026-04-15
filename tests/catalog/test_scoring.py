@@ -1,6 +1,6 @@
 """Tests for catalog quality scoring."""
+from vibelens.catalog import CatalogItem, ItemType
 from vibelens.catalog.scoring import score_items
-from vibelens.models.recommendation.catalog import CatalogItem, ItemType
 
 
 def _make_item(

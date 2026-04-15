@@ -2,7 +2,7 @@
 
 import re
 
-from vibelens.models.recommendation.catalog import CatalogItem
+from vibelens.catalog.catalog import CatalogItem
 
 
 def deduplicate(items: list[CatalogItem]) -> list[CatalogItem]:

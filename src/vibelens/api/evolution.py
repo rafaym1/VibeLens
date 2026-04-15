@@ -6,10 +6,10 @@ import secrets
 from fastapi import APIRouter, Header, HTTPException
 
 from vibelens.deps import get_personalization_store, is_demo_mode, is_test_mode
-from vibelens.models.personalization.results import PersonalizationResult
+from vibelens.models.personalization.results import PersonalizationMeta, PersonalizationResult
 from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
-from vibelens.schemas.evolution import EvolutionAnalysisMeta, EvolutionAnalysisRequest
+from vibelens.schemas.personalization import PersonalizationRequest
 from vibelens.services.evolution import analyze_skill_evolution, estimate_skill_evolution
 from vibelens.services.job_tracker import (
     cancel_job,
@@ -44,7 +44,7 @@ async def _run_evolution_analysis(
 
 @router.post("/estimate")
 async def evolution_estimate(
-    body: EvolutionAnalysisRequest, x_session_token: str | None = Header(None)
+    body: PersonalizationRequest, x_session_token: str | None = Header(None)
 ) -> CostEstimateResponse:
     """Pre-flight cost estimate for evolution analysis.
 
@@ -82,7 +82,7 @@ async def evolution_estimate(
 
 @router.post("")
 async def evolution_analysis(
-    body: EvolutionAnalysisRequest, x_session_token: str | None = Header(None)
+    body: PersonalizationRequest, x_session_token: str | None = Header(None)
 ) -> AnalysisJobResponse:
     """Run evolution analysis on specified sessions.
 
@@ -156,7 +156,7 @@ async def evolution_job_cancel(job_id: str) -> AnalysisJobStatus:
 
 
 @router.get("/history")
-async def evolution_analysis_history() -> list[EvolutionAnalysisMeta]:
+async def evolution_analysis_history() -> list[PersonalizationMeta]:
     """List all persisted evolution analyses, newest first."""
     return get_personalization_store().list_analyses()
 

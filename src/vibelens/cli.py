@@ -162,7 +162,7 @@ def discover_and_select_backend():
 
 @app.command()
 def recommend(
-    top_n: int = typer.Option(15, "--top-n", help="Maximum recommendations to show"),
+    top_n: int = typer.Option(15, "--top-n", min=1, max=50, help="Maximum recommendations (1-50)"),
     config: Path | None = typer.Option(None, help="Path to YAML config file"),  # noqa: B008
     no_open: bool = typer.Option(False, "--no-open", help="Skip launching browser"),
 ) -> None:
@@ -204,22 +204,29 @@ def recommend(
 
     typer.echo("Running recommendation pipeline...")
     try:
-        result = asyncio.run(analyze_recommendation(session_ids=None, session_token=None))
+        result = asyncio.run(
+            analyze_recommendation(session_ids=None, session_token=None, top_n=top_n)
+        )
     except (ValueError, OSError, InferenceError) as exc:
         typer.echo(f"\nError: {exc}")
         raise typer.Exit(code=1) from None
 
-    typer.echo(f"  Profile: {', '.join(result.user_profile.domains[:3])}")
-    typer.echo(f"  Languages: {', '.join(result.user_profile.languages[:3])}")
-    typer.echo(f"  Recommendations: {len(result.recommendations)}")
+    if result.user_profile:
+        typer.echo(f"  Profile: {', '.join(result.user_profile.domains[:3])}")
+        typer.echo(f"  Languages: {', '.join(result.user_profile.languages[:3])}")
+    typer.echo(f"  Recommendations: {len(result.ranked_recommendations)}")
 
-    cost_str = f"${result.metrics.cost_usd:.2f}" if result.metrics.cost_usd else "n/a"
-    typer.echo(f"\nSaved: {result.analysis_id} ({result.duration_seconds}s, {cost_str})")
+    cost_str = (
+        f"${result.final_metrics.total_cost_usd:.2f}"
+        if result.final_metrics.total_cost_usd
+        else "n/a"
+    )
+    typer.echo(f"\nSaved: {result.id} ({cost_str})")
 
     if not no_open:
         bind_host = settings.host
         bind_port = settings.port
-        url = f"http://{bind_host}:{bind_port}?recommendation={result.analysis_id}"
+        url = f"http://{bind_host}:{bind_port}?recommendation={result.id}"
         typer.echo(f"Opening {url}")
 
         thread = threading.Thread(

@@ -2,10 +2,10 @@
 import json
 from pathlib import Path
 
+from vibelens.catalog import ItemType
 from vibelens.catalog.sources.buildwithclaude import parse_buildwithclaude
 from vibelens.catalog.sources.featured import parse_featured
 from vibelens.catalog.sources.templates import parse_templates
-from vibelens.models.recommendation.catalog import ItemType
 
 
 def _write_md(path: Path, name: str, desc: str, category: str = "testing") -> None:
