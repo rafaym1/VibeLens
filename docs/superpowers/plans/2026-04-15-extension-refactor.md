@@ -10,31 +10,86 @@
 
 **Spec:** `docs/superpowers/specs/2026-04-15-extension-refactor-design.md`
 
+---
+
+## Progress Summary
+
+### Completed Tasks (1-6)
+
+Tasks 1 through 6 are fully implemented and verified. All steps within these tasks have been completed.
+
+### Additional Completed Work (beyond original plan)
+
+The following work was done in addition to the plan's original Tasks 1-6:
+
+1. **models/skill/ merged into models/extension/ package** — The original plan kept `models/skill/` as-is (just renamed types). Instead, `models/extension.py` (flat file) and `models/skill/` (directory) were merged into a single `models/extension/` package containing `__init__.py`, `info.py`, `item.py`, `retrieval.py`, `source.py`. The empty `models/skill/` directory still exists and should be deleted in Task 12.
+
+2. **BaseExtensionStore method renames** — All store methods renamed from skill-specific to extension-generic: `list_skills()` -> `list_extensions()`, `get_skill()` -> `get_extension()`, `write_skill()` -> `write_extension()`, `delete_skill()` -> `delete_extension()`, `skill_path()` -> `extension_path()`, `import_skill_from()` -> `import_extension_from()`, `search_skills()` -> `search_extensions()`, `skills_dir` -> `extensions_dir`, `_build_skill_info()` -> `_build_extension_info()`.
+
+3. **extension_type on stores** — `DiskExtensionStore` and `CentralExtensionStore` accept `extension_type: AgentExtensionType` parameter (defaults to SKILL) and pass it to `ExtensionInfo` during build.
+
+4. **deps.py function merge** — Three separate functions (`get_claude_extension_store`, `get_codex_extension_store`, old `get_agent_extension_stores`) merged into one `get_agent_extension_stores()` returning `dict[ExtensionSource, DiskExtensionStore]`.
+
+5. **Settings field removal** — Removed `claude_dir`, `codex_dir`, `gemini_dir`, `openclaw_dir`, `skills_dir` from Settings. Agent data directories now come from `AGENT_EXTENSION_REGISTRY` hardcoded paths in `storage/extension/agent.py`.
+
+6. **AGENT_EXTENSION_REGISTRY expansion** — Registry expanded to include Claude and Codex (previously only third-party agents). All 11 agent sources use hardcoded `Path.home()` paths.
+
+7. **LocalTrajectoryStore refactor** — Constructor changed from `Settings` parameter to `data_dirs: dict[AgentType, Path] | None`. When `data_dirs` is provided (tests), only listed parsers are used. When None (production), parser defaults apply.
+
+8. **api/skill.py consumer updates** — Removed `AGENT_STORE_REGISTRY`, `_make_agent_getter()`, module-level loop. Added `_find_store_by_key()` and `_resolve_agent_store()` using unified `get_agent_extension_stores()`.
+
+9. **importer.py updated** — `import_agent_extensions()` iterates `get_agent_extension_stores().items()` instead of 3 separate store lookups.
+
+### Remaining Tasks (7-12)
+
+- **Task 7:** Create extension service handlers (`services/extensions/`) — NOT started
+- **Task 8:** Rename API layer (catalog -> extensions) — NOT started
+- **Task 9:** Delete services/skill/ — PARTIALLY done (deps.py complete, services/skill/ still exists)
+- **Task 10:** Frontend renames (catalog-\*.tsx -> extension-\*.tsx) — NOT started
+- **Task 11:** Update tests for remaining renames — NOT started
+- **Task 12:** Final verification and cleanup — NOT started (includes deleting empty models/skill/)
+
+### Current Codebase State
+
+Directories that still exist and need attention:
+- `src/vibelens/models/skill/` — empty (only `__pycache__/`), needs deletion
+- `src/vibelens/services/catalog/` — still has `install.py`, needs migration to `services/extensions/`
+- `src/vibelens/services/skill/` — still has `download.py`, `importer.py`, needs migration
+- `src/vibelens/api/catalog.py` — still exists, needs rename to `api/extensions.py`
+- `src/vibelens/schemas/catalog.py` — still exists, needs rename to `schemas/extensions.py`
+- `frontend/src/components/personalization/catalog-*.tsx` — still exists, needs rename to `extension-*.tsx`
+
+Directories already migrated:
+- `src/vibelens/storage/extension/` — fully migrated (was storage/skill/)
+- `src/vibelens/models/extension/` — fully migrated (merged from models/skill/ + models/extension.py)
+
+---
+
 ## File Structure
 
-### Backend — DELETE entirely
+### Backend — DELETE entirely (PARTIALLY DONE)
 
 ```
-src/vibelens/catalog/                        # ExtensionItem moves to models/extension.py
+src/vibelens/catalog/                        # DELETED (COMPLETE) — ExtensionItem now at models/extension/item.py
 ├── catalog.py                               #   ItemType, CatalogItem, FILE_BASED_TYPES, ITEM_TYPE_LABELS
 └── __init__.py
-src/vibelens/services/catalog/               # logic moves to services/extensions/
+src/vibelens/services/catalog/               # PENDING — logic moves to services/extensions/
 ├── install.py                               #   install_catalog_item, _install_hook, _install_mcp
 └── __init__.py
-src/vibelens/services/skill/                 # logic moves to services/extensions/skill.py
+src/vibelens/services/skill/                 # PENDING — logic moves to services/extensions/skill.py
 ├── download.py                              #   download_skill_directory
-├── importer.py                              #   import_agent_skills
+├── importer.py                              #   import_agent_extensions (already renamed)
 └── __init__.py
 ```
 
-### Backend — RENAME directory
+### Backend — RENAME directory (DONE)
 
 ```
-src/vibelens/storage/skill/                  # → storage/extension/
-├── base.py                                  #   BaseSkillStore → BaseExtensionStore
-├── disk.py                                  #   DiskSkillStore → DiskExtensionStore
-├── central.py                               #   CentralSkillStore → CentralExtensionStore
-├── agent.py                                 #   AGENT_SKILL_REGISTRY → AGENT_EXTENSION_REGISTRY
+src/vibelens/storage/skill/                  # → storage/extension/ (COMPLETE)
+├── base.py                                  #   BaseSkillStore → BaseExtensionStore + method renames
+├── disk.py                                  #   DiskSkillStore → DiskExtensionStore + extension_type param
+├── central.py                               #   CentralSkillStore → CentralExtensionStore + extension_type param
+├── agent.py                                 #   AGENT_SKILL_REGISTRY → AGENT_EXTENSION_REGISTRY (expanded to 11 agents)
 └── __init__.py
 ```
 
@@ -45,29 +100,30 @@ src/vibelens/api/catalog.py                  # → api/extensions.py (prefix /ex
 src/vibelens/schemas/catalog.py              # → schemas/extensions.py
 ```
 
-### Backend — MODIFY (enum/model updates)
+### Backend — MODIFY (enum/model updates) (DONE)
 
 ```
-src/vibelens/models/enums.py                 # + AgentExtensionType, SkillSource → ExtensionSource
+src/vibelens/models/enums.py                 # + AgentExtensionType, SkillSource → ExtensionSource (COMPLETE)
 src/vibelens/models/personalization/
-├── enums.py                                 # delete PersonalizationElementType
-├── creation.py                              # element_type → AgentExtensionType
-└── recommendation.py                        # delete RecommendationItemType, rename fields
-src/vibelens/models/skill/
-├── info.py                                  # SkillInfo → ExtensionInfo
-├── source.py                                # SkillSourceInfo → ExtensionSourceInfo
+├── enums.py                                 # delete PersonalizationElementType (COMPLETE)
+├── creation.py                              # element_type → AgentExtensionType (COMPLETE)
+└── recommendation.py                        # delete RecommendationItemType, rename fields (COMPLETE)
+src/vibelens/models/skill/                   # MERGED into models/extension/ package (empty dir remains)
+├── info.py                                  # SkillInfo → ExtensionInfo (now at models/extension/info.py)
+├── source.py                                # SkillSourceInfo → ExtensionSourceInfo (now at models/extension/source.py)
 └── __init__.py
-src/vibelens/api/__init__.py                 # catalog_router → extensions_router
-src/vibelens/deps.py                         # update all store/source references
-src/vibelens/cli.py                          # update_catalog → update_extensions
-src/vibelens/app.py                          # update imports if needed
+src/vibelens/models/extension.py             # MERGED into models/extension/item.py
+src/vibelens/api/__init__.py                 # catalog_router → extensions_router (PENDING - Task 8)
+src/vibelens/deps.py                         # update all store/source references (COMPLETE + merged 3 getters into 1)
+src/vibelens/cli.py                          # update_catalog → update_extensions (PENDING - Task 12)
+src/vibelens/app.py                          # update imports if needed (COMPLETE)
 ```
 
-### Backend — CREATE (new)
+### Backend — CREATE (new) (PARTIALLY DONE)
 
 ```
-src/vibelens/models/extension.py             # ExtensionItem model + constants
-src/vibelens/storage/extension/config.py     # ConfigExtensionStore (hooks + MCP)
+src/vibelens/models/extension/item.py        # ExtensionItem model + constants (COMPLETE — merged into package)
+src/vibelens/storage/extension/config.py     # ConfigExtensionStore (hooks + MCP) (COMPLETE)
 src/vibelens/services/extensions/
 ├── __init__.py
 ├── base.py                                  # FileBasedHandler
@@ -118,17 +174,17 @@ tests/services/catalog/test_install.py       # → tests/services/extensions/
 tests/api/test_catalog_api.py                # → test_extensions_api.py
 ```
 
-### Tests — CREATE (new)
+### Tests — CREATE (new) (PARTIALLY DONE)
 
 ```
-tests/models/test_extension.py
-tests/storage/extension/test_config.py
-tests/services/extensions/test_handlers.py
+tests/models/test_extension.py               # COMPLETE
+tests/storage/extension/test_config.py        # COMPLETE
+tests/services/extensions/test_handlers.py    # PENDING (Task 7)
 ```
 
 ---
 
-### Task 1: Add AgentExtensionType Enum and ExtensionItem Model
+### Task 1: Add AgentExtensionType Enum and ExtensionItem Model -- COMPLETE
 
 **Files:**
 - Modify: `src/vibelens/models/enums.py`
@@ -305,7 +361,7 @@ git commit -m "feat: add AgentExtensionType enum and ExtensionItem model"
 
 ---
 
-### Task 2: Update Personalization Models to Use AgentExtensionType
+### Task 2: Update Personalization Models to Use AgentExtensionType -- COMPLETE
 
 **Files:**
 - Modify: `src/vibelens/models/personalization/enums.py`
@@ -400,7 +456,7 @@ git commit -m "refactor: replace PersonalizationElementType and RecommendationIt
 
 ---
 
-### Task 3: Rename models/skill/ — SkillSource → ExtensionSource, SkillInfo → ExtensionInfo
+### Task 3: Rename models/skill/ — SkillSource → ExtensionSource, SkillInfo → ExtensionInfo -- COMPLETE
 
 **Files:**
 - Modify: `src/vibelens/models/enums.py` — rename `SkillSource` → `ExtensionSource`
@@ -493,7 +549,7 @@ git commit -m "refactor: rename SkillSource/SkillInfo/SkillSourceInfo to Extensi
 
 ---
 
-### Task 4: Rename storage/skill/ → storage/extension/
+### Task 4: Rename storage/skill/ → storage/extension/ -- COMPLETE
 
 **Files:**
 - Rename: `src/vibelens/storage/skill/` → `src/vibelens/storage/extension/`
@@ -579,7 +635,7 @@ git commit -m "refactor: rename storage/skill/ to storage/extension/, rename all
 
 ---
 
-### Task 5: Delete src/vibelens/catalog/ and Update Imports
+### Task 5: Delete src/vibelens/catalog/ and Update Imports -- COMPLETE
 
 **Files:**
 - Delete: `src/vibelens/catalog/` (entire directory)
@@ -637,7 +693,7 @@ git commit -m "refactor: delete catalog/ module, update all imports to use Exten
 
 ---
 
-### Task 6: Add ConfigExtensionStore for Hook/Repo Configs
+### Task 6: Add ConfigExtensionStore for Hook/Repo Configs -- COMPLETE
 
 **Files:**
 - Create: `src/vibelens/storage/extension/config.py`
@@ -1614,6 +1670,8 @@ Files referencing `from vibelens.services.recommendation.catalog import`:
 
 - [ ] **Step 7: Delete old services/catalog/**
 
+Migrate `install_catalog_item` and `install_from_source_url` logic from `services/catalog/install.py` into the handler registry from Task 7 (`services/extensions/registry.py`), then delete:
+
 ```bash
 rm -rf src/vibelens/services/catalog/
 ```
@@ -1633,50 +1691,31 @@ git commit -m "refactor: rename API catalog -> extensions, update schemas and ro
 
 ---
 
-### Task 9: Update deps.py and Delete services/skill/
+### Task 9: Delete services/skill/ -- PARTIALLY COMPLETE
+
+> **Note:** Steps 1-4 (deps.py, app.py, api/skill.py, personalization/shared.py updates) were completed as part of additional work during Tasks 1-6 execution. The remaining work is Step 5: moving download logic and deleting services/skill/.
 
 **Files:**
-- Modify: `src/vibelens/deps.py`
-- Modify: `src/vibelens/app.py`
 - Delete: `src/vibelens/services/skill/`
+- Move: download logic from `services/skill/download.py` to `services/extensions/skill.py`
 
-- [ ] **Step 1: Update deps.py singleton names and imports**
+**Already complete:**
+- [x] deps.py: merged 3 store getters into `get_agent_extension_stores()`, all imports updated
+- [x] app.py: imports `import_agent_extensions` from updated importer
+- [x] api/skill.py: uses `get_agent_extension_stores()`, `_find_store_by_key()`, `_resolve_agent_store()`
+- [x] services/personalization/shared.py: uses `get_cached()`, `read_content()` (unchanged method names)
 
-In `src/vibelens/deps.py`:
-- Update all `from vibelens.models.skill import SkillSource` → `from vibelens.models.skill import ExtensionSource`
-- Update all `from vibelens.storage.skill.*` → `from vibelens.storage.extension.*`
-- Rename `SkillSource.CLAUDE` → `ExtensionSource.CLAUDE`
-- Rename `DiskSkillStore` → `DiskExtensionStore`
-- Rename `CentralSkillStore` → `CentralExtensionStore`
-- Rename `create_agent_skill_stores` → `create_agent_extension_stores`
-- Rename function names:
-  - `get_claude_skill_store` → `get_claude_extension_store`
-  - `get_codex_skill_store` → `get_codex_extension_store`
-  - `get_central_skill_store` → `get_central_extension_store`
-  - `get_agent_skill_stores` → `get_agent_extension_stores`
+- [ ] **Step 5: Move download logic and delete services/skill/**
 
-- [ ] **Step 2: Update app.py startup**
-
-In `src/vibelens/app.py`:
-- If it still imports `from vibelens.services.skill.importer import import_agent_skills`, move that logic to `services/extensions/skill.py` or inline it
-
-- [ ] **Step 3: Update api/skill.py imports**
-
-In `src/vibelens/api/skill.py`:
-- Update all `from vibelens.storage.skill.*` → `from vibelens.storage.extension.*`
-- Update all class names: `DiskSkillStore` → `DiskExtensionStore`, `AGENT_SKILL_REGISTRY` → `AGENT_EXTENSION_REGISTRY`
-
-- [ ] **Step 4: Update services/personalization/shared.py**
-
-If it references the old skill store DI functions, update to new names.
-
-- [ ] **Step 5: Delete services/skill/**
+Move `download_skill_directory` and its constants from `services/skill/download.py` to `services/extensions/skill.py`. The `importer.py` logic (`import_agent_extensions`) has already been updated to use the new `get_agent_extension_stores()` — it should be moved to `services/extensions/skill.py` as well, then delete the entire directory:
 
 ```bash
 rm -rf src/vibelens/services/skill/
 ```
 
-The download logic from `services/skill/download.py` can be moved to `services/extensions/skill.py` if needed by the skill handler's download method. For now, move the `download_skill_directory` function and its constants to `services/extensions/skill.py`:
+Update `src/vibelens/app.py` import: `from vibelens.services.skill.importer import import_agent_extensions` to `from vibelens.services.extensions.skill import import_agent_extensions`.
+
+Expanded `services/extensions/skill.py` with download + import logic:
 
 Add to `src/vibelens/services/extensions/skill.py`:
 
@@ -1983,6 +2022,14 @@ git commit -m "test: update all tests for extension refactor renames"
 - Modify: `CLAUDE.md` — update project structure docs
 - Verify: no stale references remain
 
+- [ ] **Step 0: Delete empty models/skill/ directory**
+
+```bash
+rm -rf src/vibelens/models/skill/
+```
+
+This directory was emptied when its contents were merged into `models/extension/` but the empty directory (with only `__pycache__/`) was never deleted.
+
 - [ ] **Step 1: Search for any remaining stale references**
 
 ```bash
@@ -1998,6 +2045,8 @@ rg "from vibelens.storage.skill" src/ tests/ --type py
 rg "SkillSource" src/ tests/ --type py
 rg "BaseSkillStore\|DiskSkillStore\|CentralSkillStore" src/ tests/ --type py
 rg "AGENT_SKILL_REGISTRY" src/ tests/ --type py
+rg "models\.skill" src/ tests/ --type py
+rg "\.list_skills\|\.get_skill\|\.write_skill\|\.delete_skill\|\.skill_path\|\.import_skill_from\|\.search_skills\|\.skills_dir" src/ tests/ --type py
 rg "/api/catalog" frontend/src/ --type ts --type tsx
 rg "item_type\|item_id" frontend/src/types.ts
 rg "CatalogItemSummary\|CatalogRecommendation\|CatalogListResponse\|CatalogMetaResponse\|CatalogInstallResponse" frontend/src/ --type ts --type tsx
