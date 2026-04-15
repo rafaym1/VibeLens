@@ -10,6 +10,122 @@
 
 **Spec:** `docs/superpowers/specs/2026-04-15-extension-refactor-design.md`
 
+## File Structure
+
+### Backend — DELETE entirely
+
+```
+src/vibelens/catalog/                        # ExtensionItem moves to models/extension.py
+├── catalog.py                               #   ItemType, CatalogItem, FILE_BASED_TYPES, ITEM_TYPE_LABELS
+└── __init__.py
+src/vibelens/services/catalog/               # logic moves to services/extensions/
+├── install.py                               #   install_catalog_item, _install_hook, _install_mcp
+└── __init__.py
+src/vibelens/services/skill/                 # logic moves to services/extensions/skill.py
+├── download.py                              #   download_skill_directory
+├── importer.py                              #   import_agent_skills
+└── __init__.py
+```
+
+### Backend — RENAME directory
+
+```
+src/vibelens/storage/skill/                  # → storage/extension/
+├── base.py                                  #   BaseSkillStore → BaseExtensionStore
+├── disk.py                                  #   DiskSkillStore → DiskExtensionStore
+├── central.py                               #   CentralSkillStore → CentralExtensionStore
+├── agent.py                                 #   AGENT_SKILL_REGISTRY → AGENT_EXTENSION_REGISTRY
+└── __init__.py
+```
+
+### Backend — RENAME file
+
+```
+src/vibelens/api/catalog.py                  # → api/extensions.py (prefix /extensions)
+src/vibelens/schemas/catalog.py              # → schemas/extensions.py
+```
+
+### Backend — MODIFY (enum/model updates)
+
+```
+src/vibelens/models/enums.py                 # + AgentExtensionType, SkillSource → ExtensionSource
+src/vibelens/models/personalization/
+├── enums.py                                 # delete PersonalizationElementType
+├── creation.py                              # element_type → AgentExtensionType
+└── recommendation.py                        # delete RecommendationItemType, rename fields
+src/vibelens/models/skill/
+├── info.py                                  # SkillInfo → ExtensionInfo
+├── source.py                                # SkillSourceInfo → ExtensionSourceInfo
+└── __init__.py
+src/vibelens/api/__init__.py                 # catalog_router → extensions_router
+src/vibelens/deps.py                         # update all store/source references
+src/vibelens/cli.py                          # update_catalog → update_extensions
+src/vibelens/app.py                          # update imports if needed
+```
+
+### Backend — CREATE (new)
+
+```
+src/vibelens/models/extension.py             # ExtensionItem model + constants
+src/vibelens/storage/extension/config.py     # ConfigExtensionStore (hooks + MCP)
+src/vibelens/services/extensions/
+├── __init__.py
+├── base.py                                  # FileBasedHandler
+├── skill.py                                 # SkillHandler + download logic
+├── subagent.py                              # SubagentHandler
+├── command.py                               # CommandHandler
+├── hook.py                                  # HookHandler (hybrid: files + config)
+├── repo.py                                  # RepoHandler (MCP → ~/.claude.json)
+├── registry.py                              # type → handler dispatch
+└── platforms.py                             # platform directory configs
+```
+
+### Frontend — RENAME file
+
+```
+frontend/src/components/personalization/
+├── catalog-card.tsx                         # → extension-card.tsx
+├── catalog-constants.ts                     # → extension-constants.ts
+├── catalog-detail-content.tsx               # → extension-detail-content.tsx
+├── catalog-detail-view.tsx                  # → extension-detail-view.tsx
+├── catalog-explore-tab.tsx                  # → extension-explore-tab.tsx
+├── catalog-format.ts                        # → extension-format.ts
+└── catalog-pagination.tsx                   # → extension-pagination.tsx
+```
+
+### Frontend — MODIFY
+
+```
+frontend/src/types.ts                        # CatalogItemSummary → ExtensionItemSummary, etc.
+frontend/src/components/personalization/
+├── recommendation-constants.ts              # deduplicate into extension-constants
+├── recommendation-card.tsx                  # field renames
+├── recommendation-results-view.tsx          # field renames
+└── personalization-panel.tsx                # import updates
+```
+
+### Tests — UPDATE/MOVE
+
+```
+tests/catalog/
+├── test_builder.py                          # delete (builder removed)
+├── test_dedup.py                            # update imports
+├── test_enricher.py                         # update imports
+├── test_frontmatter.py                      # update imports
+├── test_scoring.py                          # update imports
+└── test_sources.py                          # update imports
+tests/services/catalog/test_install.py       # → tests/services/extensions/
+tests/api/test_catalog_api.py                # → test_extensions_api.py
+```
+
+### Tests — CREATE (new)
+
+```
+tests/models/test_extension.py
+tests/storage/extension/test_config.py
+tests/services/extensions/test_handlers.py
+```
+
 ---
 
 ### Task 1: Add AgentExtensionType Enum and ExtensionItem Model
