@@ -1,7 +1,7 @@
 # VibeLens Configuration
 # Copy to vibelens.yaml and adjust values for your environment.
 #
-# Config priority (highest → lowest):
+# Config priority (highest -> lowest):
 #   1. Environment variables (VIBELENS_*)
 #   2. .env file
 #   3. vibelens.yaml
@@ -12,17 +12,17 @@
 #   vibelens serve --config path/to/config.yaml
 #   VIBELENS_CONFIG=path/to/config.yaml vibelens serve
 #
-# Environment Variables:
-#   VIBELENS_HOST         Server bind address (default: 127.0.0.1)
-#   VIBELENS_PORT         Server port (default: 12001)
-#   VIBELENS_CLAUDE_DIR   Claude Code history root (default: ~/.claude)
-#   VIBELENS_CONFIG       Path to this YAML config file (default: auto-discover)
+# Environment Variables (use __ for nested fields):
+#   VIBELENS_SERVER__HOST       Server bind address (default: 127.0.0.1)
+#   VIBELENS_SERVER__PORT       Server port (default: 12001)
+#   VIBELENS_MODE               Application mode (default: self)
+#   VIBELENS_UPLOAD__DIR        Upload directory (default: ~/.vibelens/uploads)
+#   VIBELENS_CONFIG             Path to this YAML config file (auto-discover)
 
-# Application mode: "self" (default) or "demo" (public-facing)
-app:
-  mode: self
+# Application mode: "self" (default), "demo" (public-facing), or "test"
+mode: self
 
-# Demo mode settings (only used when app.mode is "demo")
+# Demo mode settings (only used when mode is "demo")
 demo:
   example_sessions: ""             # Comma-separated file paths to pre-load
 
@@ -30,8 +30,12 @@ server:
   host: 127.0.0.1
   port: 12001
 
-sources:
-  claude_dir: ~/.claude
+storage:
+  share_dir: ~/.vibelens/shares
+  friction_dir: ~/.vibelens/friction
+  personalization_dir: ~/.vibelens/personalization
+  recommendation_dir: ~/.vibelens/recommendations
+  examples_dir: ~/.vibelens/examples
 
 upload:
   dir: ~/.vibelens/uploads
@@ -39,3 +43,18 @@ upload:
   max_extracted_bytes: 524288000  # 500 MB
   max_file_count: 10000
   stream_chunk_size: 65536        # 64 KB
+
+donation:
+  url: https://vibelens.chats-lab.org
+  dir: ~/.vibelens/donations
+
+# LLM inference backend (also configurable via ~/.vibelens/settings.json)
+# Environment variables: VIBELENS_INFERENCE__BACKEND, VIBELENS_INFERENCE__API_KEY, etc.
+inference:
+  backend: disabled                 # litellm, claude_code, gemini, codex, disabled, etc.
+  api_key: ""                       # API key for litellm backend
+  model: anthropic/claude-haiku-4-5 # Model in litellm format
+  timeout: 120                      # Inference timeout in seconds
+  max_output_tokens: 4096           # Max output tokens per request
+  max_input_tokens: 80000           # Max input token budget per LLM batch
+  max_sessions: 30                  # Max sessions per analysis request

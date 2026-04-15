@@ -11,13 +11,14 @@ from collections.abc import AsyncIterator
 
 import litellm
 
-from vibelens.config.llm_config import LLMConfig, resolve_base_url
+from vibelens.config.settings import InferenceConfig
 from vibelens.llm.backend import (
     InferenceBackend,
     InferenceError,
     InferenceRateLimitError,
     InferenceTimeoutError,
 )
+from vibelens.llm.providers import resolve_base_url
 from vibelens.models.llm.inference import (
     BackendType,
     InferenceRequest,
@@ -40,11 +41,11 @@ class LiteLLMBackend(InferenceBackend):
     use litellm's provider-prefixed format (e.g. 'anthropic/claude-sonnet-4-5').
     """
 
-    def __init__(self, config: LLMConfig, model_override: str | None = None):
-        """Initialize LiteLLM backend from LLMConfig.
+    def __init__(self, config: InferenceConfig, model_override: str | None = None):
+        """Initialize LiteLLM backend from InferenceConfig.
 
         Args:
-            config: Full LLM configuration.
+            config: Inference configuration.
             model_override: Override the model from config (used for legacy alias rewriting).
         """
         self._config = config
@@ -150,7 +151,7 @@ class LiteLLMBackend(InferenceBackend):
         kwargs: dict = {
             "model": self._model,
             "api_key": cfg.api_key,
-            "max_tokens": request.max_tokens or cfg.max_tokens,
+            "max_tokens": request.max_tokens or cfg.max_output_tokens,
             "temperature": request.temperature,
             "timeout": request.timeout or cfg.timeout,
         }

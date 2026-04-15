@@ -6,11 +6,12 @@
 #   vibelens serve --config config/demo.yaml
 #   VIBELENS_CONFIG=config/demo.yaml vibelens serve
 
-app:
-  mode: demo
+mode: demo
 
 demo:
   example_sessions: "examples/recipe-book"
+
+storage:
   friction_dir: "examples/recipe-book/friction_analyses"
   personalization_dir: "examples/recipe-book/personalization"
 

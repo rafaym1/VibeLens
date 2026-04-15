@@ -1,13 +1,13 @@
 """Backend registry and factory for inference backends.
 
-The create_backend_from_llm_config() factory reads LLMConfig and
+The create_backend_from_config() factory reads InferenceConfig and
 instantiates the configured backend, or returns None if inference is disabled.
 CLI backends are registered in _CLI_BACKEND_REGISTRY and lazy-imported.
 """
 
 import importlib
 
-from vibelens.config.llm_config import LLMConfig
+from vibelens.config.settings import InferenceConfig
 from vibelens.llm.backend import InferenceBackend
 from vibelens.models.llm.inference import BackendType
 from vibelens.utils.log import get_logger
@@ -33,11 +33,11 @@ CLI_BACKENDS = frozenset(_CLI_BACKEND_REGISTRY.keys())
 KNOWN_BACKENDS = CLI_BACKENDS | {BackendType.LITELLM, BackendType.DISABLED, BackendType.MOCK}
 
 
-def create_backend_from_llm_config(config: LLMConfig) -> InferenceBackend | None:
-    """Factory: create the configured backend from LLMConfig, or None if disabled.
+def create_backend_from_config(config: InferenceConfig) -> InferenceBackend | None:
+    """Factory: create the configured backend, or None if disabled.
 
     Args:
-        config: LLM configuration with backend, model, api_key, etc.
+        config: Inference configuration with backend, model, api_key, etc.
 
     Returns:
         Configured InferenceBackend instance, or None if disabled.
@@ -66,7 +66,7 @@ def create_backend_from_llm_config(config: LLMConfig) -> InferenceBackend | None
     return None
 
 
-def _create_litellm_backend(model: str, config: LLMConfig) -> InferenceBackend:
+def _create_litellm_backend(model: str, config: InferenceConfig) -> InferenceBackend:
     """Create a LiteLLM backend instance.
 
     Args:
@@ -87,7 +87,7 @@ def _create_litellm_backend(model: str, config: LLMConfig) -> InferenceBackend:
 LITELLM_DEFAULT_MODEL = "anthropic/claude-haiku-4-5"
 
 
-def _create_cli_backend(backend_id: BackendType, config: LLMConfig) -> InferenceBackend:
+def _create_cli_backend(backend_id: BackendType, config: InferenceConfig) -> InferenceBackend:
     """Create a CLI backend instance via registry lookup and lazy import.
 
     Resolves the model: uses config.model if explicitly set by the user,
@@ -135,7 +135,7 @@ def _resolve_cli_model(config_model: str, backend: InferenceBackend) -> str | No
     the user's choice through.
 
     Args:
-        config_model: Model string from LLMConfig.
+        config_model: Model string from InferenceConfig.
         backend: Instantiated CLI backend with model metadata.
 
     Returns:

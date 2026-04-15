@@ -1,58 +1,16 @@
-"""YAML config file loading and auto-discovery."""
+"""YAML config file auto-discovery."""
 
-import json
 import os
 from pathlib import Path
-
-import yaml
 
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
 
-# Prefix for all VibeLens environment variables
-ENV_PREFIX = "VIBELENS_"
 # Env var pointing to the YAML config file path
 CONFIG_ENV_VAR = "VIBELENS_CONFIG"
 # Config file names auto-discovered in the working directory
 DEFAULT_CONFIG_NAMES = ["vibelens.yaml", "vibelens.yml"]
-
-# Maps nested YAML sections/keys → flat Settings field names.
-# Supports readable YAML structure while keeping a flat pydantic model.
-YAML_FIELD_MAP: dict[str, dict[str, str]] = {
-    "server": {
-        "host": "host",
-        "port": "port",
-    },
-    "sources": {
-        "claude_dir": "claude_dir",
-        "codex_dir": "codex_dir",
-        "gemini_dir": "gemini_dir",
-    },
-    "upload": {
-        "dir": "upload_dir",
-        "max_zip_bytes": "max_zip_bytes",
-        "max_extracted_bytes": "max_extracted_bytes",
-        "max_file_count": "max_file_count",
-        "stream_chunk_size": "stream_chunk_size",
-    },
-    "app": {
-        "mode": "app_mode",
-        "visible_agents": "visible_agents",
-    },
-    "demo": {
-        "example_sessions": "demo_example_sessions",
-        "friction_dir": "friction_dir",
-        "personalization_dir": "personalization_dir",
-    },
-    "examples": {
-        "sessions": "demo_example_sessions",
-    },
-    "donation": {
-        "url": "donation_url",
-        "dir": "donation_dir",
-    },
-}
 
 
 def discover_config_path() -> Path | None:
@@ -79,50 +37,3 @@ def discover_config_path() -> Path | None:
             return path
 
     return None
-
-
-def apply_yaml_defaults(config_path: Path) -> None:
-    """Load a YAML config file and set env vars for unset fields.
-
-    Values from the YAML file only apply when the corresponding
-    ``VIBELENS_*`` environment variable is not already set, giving
-    env vars the highest priority.
-
-    Args:
-        config_path: Path to the YAML configuration file.
-    """
-    flat_values = load_yaml_flat(config_path)
-    for field_name, value in flat_values.items():
-        env_key = f"{ENV_PREFIX}{field_name.upper()}"
-        if env_key not in os.environ:
-            os.environ[env_key] = str(value)
-
-
-def load_yaml_flat(config_path: Path) -> dict[str, str]:
-    """Load a YAML config file and flatten it to Settings field names.
-
-    Args:
-        config_path: Path to the YAML configuration file.
-
-    Returns:
-        Dictionary mapping Settings field names to string values.
-    """
-    raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    if not isinstance(raw, dict):
-        return {}
-
-    result: dict[str, str] = {}
-    for section, field_map in YAML_FIELD_MAP.items():
-        section_data = raw.get(section)
-        if not isinstance(section_data, dict):
-            continue
-        for yaml_key, settings_field in field_map.items():
-            if yaml_key in section_data and section_data[yaml_key] is not None:
-                value = section_data[yaml_key]
-                # pydantic-settings expects JSON for complex types (list, dict)
-                if isinstance(value, (list, dict)):
-                    result[settings_field] = json.dumps(value)
-                else:
-                    result[settings_field] = str(value)
-
-    return result

@@ -5,22 +5,14 @@
 #   vibelens serve --config config/self-use.yaml
 #   VIBELENS_CONFIG=config/self-use.yaml vibelens serve
 
-app:
-  mode: self
-  visible_agents:
-    - all
+mode: self
 
 server:
   host: 127.0.0.1
   port: 12001
 
-sources:
-  claude_dir: ~/.claude
-  codex_dir: ~/.codex
-  gemini_dir: ~/.gemini
-
-examples:
-  sessions: "examples/recipe-book"
+demo:
+  example_sessions: "examples/recipe-book"
 
 upload:
   dir: ~/.vibelens/uploads
