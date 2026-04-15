@@ -108,22 +108,34 @@ VibeLens auto-detects the agent format. Just point it at your session directory 
 
 ## Quick Start
 
-### Install and run
+### pip (recommended)
+
+The simplest way to install. Requires **Python 3.10+**.
 
 ```bash
 pip install vibelens
 vibelens serve
 ```
 
-Or run without installing:
+### uv (run without installing)
+
+One command, no permanent install. Requires [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uvx vibelens serve
 ```
 
-VibeLens opens your browser at **http://localhost:12001** and reads your local `~/.claude/` sessions by default.
+### npm
 
-### Development install
+For Node.js users. Requires **Node.js 16+** and **Python 3.10+** with `pip install vibelens`.
+
+```bash
+npx vibelens serve
+```
+
+Or install globally: `npm install -g vibelens`
+
+### Developer setup
 
 ```bash
 git clone https://github.com/CHATS-lab/VibeLens.git
@@ -131,6 +143,8 @@ cd VibeLens
 uv sync --extra dev
 uv run vibelens serve
 ```
+
+VibeLens opens your browser at **http://localhost:12001** and reads your local `~/.claude/` sessions by default.
 
 ### Configuration
 
