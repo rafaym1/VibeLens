@@ -47,7 +47,7 @@ export function EvolutionSection({
       <div className="space-y-3">
         {suggestions.map((sug) => (
           <EvolutionCard
-            key={sug.skill_name}
+            key={sug.element_name}
             suggestion={sug}
             workflowPatterns={workflowPatterns}
             fetchWithToken={fetchWithToken}
@@ -73,7 +73,7 @@ function EvolutionCard({
   const { guardAction, showInstallDialog, setShowInstallDialog } = useDemoGuard();
   const [expanded, setExpanded] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [rationaleExpanded, setRationaleExpanded] = useState(true);
+  const [rationaleExpanded, setRationaleExpanded] = useState(false);
   const [patternsExpanded, setPatternsExpanded] = useState(false);
 
   const matchedPatterns = workflowPatterns.filter((p) =>
@@ -90,7 +90,7 @@ function EvolutionCard({
     setLoadingOriginal(true);
     setFetchError(null);
     try {
-      const res = await fetchWithToken(`/api/skills/local/${suggestion.skill_name}`);
+      const res = await fetchWithToken(`/api/skills/local/${suggestion.element_name}`);
       if (res.status === 404) {
         setFetchError("Skill not found in central store");
         return null;
@@ -108,7 +108,7 @@ function EvolutionCard({
     } finally {
       setLoadingOriginal(false);
     }
-  }, [fetchWithToken, suggestion.skill_name, originalContent]);
+  }, [fetchWithToken, suggestion.element_name, originalContent]);
 
   const handleExpand = useCallback(async () => {
     const willExpand = !expanded;
@@ -128,15 +128,15 @@ function EvolutionCard({
 
   const handleUpdate = useCallback(async (content: string, targets: string[]) => {
     try {
-      const res = await fetchWithToken(`/api/skills/local/${suggestion.skill_name}`, {
+      const res = await fetchWithToken(`/api/skills/local/${suggestion.element_name}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: suggestion.skill_name, content }),
+        body: JSON.stringify({ name: suggestion.element_name, content }),
       });
       if (!res.ok) return;
 
       if (targets.length > 0) {
-        await fetchWithToken(`/api/skills/sync/${suggestion.skill_name}`, {
+        await fetchWithToken(`/api/skills/sync/${suggestion.element_name}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ targets }),
@@ -147,7 +147,7 @@ function EvolutionCard({
       /* ignore */
     }
     setShowPreview(false);
-  }, [fetchWithToken, suggestion.skill_name]);
+  }, [fetchWithToken, suggestion.element_name]);
 
   return (
     <div className="border border-default rounded-xl bg-control/20 overflow-hidden">
@@ -155,7 +155,7 @@ function EvolutionCard({
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="font-mono text-base font-bold text-primary">{suggestion.skill_name}</span>
+            <span className="font-mono text-base font-bold text-primary">{suggestion.element_name}</span>
             <Tooltip text={`${suggestion.edits.length} edit${suggestion.edits.length !== 1 ? "s" : ""} suggested`}>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent-teal-subtle text-accent-teal border border-accent-teal cursor-help">
                 <Pencil className="w-2.5 h-2.5" />
@@ -186,12 +186,6 @@ function EvolutionCard({
             {fetchError && <span className="text-xs text-accent-rose">{fetchError}</span>}
           </div>
         </div>
-        {suggestion.description && (
-          <p className="text-sm text-secondary leading-relaxed mt-1.5">
-            <span className="font-semibold text-secondary">Skill Description: </span>
-            {suggestion.description}
-          </p>
-        )}
       </div>
 
       {/* Why this helps */}
@@ -255,7 +249,7 @@ function EvolutionCard({
         {expanded && suggestion.edits.length > 0 && (
           <div className="mt-2.5">
             <EvolutionDiffView
-              skillName={suggestion.skill_name}
+              skillName={suggestion.element_name}
               edits={suggestion.edits}
               originalContent={originalContent ?? undefined}
             />
@@ -264,7 +258,7 @@ function EvolutionCard({
       </div>
       {showPreview && mergedContent !== null && (
         <SkillPreviewDialog
-          skillName={suggestion.skill_name}
+          skillName={suggestion.element_name}
           content={mergedContent}
           onContentChange={setMergedContent}
           onInstall={handleUpdate}

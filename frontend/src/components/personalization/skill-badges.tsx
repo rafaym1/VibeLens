@@ -3,6 +3,7 @@ import { Tooltip } from "../tooltip";
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
+  normalizeSourceType,
   SOURCE_COLORS,
   SOURCE_DESCRIPTIONS,
   SOURCE_LABELS,
@@ -13,9 +14,10 @@ import {
 
 /** Colored pill showing which agent interface a skill comes from. */
 export function SourceBadge({ sourceType, sourcePath }: { sourceType: string; sourcePath?: string }) {
-  const colorClass = SOURCE_COLORS[sourceType] || "bg-control-hover text-muted border-hover";
-  const label = SOURCE_LABELS[sourceType] || sourceType;
-  const description = SOURCE_DESCRIPTIONS[sourceType] || sourcePath || sourceType;
+  const key = normalizeSourceType(sourceType);
+  const colorClass = SOURCE_COLORS[key] || "bg-control-hover text-muted border-hover";
+  const label = SOURCE_LABELS[key] || key;
+  const description = SOURCE_DESCRIPTIONS[key] || sourcePath || key;
 
   return (
     <Tooltip text={description}>

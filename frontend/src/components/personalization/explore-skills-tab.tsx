@@ -233,7 +233,7 @@ function FeaturedSkillCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-sm font-semibold text-primary">{skill.name}</span>
+            <span className="font-mono text-base font-bold text-primary">{skill.name}</span>
             <CategoryBadge category={skill.category} />
             {skill.stars > 0 && (
               <Tooltip text={`${skill.stars.toLocaleString()} GitHub stars`}>

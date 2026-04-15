@@ -17,7 +17,7 @@ import { MarkdownRenderer } from "../markdown-renderer";
 import { Modal, ModalHeader, ModalBody } from "../modal";
 import { Tooltip } from "../tooltip";
 import { SourceBadge, SubdirBadge, TagList, TagPill, ToolBadge, ToolList } from "./skill-badges";
-import { SOURCE_LABELS } from "./skill-constants";
+import { normalizeSourceType, SOURCE_LABELS } from "./skill-constants";
 
 /** Compact card for a locally installed skill in the list view. */
 export function SkillCard({
@@ -47,7 +47,7 @@ export function SkillCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-sm font-semibold text-primary">{skill.name}</span>
+              <span className="font-mono text-base font-bold text-primary">{skill.name}</span>
               {skill.sources
                 .filter((s) => s.source_type !== "central")
                 .map((src) => (
@@ -64,21 +64,21 @@ export function SkillCard({
             <ToolList tools={allowedTools} />
           </div>
         </button>
-        <div className="flex items-center gap-1 px-2 py-3 shrink-0">
+        <div className="flex items-center gap-1.5 px-3 py-3 shrink-0">
           <Tooltip text="Edit skill">
             <button
               onClick={() => onEdit(skill)}
-              className="p-1.5 text-dimmed hover:text-accent-teal hover:bg-control-hover rounded transition"
+              className="p-2 text-dimmed hover:text-accent-teal hover:bg-accent-teal-subtle rounded-md transition"
             >
-              <Pencil className="w-3.5 h-3.5" />
+              <Pencil className="w-4 h-4" />
             </button>
           </Tooltip>
           <Tooltip text="Delete skill">
             <button
               onClick={() => onDelete(skill.name)}
-              className="p-1.5 text-dimmed hover:text-red-600 dark:hover:text-red-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition"
+              className="p-2 text-dimmed hover:text-red-600 dark:hover:text-red-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-md transition"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </Tooltip>
         </div>
@@ -143,7 +143,7 @@ export function SkillDetailPopup({
           const data = await res.json();
           const result = data.results?.[targetKey];
           if (result?.synced) {
-            setSyncMessage(`Synced to ${SOURCE_LABELS[targetKey] || targetKey}`);
+            setSyncMessage(`Synced to ${SOURCE_LABELS[normalizeSourceType(targetKey)] || targetKey}`);
             if (data.skill) setSkill(data.skill as SkillInfo);
             onRefresh();
           } else {

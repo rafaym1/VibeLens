@@ -1,6 +1,6 @@
-import { MAX_VISIBLE_PAGES } from "./catalog-constants";
+import { MAX_VISIBLE_PAGES } from "./extension-constants";
 
-interface CatalogPaginationProps {
+interface ExtensionPaginationProps {
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -27,7 +27,7 @@ function buildPageNumbers(page: number, totalPages: number): (number | "...")[] 
   return pages;
 }
 
-export function CatalogPagination({ page, totalPages, onPageChange }: CatalogPaginationProps) {
+export function ExtensionPagination({ page, totalPages, onPageChange }: ExtensionPaginationProps) {
   if (totalPages <= 1) return null;
 
   const pageNumbers = buildPageNumbers(page, totalPages);

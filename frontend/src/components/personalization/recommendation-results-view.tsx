@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { CatalogRecommendation, RecommendationResult } from "../../types";
+import type { ExtensionRecommendation, RecommendationResult } from "../../types";
 import { RecommendationCard } from "./recommendation-card";
 
 interface RecommendationResultsViewProps {
@@ -31,8 +31,8 @@ function ProfilePills({ profile }: { profile: RecommendationResult["user_profile
 }
 
 function MetadataLine({ result }: { result: RecommendationResult }) {
-  const costStr = result.metrics?.cost_usd != null ? `$${result.metrics.cost_usd.toFixed(2)}` : "";
-  const durationStr = result.duration_seconds != null ? `${result.duration_seconds}s` : "";
+  const costStr = result.final_metrics?.total_cost_usd != null ? `$${result.final_metrics.total_cost_usd.toFixed(2)}` : "";
+  const durationStr = result.final_metrics?.duration ? `${result.final_metrics.duration}s` : "";
   const metaParts = [
     `${result.session_ids.length} sessions analyzed`,
     durationStr,
@@ -60,7 +60,7 @@ export function RecommendationView({ analysisId, fetchWithToken }: Recommendatio
       .finally(() => setLoading(false));
   }, [analysisId, fetchWithToken]);
 
-  const handleInstall = useCallback((rec: CatalogRecommendation) => {
+  const handleInstall = useCallback((rec: ExtensionRecommendation) => {
     if (rec.install_command) {
       navigator.clipboard.writeText(rec.install_command);
     }

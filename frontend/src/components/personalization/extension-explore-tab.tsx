@@ -1,15 +1,15 @@
-import { Check, ChevronDown, Compass, Filter, LayoutGrid, List, RefreshCw, Search, SlidersHorizontal, Tag } from "lucide-react";
+import { Check, ChevronDown, Compass, LayoutGrid, List, Package, RefreshCw, Search, SlidersHorizontal, Tag } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../app";
 import { TOGGLE_ACTIVE, TOGGLE_BUTTON_BASE, TOGGLE_CONTAINER, TOGGLE_INACTIVE } from "../../styles";
-import type { CatalogItemSummary, CatalogListResponse, CatalogMetaResponse } from "../../types";
+import type { ExtensionItemSummary, ExtensionListResponse, ExtensionMetaResponse } from "../../types";
 import { EmptyState } from "../empty-state";
 import { ErrorBanner } from "../error-banner";
 import { LoadingState } from "../loading-state";
-import { CatalogCard } from "./catalog-card";
-import { CATALOG_PAGE_SIZE, ITEM_TYPE_LABELS, SORT_OPTIONS, type CatalogViewMode } from "./catalog-constants";
-import { CatalogDetailView } from "./catalog-detail-view";
-import { CatalogPagination } from "./catalog-pagination";
+import { ExtensionCard } from "./extension-card";
+import { EXTENSION_PAGE_SIZE, ITEM_TYPE_LABELS, SORT_OPTIONS, type ExtensionViewMode } from "./extension-constants";
+import { ExtensionDetailView } from "./extension-detail-view";
+import { ExtensionPagination } from "./extension-pagination";
 import { NoResultsState } from "./skill-shared";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -73,10 +73,14 @@ function FilterDropdown({ value, options, onChange, icon, placeholder }: FilterD
   );
 }
 
-export function CatalogExploreTab() {
+interface ExtensionExploreTabProps {
+  resetKey?: number;
+}
+
+export function ExtensionExploreTab({ resetKey = 0 }: ExtensionExploreTabProps) {
   const { fetchWithToken } = useAppContext();
 
-  const [items, setItems] = useState<CatalogItemSummary[]>([]);
+  const [items, setItems] = useState<ExtensionItemSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,19 +90,24 @@ export function CatalogExploreTab() {
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("quality");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<CatalogViewMode>("list");
+  const [viewMode, setViewMode] = useState<ExtensionViewMode>("list");
   const [categories, setCategories] = useState<string[]>([]);
   const [hasProfile, setHasProfile] = useState(false);
   const [page, setPage] = useState(1);
 
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
-  const [detailItem, setDetailItem] = useState<CatalogItemSummary | null>(null);
+  const [detailItem, setDetailItem] = useState<ExtensionItemSummary | null>(null);
+
+  // Reset to list view when the explore tab is re-clicked
+  useEffect(() => {
+    if (resetKey > 0) setDetailItem(null);
+  }, [resetKey]);
 
   // Load catalog metadata once on mount
   useEffect(() => {
-    fetchWithToken("/api/catalog/meta")
+    fetchWithToken("/api/extensions/meta")
       .then((res) => res.json())
-      .then((data: CatalogMetaResponse) => {
+      .then((data: ExtensionMetaResponse) => {
         setCategories(data.categories);
         setHasProfile(data.has_profile);
       })
@@ -120,16 +129,16 @@ export function CatalogExploreTab() {
     try {
       const params = new URLSearchParams({
         page: String(page),
-        per_page: String(CATALOG_PAGE_SIZE),
+        per_page: String(EXTENSION_PAGE_SIZE),
         sort: sortBy,
       });
       if (debouncedSearch) params.set("search", debouncedSearch);
-      if (typeFilter) params.set("item_type", typeFilter);
+      if (typeFilter) params.set("extension_type", typeFilter);
       if (categoryFilter) params.set("category", categoryFilter);
 
-      const res = await fetchWithToken(`/api/catalog?${params}`);
+      const res = await fetchWithToken(`/api/extensions?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: CatalogListResponse = await res.json();
+      const data: ExtensionListResponse = await res.json();
       setItems(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -147,8 +156,11 @@ export function CatalogExploreTab() {
     setInstalledIds((prev) => new Set([...prev, itemId]));
   }, []);
 
-  const typeOptions = useMemo(
-    () => Object.entries(ITEM_TYPE_LABELS).map(([key, label]) => ({ key, label })),
+  const typeDropdownOptions = useMemo(
+    () => [
+      { value: "", label: "All Types" },
+      ...Object.entries(ITEM_TYPE_LABELS).map(([key, label]) => ({ value: key, label })),
+    ],
     [],
   );
 
@@ -169,11 +181,11 @@ export function CatalogExploreTab() {
     [categories],
   );
 
-  const totalPages = Math.ceil(total / CATALOG_PAGE_SIZE);
+  const totalPages = Math.ceil(total / EXTENSION_PAGE_SIZE);
 
   if (detailItem) {
     return (
-      <CatalogDetailView
+      <ExtensionDetailView
         item={detailItem}
         isInstalled={installedIds.has(detailItem.item_id)}
         onBack={() => setDetailItem(null)}
@@ -191,7 +203,7 @@ export function CatalogExploreTab() {
             <Compass className="w-5 h-5 text-accent-teal" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-primary">Explore Catalog</h2>
+            <h2 className="text-lg font-bold text-primary">Explore</h2>
             <p className="text-xs text-secondary">Browse tools, skills, hooks, and agents</p>
           </div>
         </div>
@@ -204,20 +216,25 @@ export function CatalogExploreTab() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search skills, agents, commands, hooks, MCPs..."
-          className="w-full pl-10 pr-4 py-2.5 text-sm bg-panel border border-card rounded-lg text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600 transition"
+      {/* Search + Type + Sort */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search skills, agents, commands, hooks, MCPs..."
+            className="w-full pl-10 pr-4 py-2 text-sm bg-panel border border-card rounded-lg text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600 transition"
+          />
+        </div>
+        <FilterDropdown
+          value={typeFilter ?? ""}
+          options={typeDropdownOptions}
+          onChange={(v) => { setTypeFilter(v || null); setPage(1); }}
+          icon={<Package className="w-3.5 h-3.5 text-muted shrink-0" />}
+          placeholder="All Types"
         />
-      </div>
-
-      {/* Controls: sort dropdown, category dropdown, view mode toggle */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
         <FilterDropdown
           value={sortBy}
           options={sortOptions}
@@ -225,6 +242,10 @@ export function CatalogExploreTab() {
           icon={<SlidersHorizontal className="w-3.5 h-3.5 text-muted shrink-0" />}
           placeholder="Sort"
         />
+      </div>
+
+      {/* Category + View mode */}
+      <div className="flex items-center gap-2 mb-4">
         {categoryOptions.length > 1 && (
           <FilterDropdown
             value={categoryFilter ?? ""}
@@ -252,39 +273,11 @@ export function CatalogExploreTab() {
         </div>
       </div>
 
-      {/* Type filter pills */}
-      <div className="flex items-center gap-1.5 mb-4 flex-wrap">
-        <Filter className="w-3.5 h-3.5 text-muted mr-1" />
-        <button
-          onClick={() => { setTypeFilter(null); setPage(1); }}
-          className={`px-2.5 py-1 text-xs rounded-full transition ${
-            !typeFilter
-              ? "bg-teal-600 text-white dark:bg-teal-500"
-              : "bg-control text-muted border border-card hover:text-secondary"
-          }`}
-        >
-          All
-        </button>
-        {typeOptions.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => { setTypeFilter(typeFilter === key ? null : key); setPage(1); }}
-            className={`px-2.5 py-1 text-xs rounded-full transition ${
-              typeFilter === key
-                ? "bg-teal-600 text-white dark:bg-teal-500"
-                : "bg-control text-muted border border-card hover:text-secondary"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       {/* States */}
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
-      {loading && items.length === 0 && <LoadingState label="Loading catalog..." />}
+      {loading && items.length === 0 && <LoadingState label="Loading extensions..." />}
       {!loading && !error && total === 0 && !searchQuery && !typeFilter && (
-        <EmptyState icon={Compass} title="No catalog items" subtitle="Run the catalog builder to populate" />
+        <EmptyState icon={Compass} title="No extension items" subtitle="Run the catalog builder to populate" />
       )}
       {!loading && total === 0 && (searchQuery || typeFilter) && <NoResultsState />}
 
@@ -294,7 +287,7 @@ export function CatalogExploreTab() {
           <div className="text-sm text-secondary mb-3">{total} items</div>
           <div className={viewMode === "card" ? "grid grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2"}>
             {items.map((item) => (
-              <CatalogCard
+              <ExtensionCard
                 key={item.item_id}
                 item={item}
                 isInstalled={installedIds.has(item.item_id)}
@@ -307,7 +300,7 @@ export function CatalogExploreTab() {
         </div>
       )}
 
-      <CatalogPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      <ExtensionPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

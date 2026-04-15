@@ -7,7 +7,7 @@ import { AnalysisWelcomePage, TutorialBanner } from "../analysis-welcome";
 import { CostEstimateDialog } from "../cost-estimate-dialog";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "../modal";
 import { Tooltip } from "../tooltip";
-import { CatalogExploreTab } from "./catalog-explore-tab";
+import { ExtensionExploreTab } from "./extension-explore-tab";
 import { LocalSkillsTab } from "./local-skills-tab";
 import {
   AnalysisLoadingState,
@@ -15,7 +15,6 @@ import {
   type SkillTab,
 } from "./personalization-view";
 import { PersonalizationHistory } from "./personalization-history";
-import { RecommendationView } from "./recommendation-results-view";
 
 const TAB_CONFIG: { id: SkillTab; label: string; tooltip: string }[] = [
   { id: "local", label: "Local Skills", tooltip: "Manage installed SKILL.md files" },
@@ -29,7 +28,7 @@ const ACTIVE_TAB_STYLE = "bg-control/70 text-primary";
 const INACTIVE_TAB_STYLE = "text-muted hover:text-secondary hover:bg-control/40";
 
 const MODE_MAP: Record<string, SkillMode> = {
-  retrieve: "retrieval",
+  retrieve: "recommendation",
   create: "creation",
   evolve: "evolution",
 };
@@ -46,7 +45,7 @@ const MODE_DESCRIPTIONS: Record<SkillMode, {
   icon: React.ReactNode;
   tutorial: { title: string; description: string };
 }> = {
-  retrieval: {
+  recommendation: {
     title: "Skill Recommendation",
     desc: "Detect workflow patterns and discover existing skills that match your coding style.",
     icon: <Search className="w-10 h-10 text-teal-600 dark:text-teal-400" />,
@@ -84,18 +83,18 @@ interface PersonalizationPanelProps {
 }
 
 export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }: PersonalizationPanelProps) {
-  const { fetchWithToken, appMode, maxAnalysisSessions } = useAppContext();
+  const { fetchWithToken, appMode, maxSessions } = useAppContext();
   const [activeTab, setActiveTab] = useState<SkillTab>(() => {
     const stored = localStorage.getItem("vibelens-skills-tab");
     if (stored && TAB_CONFIG.some((t) => t.id === stored)) return stored as SkillTab;
     return "local";
   });
   const [analysisResult, setAnalysisResult] = useState<PersonalizationResult | null>(null);
-  const [recommendationAnalysisId, setRecommendationAnalysisId] = useState<string | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(true);
   const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [exploreResetKey, setExploreResetKey] = useState(0);
   const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null);
   const [estimate, setEstimate] = useState<CostEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
@@ -144,7 +143,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
     refreshLlmStatus();
   }, [refreshLlmStatus]);
 
-  const pendingModeRef = useRef<SkillMode>("retrieval");
+  const pendingModeRef = useRef<SkillMode>("recommendation");
   const selectedSkillNamesRef = useRef<string[] | undefined>(undefined);
   const resolvedSessionIdsRef = useRef<string[]>([]);
   const [showSkillSelector, setShowSkillSelector] = useState(false);
@@ -189,7 +188,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
     const mode = pendingModeRef.current;
     const tabKey = Object.entries(MODE_MAP).find(([, v]) => v === mode)?.[0] ?? "retrieve";
     const apiBase = API_BASE_MAP[tabKey];
-    const isRecommend = mode === "retrieval";
+    const isRecommend = mode === "recommendation";
     setEstimate(null);
     setAnalysisLoading(true);
     setAnalysisError(null);
@@ -210,13 +209,9 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
       }
       const data: AnalysisJobResponse = await res.json();
       if (data.status === "completed" && data.analysis_id) {
-        if (isRecommend) {
-          setRecommendationAnalysisId(data.analysis_id);
-        } else {
-          const loadRes = await fetchWithToken(`${apiBase}/${data.analysis_id}`);
-          if (loadRes.ok) {
-            setAnalysisResult(await loadRes.json());
-          }
+        const loadRes = await fetchWithToken(`${apiBase}/${data.analysis_id}`);
+        if (loadRes.ok) {
+          setAnalysisResult(await loadRes.json());
         }
         setHistoryRefresh((n) => n + 1);
         setAnalysisLoading(false);
@@ -234,7 +229,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
       if (checkedIds.size === 0) return;
       pendingModeRef.current = mode;
       selectedSkillNamesRef.current = undefined;
-      if (mode === "retrieval") {
+      if (mode === "recommendation") {
         resolvedSessionIdsRef.current = [...checkedIds];
       }
       if (mode === "evolution") {
@@ -247,7 +242,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
   );
 
   const handleRunAll = useCallback(async () => {
-    pendingModeRef.current = "retrieval";
+    pendingModeRef.current = "recommendation";
     selectedSkillNamesRef.current = undefined;
     setAnalysisError(null);
     try {
@@ -257,7 +252,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
         return;
       }
       resolvedSessionIdsRef.current = allIds;
-      proceedToEstimate("retrieval", allIds);
+      proceedToEstimate("recommendation", allIds);
     } catch (err) {
       setAnalysisError(err instanceof Error ? err.message : String(err));
     }
@@ -274,18 +269,12 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
 
   const handleHistorySelect = useCallback((loaded: PersonalizationResult) => {
     const tabMap: Record<SkillMode, SkillTab> = {
-      retrieval: "retrieve",
+      recommendation: "retrieve",
       creation: "create",
       evolution: "evolve",
     };
     const tab = tabMap[loaded.mode] || "retrieve";
-    if (loaded.mode === "retrieval" && loaded.id) {
-      setAnalysisResult(null);
-      setRecommendationAnalysisId(loaded.id);
-    } else {
-      setRecommendationAnalysisId(null);
-      setAnalysisResult(loaded);
-    }
+    setAnalysisResult(loaded);
     setActiveTab(tab);
     localStorage.setItem("vibelens-skills-tab", tab);
   }, []);
@@ -306,16 +295,9 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
         }
         const match = demoHistoryRef.current?.find((h) => h.mode === mode);
         if (!match) return;
-        if (mode === "retrieval") {
-          setRecommendationAnalysisId(match.id);
-          setAnalysisResult(null);
-        } else {
-          const loadRes = await fetchWithToken(`${apiBase}/${match.id}`);
-          if (!loadRes.ok) return;
-          const result: PersonalizationResult = await loadRes.json();
-          setAnalysisResult(result);
-          setRecommendationAnalysisId(null);
-        }
+        const loadRes = await fetchWithToken(`${apiBase}/${match.id}`);
+        if (!loadRes.ok) return;
+        setAnalysisResult(await loadRes.json());
       } catch {
         /* best-effort — fall back to welcome page */
       }
@@ -344,16 +326,10 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
         demoHistoryRef.current = history;
         if (history.length === 0) return;
         const match = history.find((h) => h.mode === targetMode) ?? history[0];
-        if (targetMode === "retrieval") {
-          setRecommendationAnalysisId(match.id);
-          setActiveTab("retrieve");
-          localStorage.setItem("vibelens-skills-tab", "retrieve");
-        } else {
-          const loadRes = await fetchWithToken(`${apiBase}/${match.id}`);
-          if (!loadRes.ok) return;
-          const result: PersonalizationResult = await loadRes.json();
-          handleHistorySelect(result);
-        }
+        const loadRes = await fetchWithToken(`${apiBase}/${match.id}`);
+        if (!loadRes.ok) return;
+        const result: PersonalizationResult = await loadRes.json();
+        handleHistorySelect(result);
       } catch {
         /* best-effort */
       }
@@ -362,7 +338,6 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
 
   const handleNewAnalysis = useCallback(() => {
     setAnalysisResult(null);
-    setRecommendationAnalysisId(null);
     setAnalysisError(null);
   }, []);
 
@@ -371,7 +346,6 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
     if (!activeJobId) return;
     setAnalysisLoading(true);
     const apiBase = API_BASE_MAP[activeTab] ?? "/api/recommendation";
-    const isRecommend = activeTab === "retrieve";
     const interval = setInterval(async () => {
       try {
         const res = await fetchWithToken(`${apiBase}/jobs/${activeJobId}`);
@@ -380,13 +354,9 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
         if (status.status === "completed" && status.analysis_id) {
           onJobIdChange(null);
           setAnalysisLoading(false);
-          if (isRecommend) {
-            setRecommendationAnalysisId(status.analysis_id);
-          } else {
-            const loadRes = await fetchWithToken(`${apiBase}/${status.analysis_id}`);
-            if (loadRes.ok) {
-              setAnalysisResult(await loadRes.json());
-            }
+          const loadRes = await fetchWithToken(`${apiBase}/${status.analysis_id}`);
+          if (loadRes.ok) {
+            setAnalysisResult(await loadRes.json());
           }
           setHistoryRefresh((n) => n + 1);
         } else if (status.status === "failed") {
@@ -429,9 +399,11 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
           <Tooltip key={tab.id} text={tab.tooltip} className="flex-1 min-w-0">
             <button
               onClick={() => {
+                if (tab.id === "explore" && activeTab === "explore") {
+                  setExploreResetKey((k) => k + 1);
+                }
                 if (tab.id !== activeTab && MODE_MAP[tab.id] && MODE_MAP[activeTab]) {
                   setAnalysisResult(null);
-                  setRecommendationAnalysisId(null);
                   setAnalysisError(null);
                   if (appMode === "demo" && MODE_MAP[tab.id]) {
                     loadDemoAnalysis(MODE_MAP[tab.id]);
@@ -459,7 +431,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
             </div>
           )}
           {activeTab === "local" && <LocalSkillsTab />}
-          {activeTab === "explore" && <CatalogExploreTab />}
+          {activeTab === "explore" && <ExtensionExploreTab resetKey={exploreResetKey} />}
           {isAnalysisTab && (analysisLoading || estimating) && (
             <div className="flex items-center justify-center pt-16">
               <div className="flex flex-col items-center gap-5 max-w-md">
@@ -482,7 +454,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
               </div>
             </div>
           )}
-          {isAnalysisTab && !analysisLoading && !estimating && !analysisResult && !recommendationAnalysisId && (
+          {isAnalysisTab && !analysisLoading && !estimating && !analysisResult && (
             <AnalysisWelcomePage
               icon={MODE_DESCRIPTIONS[currentMode].icon}
               title={MODE_DESCRIPTIONS[currentMode].title}
@@ -492,20 +464,14 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
               fetchWithToken={fetchWithToken}
               onLlmConfigured={refreshLlmStatus}
               checkedCount={checkedIds.size}
-              maxSessions={maxAnalysisSessions}
+              maxSessions={maxSessions}
               error={analysisError}
               onRun={() => handleRequestEstimate(currentMode)}
               isDemo={appMode === "demo"}
               {...(activeTab === "retrieve" ? { onRunAll: handleRunAll } : {})}
             />
           )}
-          {isAnalysisTab && !analysisLoading && activeTab === "retrieve" && recommendationAnalysisId && (
-            <RecommendationView
-              analysisId={recommendationAnalysisId}
-              fetchWithToken={fetchWithToken}
-            />
-          )}
-          {isAnalysisTab && !analysisLoading && activeTab !== "retrieve" && analysisResult && (
+          {isAnalysisTab && !analysisLoading && analysisResult && (
             <AnalysisResultView
               result={analysisResult}
               activeTab={activeTab}

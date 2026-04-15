@@ -356,7 +356,7 @@ export interface FeaturedSkillsResponse {
   skills: FeaturedSkill[];
 }
 
-export type SkillMode = "retrieval" | "creation" | "evolution";
+export type SkillMode = "recommendation" | "creation" | "evolution";
 
 export interface WorkflowPattern {
   title: string;
@@ -373,8 +373,31 @@ export interface SkillRecommendation {
   confidence: number;
 }
 
-export interface SkillCreation {
+export interface RecommendationItem {
+  item_id: string;
+  item_type: string;
   name: string;
+  repo_name: string;
+  source_url: string;
+  updated_at: string;
+  description: string;
+  tags: string[];
+  stars: number;
+  forks: number;
+  license: string;
+  language: string;
+  install_command: string | null;
+}
+
+export interface RankedRecommendationItem {
+  item: RecommendationItem;
+  rationale: string;
+  scores: Record<string, number>;
+}
+
+export interface SkillCreation {
+  element_type: string;
+  element_name: string;
   description: string;
   skill_md_content: string;
   rationale: string;
@@ -390,8 +413,7 @@ export interface SkillEdit {
 }
 
 export interface SkillEvolution {
-  skill_name: string;
-  description: string;
+  element_name: string;
   edits: SkillEdit[];
   rationale: string;
   addressed_patterns: string[];
@@ -403,16 +425,15 @@ export interface PersonalizationResult {
   mode: SkillMode;
   title: string;
   workflow_patterns: WorkflowPattern[];
-  recommendations: SkillRecommendation[];
+  recommendations: RankedRecommendationItem[];
   creations: SkillCreation[];
   evolutions: SkillEvolution[];
   session_ids: string[];
   skipped_session_ids: string[];
   warnings?: string[];
-  backend_id: string;
+  backend: string;
   model: string;
-  metrics: { cost_usd: number | null };
-  duration_seconds: number | null;
+  final_metrics: PersonalizationFinalMetrics;
   created_at: string;
   is_example?: boolean;
 }
@@ -483,7 +504,7 @@ export interface UserProfile {
   search_keywords: string[];
 }
 
-export interface CatalogRecommendation {
+export interface ExtensionRecommendation {
   item_id: string;
   item_type: string;
   user_label: string;
@@ -506,17 +527,17 @@ export interface RecommendationResult {
   title: string;
   summary: string;
   user_profile: UserProfile;
-  recommendations: CatalogRecommendation[];
+  recommendations: ExtensionRecommendation[];
   session_ids: string[];
   skipped_session_ids: string[];
+  backend: string;
   model: string;
   created_at: string;
-  duration_seconds: number | null;
-  metrics: { cost_usd: number | null };
+  final_metrics: PersonalizationFinalMetrics;
   catalog_version: string;
 }
 
-export interface CatalogItemSummary {
+export interface ExtensionItemSummary {
   item_id: string;
   item_type: string;
   name: string;
@@ -538,20 +559,20 @@ export interface CatalogItemSummary {
   is_file_based: boolean;
 }
 
-export interface CatalogListResponse {
-  items: CatalogItemSummary[];
+export interface ExtensionListResponse {
+  items: ExtensionItemSummary[];
   total: number;
   page: number;
   per_page: number;
 }
 
-export interface CatalogInstallResponse {
+export interface ExtensionInstallResponse {
   success: boolean;
   installed_path: string;
   message: string;
 }
 
-export interface CatalogMetaResponse {
+export interface ExtensionMetaResponse {
   categories: string[];
   has_profile: boolean;
 }

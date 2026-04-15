@@ -21,19 +21,19 @@ export type SkillTab = "local" | "explore" | "retrieve" | "create" | "evolve";
 export { SectionHeader } from "./skill-shared";
 
 const MODE_TITLES: Record<SkillMode, string> = {
-  retrieval: "Skill Recommendation",
+  recommendation: "Skill Recommendation",
   creation: "Custom Skill Generation",
   evolution: "Installed Skill Evolution",
 };
 
 const MODE_ITEM_LABELS: Record<SkillMode, string> = {
-  retrieval: "recommended skill",
+  recommendation: "recommended skill",
   creation: "custom skill",
   evolution: "evolved skill",
 };
 
 const MODE_SUBLABELS: Record<SkillMode, string> = {
-  retrieval: "Discovering skills that match your coding patterns",
+  recommendation: "Discovering skills that match your coding patterns",
   creation: "Generating custom skills from your workflow",
   evolution: "Checking installed skills against your usage",
 };
@@ -78,7 +78,7 @@ export function AnalysisResultView({
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-6 space-y-8">
-      {result.backend_id === "mock" && <DemoBanner />}
+      {result.backend === "mock" && <DemoBanner />}
       {/* Header */}
       <ResultHeader result={result} onNew={onNew} mode={result.mode} />
       {result.warnings && result.warnings.length > 0 && (
@@ -89,7 +89,6 @@ export function AnalysisResultView({
       {activeTab === "retrieve" && result.recommendations.length > 0 && (
         <RecommendationSection
           recommendations={result.recommendations}
-          workflowPatterns={result.workflow_patterns}
           fetchWithToken={fetchWithToken}
           agentSources={agentSources}
         />
@@ -115,8 +114,8 @@ export function AnalysisResultView({
         />
       )}
 
-      {/* Workflow Patterns — shown at the bottom */}
-      {SHOW_ANALYSIS_DETAIL_SECTIONS && result.workflow_patterns.length > 0 && (
+      {/* Workflow Patterns — shown at the bottom (hidden for retrieve) */}
+      {SHOW_ANALYSIS_DETAIL_SECTIONS && activeTab !== "retrieve" && result.workflow_patterns.length > 0 && (
         <PatternSection patterns={result.workflow_patterns} />
       )}
 
@@ -127,7 +126,7 @@ export function AnalysisResultView({
 }
 
 function getItemCount(result: PersonalizationResult, mode: SkillMode): number {
-  if (mode === "retrieval") return result.recommendations.length;
+  if (mode === "recommendation") return result.recommendations.length;
   if (mode === "creation") return result.creations.length;
   return result.evolutions.length;
 }
@@ -151,7 +150,7 @@ function ResultHeader({
         <BarChart3 className="w-6 h-6 text-accent-teal" />
         <div>
           <div className="flex items-center gap-2.5">
-            {(result.is_example || result.backend_id === "mock") && (
+            {(result.is_example || result.backend === "mock") && (
               <span className="px-2 py-0.5 rounded border text-[11px] font-semibold bg-accent-amber-subtle border-accent-amber text-accent-amber">
                 Example
               </span>
@@ -196,16 +195,16 @@ function MetadataFooter({ result }: { result: PersonalizationResult }) {
     <Tooltip text="Backend, model, and API cost">
       <div className="border-t border-default pt-4 text-xs text-dimmed flex items-center justify-between gap-4 w-full cursor-help">
         <div className="flex items-center gap-2 flex-wrap">
-          <span>{result.backend_id}/{result.model}</span>
-          {result.metrics.cost_usd != null && (
+          <span>{result.backend}/{result.model}</span>
+          {result.final_metrics?.total_cost_usd != null && (
             <span className="border-l border-card pl-2">
-              ${result.metrics.cost_usd.toFixed(4)}
+              ${result.final_metrics.total_cost_usd.toFixed(4)}
             </span>
           )}
-          {result.duration_seconds != null && (
+          {result.final_metrics?.duration != null && result.final_metrics.duration > 0 && (
             <span className="inline-flex items-center gap-1 border-l border-card pl-2">
               <Timer className="w-3 h-3" />
-              {formatDuration(result.duration_seconds)}
+              {formatDuration(result.final_metrics.duration)}
             </span>
           )}
         </div>

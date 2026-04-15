@@ -43,7 +43,7 @@ export function CreationSection({
       <div className="space-y-3">
         {skills.map((skill) => (
           <CreatedSkillCard
-            key={skill.name}
+            key={skill.element_name}
             skill={skill}
             workflowPatterns={workflowPatterns}
             fetchWithToken={fetchWithToken}
@@ -70,7 +70,7 @@ function CreatedSkillCard({
   const [showPreview, setShowPreview] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [editedContent, setEditedContent] = useState(skill.skill_md_content);
-  const [rationaleExpanded, setRationaleExpanded] = useState(true);
+  const [rationaleExpanded, setRationaleExpanded] = useState(false);
   const [patternsExpanded, setPatternsExpanded] = useState(false);
 
   const matchedPatterns = workflowPatterns.filter((p) =>
@@ -83,12 +83,12 @@ function CreatedSkillCard({
         const res = await fetchWithToken("/api/skills/install", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: skill.name, content }),
+          body: JSON.stringify({ name: skill.element_name, content }),
         });
         if (!res.ok) return;
 
         if (targets.length > 0) {
-          await fetchWithToken(`/api/skills/sync/${skill.name}`, {
+          await fetchWithToken(`/api/skills/sync/${skill.element_name}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ targets }),
@@ -100,7 +100,7 @@ function CreatedSkillCard({
       }
       setShowPreview(false);
     },
-    [fetchWithToken, skill.name],
+    [fetchWithToken, skill.element_name],
   );
 
   return (
@@ -109,7 +109,7 @@ function CreatedSkillCard({
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="font-mono text-sm font-bold text-primary">{skill.name}</span>
+            <span className="font-mono text-base font-bold text-primary">{skill.element_name}</span>
             {skill.confidence > 0 && <ConfidenceBar confidence={skill.confidence} />}
           </div>
           <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ function CreatedSkillCard({
       )}
       {showPreview && (
         <SkillPreviewDialog
-          skillName={skill.name}
+          skillName={skill.element_name}
           content={editedContent}
           onContentChange={setEditedContent}
           onInstall={handleInstall}

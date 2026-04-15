@@ -38,18 +38,18 @@ interface AppContextValue {
   sessionToken: string;
   appMode: AppMode;
   maxZipBytes: number;
-  maxAnalysisSessions: number;
+  maxSessions: number;
   fetchWithToken: (url: string, init?: RequestInit) => Promise<Response>;
 }
 
 const DEFAULT_MAX_ZIP_BYTES = 500 * 1024 * 1024;
-const DEFAULT_MAX_ANALYSIS_SESSIONS = 30;
+const DEFAULT_MAX_SESSIONS = 30;
 
 const AppContext = createContext<AppContextValue>({
   sessionToken: "",
   appMode: "self",
   maxZipBytes: DEFAULT_MAX_ZIP_BYTES,
-  maxAnalysisSessions: DEFAULT_MAX_ANALYSIS_SESSIONS,
+  maxSessions: DEFAULT_MAX_SESSIONS,
   fetchWithToken: (url, init) => fetch(url, init),
 });
 
@@ -74,9 +74,8 @@ export function App() {
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [appMode, setAppMode] = useState<AppMode>("self");
   const [maxZipBytes, setMaxZipBytes] = useState(DEFAULT_MAX_ZIP_BYTES);
-  const [maxAnalysisSessions, setMaxAnalysisSessions] = useState(DEFAULT_MAX_ANALYSIS_SESSIONS);
+  const [maxSessions, setMaxSessions] = useState(DEFAULT_MAX_SESSIONS);
   const [agentFilter, setAgentFilter] = useState("all");
-  const [visibleAgents, setVisibleAgents] = useState<string[]>(["all"]);
   const [mainView, setMainView] = useState<MainView>("browse");
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -129,7 +128,7 @@ export function App() {
     sessionToken,
     appMode,
     maxZipBytes,
-    maxAnalysisSessions,
+    maxSessions,
     fetchWithToken,
   };
 
@@ -143,11 +142,10 @@ export function App() {
   useEffect(() => {
     fetchWithToken("/api/settings")
       .then((r) => r.json())
-      .then((data: { app_mode?: string; max_zip_bytes?: number; max_analysis_sessions?: number; visible_agents?: string[] }) => {
+      .then((data: { app_mode?: string; max_zip_bytes?: number; max_sessions?: number }) => {
         if (data.app_mode === "demo") setAppMode("demo");
         if (data.max_zip_bytes) setMaxZipBytes(data.max_zip_bytes);
-        if (data.max_analysis_sessions) setMaxAnalysisSessions(data.max_analysis_sessions);
-        if (data.visible_agents) setVisibleAgents(data.visible_agents);
+        if (data.max_sessions) setMaxSessions(data.max_sessions);
         setSettingsLoaded(true);
       })
       .catch((err) => {
@@ -185,18 +183,14 @@ export function App() {
       .finally(() => setSessionsLoading(false));
   }, [refreshKey, fetchWithToken]);
 
-  // Derive unique agent names from loaded sessions, filtered by config
+  // Derive unique agent names from loaded sessions
   const availableAgents = useMemo(() => {
     const names = new Set<string>();
     for (const s of sessions) {
       if (s.agent?.name) names.add(s.agent.name);
     }
-    const sorted = [...names].sort();
-    // If config restricts to specific agents, only show those
-    const isAllVisible = visibleAgents.length === 1 && visibleAgents[0] === "all";
-    if (isAllVisible) return sorted;
-    return sorted.filter((name) => visibleAgents.includes(name));
-  }, [sessions, visibleAgents]);
+    return [...names].sort();
+  }, [sessions]);
 
   // Preload dashboard data after session list loads to avoid blocking it
   const [dashboardCache, setDashboardCache] = useState<{

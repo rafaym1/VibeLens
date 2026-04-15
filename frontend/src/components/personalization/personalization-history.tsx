@@ -7,13 +7,13 @@ import { ConfirmDialog } from "../confirm-dialog";
 import { InstallLocallyDialog } from "../install-locally-dialog";
 
 const MODE_LABELS: Record<SkillMode, string> = {
-  retrieval: "Discover",
+  recommendation: "Discover",
   creation: "Customize",
   evolution: "Evolve",
 };
 
 const MODE_API_BASE: Record<SkillMode, string> = {
-  retrieval: "/api/recommendation",
+  recommendation: "/api/recommendation",
   creation: "/api/creation",
   evolution: "/api/evolution",
 };

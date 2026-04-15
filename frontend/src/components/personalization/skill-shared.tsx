@@ -1,6 +1,6 @@
 import { Filter, Search, X } from "lucide-react";
 import { Tooltip } from "../tooltip";
-import { SOURCE_COLORS, SOURCE_LABELS } from "./skill-constants";
+import { normalizeSourceType, SOURCE_COLORS, SOURCE_LABELS } from "./skill-constants";
 
 /** Search input with icon and clear button. */
 export function SkillSearchBar({
@@ -70,8 +70,9 @@ export function SourceFilterBar({
         All ({totalCount})
       </button>
       {items.map((key) => {
+        const normalized = normalizeSourceType(key);
         const count = countByKey(key);
-        const colorClass = colorMap[key] || "bg-control text-muted border-card";
+        const colorClass = colorMap[normalized] || colorMap[key] || "bg-control text-muted border-card";
         return (
           <button
             key={key}
@@ -82,7 +83,7 @@ export function SourceFilterBar({
                 : "text-secondary border-card hover:text-primary hover:border-hover"
             }`}
           >
-            {labelMap[key] || key} ({count})
+            {labelMap[normalized] || labelMap[key] || key} ({count})
           </button>
         );
       })}
@@ -154,7 +155,7 @@ export function SectionHeader({
     <Tooltip text={tooltip}>
       <div className="flex items-center gap-2 mb-3 cursor-help">
         <span className={accentColor}>{icon}</span>
-        <h3 className="text-lg font-semibold text-primary">{title}</h3>
+        <h3 className="text-xl font-semibold text-primary">{title}</h3>
       </div>
     </Tooltip>
   );

@@ -1,13 +1,13 @@
 import { Copy, ExternalLink } from "lucide-react";
-import type { CatalogRecommendation } from "../../types";
+import type { ExtensionRecommendation } from "../../types";
 import { ITEM_TYPE_COLORS, ITEM_TYPE_LABELS, scoreColor } from "./recommendation-constants";
 
 const MAX_VISIBLE_TAGS = 4;
 
 interface RecommendationCardProps {
-  recommendation: CatalogRecommendation;
+  recommendation: ExtensionRecommendation;
   rank: number;
-  onInstall: (rec: CatalogRecommendation) => void;
+  onInstall: (rec: ExtensionRecommendation) => void;
 }
 
 function QualityBadge({ score }: { score: number }) {
@@ -30,7 +30,7 @@ export function RecommendationCard({ recommendation: rec, rank, onInstall }: Rec
   const typeLabel = ITEM_TYPE_LABELS[rec.item_type] ?? rec.user_label;
   const barColor = scoreColor(rec.score);
   const confidencePct = Math.round(rec.confidence * 100);
-  const tags: string[] = (rec as CatalogRecommendation & { tags?: string[] }).tags?.slice(0, MAX_VISIBLE_TAGS) ?? [];
+  const tags: string[] = (rec as ExtensionRecommendation & { tags?: string[] }).tags?.slice(0, MAX_VISIBLE_TAGS) ?? [];
   const canInstall = rec.has_content || rec.install_command;
 
   return (
