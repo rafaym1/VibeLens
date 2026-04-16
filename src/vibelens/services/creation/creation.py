@@ -8,6 +8,7 @@ Pipeline:
 """
 
 import asyncio
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -27,7 +28,7 @@ from vibelens.models.personalization.creation import (
 )
 from vibelens.models.personalization.enums import PersonalizationMode
 from vibelens.models.personalization.results import PersonalizationResult
-from vibelens.models.trajectories.final_metrics import FinalMetrics
+from vibelens.models.trajectories.metrics import Metrics
 from vibelens.prompts.creation import (
     CREATION_PROMPT,
     CREATION_PROPOSAL_PROMPT,
@@ -36,10 +37,12 @@ from vibelens.prompts.creation import (
 from vibelens.services.analysis_store import generate_analysis_id
 from vibelens.services.inference_shared import (
     CACHE_TTL_SECONDS,
+    aggregate_final_metrics,
     build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
     log_inference_summary,
+    metrics_from_result,
     require_backend,
     run_batches_concurrent,
     save_inference_log,
@@ -146,6 +149,7 @@ async def analyze_skill_creation(
     analysis_id = generate_analysis_id()
     set_analysis_id(analysis_id)
 
+    start_time = time.monotonic()
     run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
 
@@ -185,19 +189,20 @@ async def analyze_skill_creation(
 
     creations: list[PersonalizationCreation] = []
     creation_warnings: list[str] = list(proposal_result.warnings)
-    total_cost = proposal_result.final_metrics.total_cost_usd or 0.0
+    all_metrics: list[Metrics] = list(proposal_result.batch_metrics)
     if creation_tasks:
         results = await asyncio.gather(*creation_tasks, return_exceptions=True)
         for idx, result in enumerate(results):
             if isinstance(result, tuple):
-                creation, cost = result
+                creation, step_metrics = result
                 creations.append(creation)
-                total_cost += cost
+                all_metrics.append(step_metrics)
             else:
                 element_name = proposal_result.proposal_batch.proposals[idx].element_name
                 creation_warnings.append(f"Deep creation failed for '{element_name}': {result}")
                 logger.warning("Deep creation failed for proposal '%s': %s", element_name, result)
 
+    duration = int(time.monotonic() - start_time)
     proposal_output = proposal_result.proposal_batch
     skill_result = PersonalizationResult(
         id=analysis_id,
@@ -210,7 +215,8 @@ async def analyze_skill_creation(
         warnings=creation_warnings,
         backend=proposal_result.backend,
         model=proposal_result.model,
-        final_metrics=FinalMetrics(total_cost_usd=total_cost if total_cost > 0 else None),
+        batch_metrics=all_metrics,
+        final_metrics=aggregate_final_metrics(all_metrics, duration_seconds=duration),
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     get_personalization_store().save(skill_result, analysis_id)
@@ -268,16 +274,16 @@ async def _infer_skill_creation_proposals(
     ]
     batch_results, batch_warnings = await run_batches_concurrent(tasks, "proposal")
 
-    total_cost = sum(cost for _, cost in batch_results)
+    all_metrics: list[Metrics] = [m for _, m in batch_results]
 
     # Single batch: use directly; multiple batches: synthesize
     if len(batch_results) == 1:
         proposal_output = batch_results[0][0]
     else:
-        proposal_output, syn_cost = await _synthesize_skill_creation_proposals(
+        proposal_output, syn_metrics = await _synthesize_skill_creation_proposals(
             backend, batch_results, len(context_set.session_ids), log_dir
         )
-        total_cost += syn_cost
+        all_metrics.append(syn_metrics)
         # Synthesis LLM drops example_refs; recover from batch outputs
         merge_batch_refs(
             proposal_output.workflow_patterns,
@@ -298,7 +304,8 @@ async def _infer_skill_creation_proposals(
         warnings=batch_warnings,
         backend=backend.backend_id,
         model=backend.model,
-        final_metrics=FinalMetrics(total_cost_usd=total_cost if total_cost > 0 else None),
+        batch_metrics=all_metrics,
+        final_metrics=aggregate_final_metrics(all_metrics),
         batch_count=len(batches),
         created_at=datetime.now(timezone.utc).isoformat(),
         proposal_batch=final_output,
@@ -318,7 +325,7 @@ async def _infer_skill_creation(
     proposal_confidence: float = 0.0,
     log_dir: Path | None = None,
     proposal_index: int | None = None,
-) -> tuple[PersonalizationCreation, float]:
+) -> tuple[PersonalizationCreation, Metrics]:
     """Generate full SKILL.md content for one approved proposal.
 
     Args:
@@ -333,7 +340,7 @@ async def _infer_skill_creation(
         proposal_index: Index for log file naming when called from analyze_skill_creation.
 
     Returns:
-        Tuple of (PersonalizationCreation with full SKILL.md content, cost in USD).
+        Tuple of (PersonalizationCreation with full SKILL.md content, per-call metrics).
 
     Raises:
         ValueError: If no sessions could be loaded or no backend configured.
@@ -396,8 +403,7 @@ async def _infer_skill_creation(
     creation = parse_llm_output(result.text, PersonalizationCreation, "deep creation")
     creation.confidence = proposal_confidence
     creation.addressed_patterns = addressed_patterns
-    cost = result.cost_usd or 0.0
-    return creation, cost
+    return creation, metrics_from_result(result)
 
 
 async def _infer_skill_creation_proposal_batch(
@@ -406,7 +412,7 @@ async def _infer_skill_creation_proposal_batch(
     installed_skills: list[dict],
     log_dir: Path,
     batch_index: int,
-) -> tuple[CreationProposalBatch, float]:
+) -> tuple[CreationProposalBatch, Metrics]:
     """Run LLM inference for one proposal batch.
 
     Args:
@@ -417,7 +423,7 @@ async def _infer_skill_creation_proposal_batch(
         batch_index: Zero-based batch index for file naming.
 
     Returns:
-        Tuple of (parsed proposal output, cost in USD).
+        Tuple of (parsed proposal output, per-call metrics).
     """
     digest = format_context_batch(batch)
     session_count = len(batch.contexts)
@@ -455,26 +461,25 @@ async def _infer_skill_creation_proposal_batch(
     save_inference_log(log_dir, f"skill_creation_proposal_output_{batch_index}.txt", result.text)
 
     proposal_output = parse_llm_output(result.text, CreationProposalBatch, "proposal")
-    cost = result.cost_usd or 0.0
-    return proposal_output, cost
+    return proposal_output, metrics_from_result(result)
 
 
 async def _synthesize_skill_creation_proposals(
     backend: InferenceBackend,
-    batch_results: list[tuple[CreationProposalBatch, float]],
+    batch_results: list[tuple[CreationProposalBatch, Metrics]],
     session_count: int,
     log_dir: Path,
-) -> tuple[CreationProposalBatch, float]:
+) -> tuple[CreationProposalBatch, Metrics]:
     """Merge proposals from multiple batches via LLM synthesis.
 
     Args:
         backend: Configured inference backend.
-        batch_results: Per-batch proposal outputs and costs.
+        batch_results: Per-batch proposal outputs and metrics.
         session_count: Total number of sessions analyzed.
         log_dir: Timestamped directory for saving prompts and outputs.
 
     Returns:
-        Tuple of (merged CreationProposalBatch, synthesis cost in USD).
+        Tuple of (merged CreationProposalBatch, synthesis call metrics).
     """
     batch_data = [
         {
@@ -522,5 +527,4 @@ async def _synthesize_skill_creation_proposals(
     save_inference_log(log_dir, "skill_creation_proposal_synthesis_output.txt", result.text)
 
     synthesis_output = parse_llm_output(result.text, CreationProposalBatch, "proposal synthesis")
-    cost = result.cost_usd or 0.0
-    return synthesis_output, cost
+    return synthesis_output, metrics_from_result(result)

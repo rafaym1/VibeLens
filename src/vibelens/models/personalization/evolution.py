@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field
 
+from vibelens.models.enums import AgentExtensionType
 from vibelens.models.llm.inference import BackendType
 from vibelens.models.personalization.constants import (
     DESCRIPTION_CONFIDENCE,
@@ -34,6 +35,9 @@ class EvolutionProposal(BaseModel):
     before the deep-edit step generates granular edits.
     """
 
+    element_type: AgentExtensionType = Field(
+        default=AgentExtensionType.SKILL, description="Type of element to evolve."
+    )
     element_name: str = Field(description="Name of the existing element to modify.")
     session_indices: list[int] = Field(
         default_factory=list, description="0-indexed session indices relevant to this proposal."
@@ -96,7 +100,18 @@ class PersonalizationEvolution(BaseModel):
     to apply to the element's source file.
     """
 
+    element_type: AgentExtensionType = Field(
+        default=AgentExtensionType.SKILL, description="Type of element to evolve."
+    )
     element_name: str = Field(description="Name of the existing element to evolve.")
+    description: str = Field(
+        default="",
+        description=(
+            "Updated trigger description for YAML frontmatter. "
+            "State what the element does AND when it activates. "
+            "Include trigger phrases. Max 30 words."
+        ),
+    )
     edits: list[PersonalizationEdit] = Field(description="Ordered list of granular edits to apply.")
     addressed_patterns: list[str] = Field(
         default_factory=list, description="Workflow pattern titles addressed."

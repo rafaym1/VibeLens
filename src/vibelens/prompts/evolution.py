@@ -26,5 +26,5 @@ EVOLUTION_PROMPT = AnalysisPrompt(
     system_template=load_template("evolution/evolution_system.j2"),
     user_template=load_template("evolution/evolution_user.j2"),
     output_model=PersonalizationEvolution,
-    exclude_fields={"PersonalizationEvolution": frozenset({"addressed_patterns"})},
+    exclude_fields={"PersonalizationEvolution": frozenset({"addressed_patterns", "element_type"})},
 )

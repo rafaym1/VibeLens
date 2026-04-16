@@ -23,6 +23,13 @@ class CreationProposal(BaseModel):
 
     element_type: AgentExtensionType = Field(description="Type of element to create.")
     element_name: str = Field(description="Proposed element name in kebab-case.")
+    description: str = Field(
+        description=(
+            "One-line trigger description for the proposed element. "
+            "State what the element does AND when it activates. "
+            "Include trigger phrases. Max 30 words."
+        )
+    )
     session_indices: list[int] = Field(
         default_factory=list, description="0-indexed session indices pointing to relevant sessions."
     )

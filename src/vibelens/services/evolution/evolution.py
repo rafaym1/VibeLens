@@ -8,6 +8,7 @@ Two-step pipeline (mirrors creation):
 """
 
 import asyncio
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContextBatch
+from vibelens.models.enums import AgentExtensionType
 from vibelens.models.llm.inference import InferenceRequest
 from vibelens.models.personalization.enums import PersonalizationMode
 from vibelens.models.personalization.evolution import (
@@ -25,7 +27,7 @@ from vibelens.models.personalization.evolution import (
     PersonalizationEvolution,
 )
 from vibelens.models.personalization.results import PersonalizationResult
-from vibelens.models.trajectories.final_metrics import FinalMetrics
+from vibelens.models.trajectories.metrics import Metrics
 from vibelens.prompts.evolution import (
     EVOLUTION_PROMPT,
     EVOLUTION_PROPOSAL_PROMPT,
@@ -33,10 +35,12 @@ from vibelens.prompts.evolution import (
 )
 from vibelens.services.analysis_store import generate_analysis_id
 from vibelens.services.inference_shared import (
+    aggregate_final_metrics,
     build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
     log_inference_summary,
+    metrics_from_result,
     require_backend,
     run_batches_concurrent,
     save_inference_log,
@@ -168,6 +172,7 @@ async def analyze_skill_evolution(
     analysis_id = generate_analysis_id()
     set_analysis_id(analysis_id)
 
+    start_time = time.monotonic()
     run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
 
@@ -218,20 +223,21 @@ async def analyze_skill_evolution(
 
     evolutions: list[PersonalizationEvolution] = []
     warnings: list[str] = list(proposal_result.warnings)
-    total_cost = proposal_result.final_metrics.total_cost_usd or 0.0
+    all_metrics: list[Metrics] = list(proposal_result.batch_metrics)
 
     if evolution_tasks:
         results = await asyncio.gather(*evolution_tasks, return_exceptions=True)
         for idx, result in enumerate(results):
             if isinstance(result, tuple):
-                evolution, cost = result
+                evolution, step_metrics = result
                 evolutions.append(evolution)
-                total_cost += cost
+                all_metrics.append(step_metrics)
             else:
                 name = proposal_result.proposal_batch.proposals[idx].element_name
                 warnings.append(f"Evolution failed for '{name}': {result}")
                 logger.warning("Evolution failed for proposal '%s': %s", name, result)
 
+    duration = int(time.monotonic() - start_time)
     proposal_output = proposal_result.proposal_batch
     skill_result = PersonalizationResult(
         id=analysis_id,
@@ -244,7 +250,8 @@ async def analyze_skill_evolution(
         warnings=warnings,
         backend=proposal_result.backend,
         model=proposal_result.model,
-        final_metrics=FinalMetrics(total_cost_usd=total_cost if total_cost > 0 else None),
+        batch_metrics=all_metrics,
+        final_metrics=aggregate_final_metrics(all_metrics, duration_seconds=duration),
         batch_count=proposal_result.batch_count,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
@@ -303,16 +310,16 @@ async def _infer_evolution_proposals(
     ]
     batch_results, batch_warnings = await run_batches_concurrent(tasks, "evolution_proposal")
 
-    total_cost = sum(cost for _, cost in batch_results)
+    all_metrics: list[Metrics] = [m for _, m in batch_results]
 
     # Single batch: use directly; multiple batches: synthesize
     if len(batch_results) == 1:
         proposal_output = batch_results[0][0]
     else:
-        proposal_output, syn_cost = await _synthesize_evolution_proposals(
+        proposal_output, syn_metrics = await _synthesize_evolution_proposals(
             backend, batch_results, len(context_set.session_ids), log_dir
         )
-        total_cost += syn_cost
+        all_metrics.append(syn_metrics)
         # Synthesis LLM drops example_refs; recover from batch outputs
         merge_batch_refs(
             proposal_output.workflow_patterns,
@@ -333,7 +340,8 @@ async def _infer_evolution_proposals(
         warnings=batch_warnings,
         backend=backend.backend_id,
         model=backend.model,
-        final_metrics=FinalMetrics(total_cost_usd=total_cost if total_cost > 0 else None),
+        batch_metrics=all_metrics,
+        final_metrics=aggregate_final_metrics(all_metrics),
         batch_count=len(batches),
         created_at=datetime.now(timezone.utc).isoformat(),
         proposal_batch=final_output,
@@ -350,7 +358,7 @@ async def _infer_evolution(
     proposal_confidence: float = 0.0,
     log_dir: Path | None = None,
     proposal_index: int | None = None,
-) -> tuple[PersonalizationEvolution, float]:
+) -> tuple[PersonalizationEvolution, Metrics]:
     """Generate granular evolutions for one existing skill.
 
     Args:
@@ -365,7 +373,7 @@ async def _infer_evolution(
         proposal_index: Index for log file naming.
 
     Returns:
-        Tuple of (PersonalizationEvolution, cost in USD).
+        Tuple of (PersonalizationEvolution, per-call metrics).
     """
     backend = require_backend()
     context_set = extract_all_contexts(
@@ -424,10 +432,10 @@ async def _infer_evolution(
     save_inference_log(log_dir, f"skill_evolution{suffix}_output.txt", result.text)
 
     evolution = parse_llm_output(result.text, PersonalizationEvolution, "evolution")
+    evolution.element_type = AgentExtensionType.SKILL
     evolution.confidence = proposal_confidence
     evolution.addressed_patterns = addressed_patterns
-    cost = result.cost_usd or 0.0
-    return evolution, cost
+    return evolution, metrics_from_result(result)
 
 
 async def _infer_evolution_proposal_batch(
@@ -436,7 +444,7 @@ async def _infer_evolution_proposal_batch(
     installed_skills: list[dict],
     log_dir: Path,
     batch_index: int,
-) -> tuple[EvolutionProposalBatch, float]:
+) -> tuple[EvolutionProposalBatch, Metrics]:
     """Run LLM inference for one evolution proposal batch.
 
     Args:
@@ -447,7 +455,7 @@ async def _infer_evolution_proposal_batch(
         batch_index: Zero-based batch index for file naming.
 
     Returns:
-        Tuple of (parsed proposal batch, cost in USD).
+        Tuple of (parsed proposal batch, per-call metrics).
     """
     digest = format_context_batch(batch)
     session_count = len(batch.contexts)
@@ -486,26 +494,25 @@ async def _infer_evolution_proposal_batch(
     save_inference_log(log_dir, f"skill_evolution_proposal_output_{batch_index}.txt", result.text)
 
     proposal_output = parse_llm_output(result.text, EvolutionProposalBatch, "evolution proposal")
-    cost = result.cost_usd or 0.0
-    return proposal_output, cost
+    return proposal_output, metrics_from_result(result)
 
 
 async def _synthesize_evolution_proposals(
     backend: InferenceBackend,
-    batch_results: list[tuple[EvolutionProposalBatch, float]],
+    batch_results: list[tuple[EvolutionProposalBatch, Metrics]],
     session_count: int,
     log_dir: Path,
-) -> tuple[EvolutionProposalBatch, float]:
+) -> tuple[EvolutionProposalBatch, Metrics]:
     """Merge evolution proposals from multiple batches via LLM synthesis.
 
     Args:
         backend: Configured inference backend.
-        batch_results: Per-batch proposal outputs and costs.
+        batch_results: Per-batch proposal outputs and metrics.
         session_count: Total number of sessions analyzed.
         log_dir: Timestamped directory for saving prompts and outputs.
 
     Returns:
-        Tuple of (merged EvolutionProposalBatch, synthesis cost in USD).
+        Tuple of (merged EvolutionProposalBatch, synthesis call metrics).
     """
     batch_data = [
         {
@@ -520,6 +527,7 @@ async def _synthesize_evolution_proposals(
             ],
             "proposals": [
                 {
+                    "element_type": p.element_type,
                     "element_name": p.element_name,
                     "rationale": p.rationale,
                     "addressed_patterns": p.addressed_patterns,
@@ -554,5 +562,4 @@ async def _synthesize_evolution_proposals(
     synthesis_output = parse_llm_output(
         result.text, EvolutionProposalBatch, "evolution proposal synthesis"
     )
-    cost = result.cost_usd or 0.0
-    return synthesis_output, cost
+    return synthesis_output, metrics_from_result(result)

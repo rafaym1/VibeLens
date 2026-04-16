@@ -15,8 +15,10 @@ from vibelens.deps import get_inference_backend
 from vibelens.llm.backend import InferenceBackend, InferenceError
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContext, SessionContextBatch
-from vibelens.models.llm.inference import BackendType
+from vibelens.models.llm.inference import BackendType, InferenceResult
 from vibelens.models.llm.prompts import AnalysisPrompt
+from vibelens.models.trajectories.final_metrics import FinalMetrics
+from vibelens.models.trajectories.metrics import Metrics
 from vibelens.services.session.store_resolver import (
     get_metadata_from_stores,
     load_from_stores,
@@ -61,16 +63,40 @@ def require_backend() -> InferenceBackend:
     return backend
 
 
+def metrics_from_result(result: InferenceResult) -> Metrics:
+    """Extract a Metrics snapshot from an LLM InferenceResult."""
+    return Metrics(
+        prompt_tokens=result.usage.input_tokens if result.usage else 0,
+        completion_tokens=result.usage.output_tokens if result.usage else 0,
+        cost_usd=result.cost_usd,
+    )
+
+
+def aggregate_final_metrics(
+    batch_metrics: list[Metrics], duration_seconds: int = 0
+) -> FinalMetrics:
+    """Sum per-batch Metrics into a single FinalMetrics aggregate."""
+    total_prompt = sum(m.prompt_tokens for m in batch_metrics)
+    total_completion = sum(m.completion_tokens for m in batch_metrics)
+    total_cost = sum(m.cost_usd or 0.0 for m in batch_metrics)
+    return FinalMetrics(
+        total_prompt_tokens=total_prompt if total_prompt else None,
+        total_completion_tokens=total_completion if total_completion else None,
+        total_cost_usd=total_cost if total_cost > 0 else None,
+        duration=duration_seconds,
+    )
+
+
 async def run_batches_concurrent(
     tasks: list[Coroutine], label: str
 ) -> tuple[list[tuple], list[str]]:
     """Run batch coroutines concurrently, tolerating individual failures.
 
     Generic replacement for per-module _run_all_batches / _run_proposal_batches
-    functions. Each task should return a tuple (output, cost_usd).
+    functions. Each task should return a tuple (output, Metrics).
 
     Args:
-        tasks: List of coroutines that each return (output, cost_usd).
+        tasks: List of coroutines that each return (output, Metrics).
         label: Human-readable label for log messages (e.g. "proposal", "friction").
 
     Returns:

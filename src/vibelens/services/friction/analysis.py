@@ -36,10 +36,12 @@ from vibelens.services.analysis_store import generate_analysis_id
 from vibelens.services.inference_shared import (
     CACHE_MAXSIZE,
     CACHE_TTL_SECONDS,
+    aggregate_final_metrics,
     build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
     log_inference_summary,
+    metrics_from_result,
     require_backend,
     run_batches_concurrent,
     save_inference_log,
@@ -151,16 +153,16 @@ async def analyze_friction(
     ]
     batch_results, batch_warnings = await run_batches_concurrent(tasks, "friction")
 
-    total_cost = sum(cost for _, cost in batch_results)
+    all_metrics: list[Metrics] = [m for _, m in batch_results]
 
     # Step 2: Single batch → use directly; multiple → synthesize
     if len(batch_results) == 1:
         analysis_output = batch_results[0][0]
     else:
-        analysis_output, syn_cost = await _synthesize_friction_analysis(
+        analysis_output, syn_metrics = await _synthesize_friction_analysis(
             backend, batch_results, len(context_set.session_ids), log_dir
         )
-        total_cost += syn_cost
+        all_metrics.append(syn_metrics)
         # Synthesis LLM may drop example_refs; recover from batch outputs
         _merge_friction_refs(
             analysis_output.friction_types,
@@ -170,7 +172,7 @@ async def analyze_friction(
     # Step 3: Validate example_refs and compute friction_cost per type
     validated_types = _validate_and_enrich(analysis_output.friction_types, context_set)
 
-    duration = round(time.monotonic() - start_time, 2)
+    duration = round(time.monotonic() - start_time)
     friction_result = FrictionAnalysisResult(
         title=analysis_output.title,
         mitigations=analysis_output.mitigations,
@@ -179,10 +181,10 @@ async def analyze_friction(
         skipped_session_ids=context_set.skipped_session_ids,
         warnings=batch_warnings,
         batch_count=len(batches),
-        backend_id=backend.backend_id,
+        backend=backend.backend_id,
         model=backend.model,
-        metrics=Metrics(cost_usd=total_cost if total_cost > 0 else None),
-        duration_seconds=duration,
+        batch_metrics=all_metrics,
+        final_metrics=aggregate_final_metrics(all_metrics, duration_seconds=duration),
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     get_friction_store().save(friction_result, analysis_id)
@@ -194,7 +196,7 @@ async def analyze_friction(
 
 async def _infer_friction_analysis_batch(
     backend: InferenceBackend, batch: SessionContextBatch, log_dir: Path, batch_index: int
-) -> tuple[FrictionAnalysisOutput, float]:
+) -> tuple[FrictionAnalysisOutput, Metrics]:
     """Run LLM inference for one batch.
 
     Args:
@@ -204,7 +206,7 @@ async def _infer_friction_analysis_batch(
         batch_index: Zero-based batch index for file naming.
 
     Returns:
-        Tuple of (parsed batch output, cost in USD).
+        Tuple of (parsed batch output, per-call metrics).
     """
     digest = format_context_batch(batch)
     session_count = len(batch.contexts)
@@ -239,26 +241,25 @@ async def _infer_friction_analysis_batch(
     save_inference_log(log_dir, f"friction_analysis_output_{batch_index}.txt", result.text)
 
     batch_output = parse_llm_output(result.text, FrictionAnalysisOutput, "friction analysis")
-    cost = result.cost_usd or 0.0
-    return batch_output, cost
+    return batch_output, metrics_from_result(result)
 
 
 async def _synthesize_friction_analysis(
     backend: InferenceBackend,
-    batch_results: list[tuple[FrictionAnalysisOutput, float]],
+    batch_results: list[tuple[FrictionAnalysisOutput, Metrics]],
     session_count: int,
     log_dir: Path,
-) -> tuple[FrictionAnalysisOutput, float]:
+) -> tuple[FrictionAnalysisOutput, Metrics]:
     """Merge results from multiple batches via LLM synthesis.
 
     Args:
         backend: Configured inference backend.
-        batch_results: Per-batch analysis outputs and costs.
+        batch_results: Per-batch analysis outputs and metrics.
         session_count: Total number of sessions analyzed.
         log_dir: Timestamped directory for saving prompts and outputs.
 
     Returns:
-        Tuple of (merged FrictionAnalysisOutput, synthesis cost in USD).
+        Tuple of (merged FrictionAnalysisOutput, synthesis metrics).
     """
     batch_data = [
         {
@@ -313,9 +314,8 @@ async def _synthesize_friction_analysis(
     save_inference_log(log_dir, "friction_synthesis_output.txt", result.text)
 
     synthesis = parse_llm_output(result.text, FrictionAnalysisOutput, "friction synthesis")
-    cost = result.cost_usd or 0.0
     logger.info("Synthesis complete: title=%r", synthesis.title)
-    return synthesis, cost
+    return synthesis, metrics_from_result(result)
 
 
 def _merge_friction_refs(

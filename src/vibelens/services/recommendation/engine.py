@@ -8,6 +8,7 @@ Pipeline:
 """
 
 import hashlib
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,7 +29,6 @@ from vibelens.models.personalization.recommendation import (
     UserProfile,
 )
 from vibelens.models.personalization.results import PersonalizationResult
-from vibelens.models.trajectories.final_metrics import FinalMetrics
 from vibelens.models.trajectories.metrics import Metrics
 from vibelens.prompts.recommendation import (
     RECOMMENDATION_PROFILE_PROMPT,
@@ -38,9 +38,11 @@ from vibelens.services.analysis_store import generate_analysis_id
 from vibelens.services.inference_shared import (
     CACHE_MAXSIZE,
     CACHE_TTL_SECONDS,
+    aggregate_final_metrics,
     build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
+    metrics_from_result,
     require_backend,
     save_inference_log,
     truncate_digest_to_fit,
@@ -188,6 +190,7 @@ async def _run_pipeline(
     Returns:
         PersonalizationResult with all pipeline outputs.
     """
+    start_time = time.monotonic()
     backend = require_backend()
 
     # L1: Context extraction
@@ -254,10 +257,8 @@ async def _run_pipeline(
     if len(ranked_items) == 1:
         title = "1 recommendation for your workflow"
 
+    duration = int(time.monotonic() - start_time)
     batch_metrics = [profile_metrics, rationale_metrics]
-    total_prompt = sum(m.prompt_tokens for m in batch_metrics)
-    total_completion = sum(m.completion_tokens for m in batch_metrics)
-    total_cost = sum(m.cost_usd or 0.0 for m in batch_metrics)
 
     return PersonalizationResult(
         id=analysis_id,
@@ -272,11 +273,7 @@ async def _run_pipeline(
         created_at=datetime.now(timezone.utc).isoformat(),
         batch_count=2,
         batch_metrics=batch_metrics,
-        final_metrics=FinalMetrics(
-            total_prompt_tokens=total_prompt,
-            total_completion_tokens=total_completion,
-            total_cost_usd=total_cost if total_cost > 0 else None,
-        ),
+        final_metrics=aggregate_final_metrics(batch_metrics, duration_seconds=duration),
     )
 
 
@@ -321,11 +318,7 @@ async def _generate_profile(
     save_inference_log(log_dir, "profile_output.txt", result.text)
 
     profile = parse_llm_output(result.text, UserProfile, "recommendation profile")
-    metrics = Metrics(
-        prompt_tokens=result.usage.input_tokens if result.usage else 0,
-        completion_tokens=result.usage.output_tokens if result.usage else 0,
-        cost_usd=result.cost_usd,
-    )
+    metrics = metrics_from_result(result)
     logger.info(
         "L2 profile: %d domains, %d languages, %d keywords",
         len(profile.domains),
@@ -414,11 +407,7 @@ async def _generate_rationales(
     save_inference_log(log_dir, "rationale_output.txt", result.text)
 
     rationale_output = parse_llm_output(result.text, RationaleOutput, "recommendation rationale")
-    metrics = Metrics(
-        prompt_tokens=result.usage.input_tokens if result.usage else 0,
-        completion_tokens=result.usage.output_tokens if result.usage else 0,
-        cost_usd=result.cost_usd,
-    )
+    metrics = metrics_from_result(result)
     logger.info("L4 rationale: %d rationales generated", len(rationale_output.rationales))
     return rationale_output, metrics
 

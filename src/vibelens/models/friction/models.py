@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from vibelens.models.llm.inference import BackendType
 from vibelens.models.step_ref import StepRef
+from vibelens.models.trajectories.final_metrics import FinalMetrics
 from vibelens.models.trajectories.metrics import Metrics
 
 
@@ -86,9 +87,7 @@ class FrictionAnalysisOutput(BaseModel):
 class FrictionAnalysisResult(BaseModel):
     """Complete friction analysis result merged across all batches."""
 
-    analysis_id: str | None = Field(
-        default=None, description="Persistence ID. Set when the result is saved to disk."
-    )
+    id: str = Field(default="", description="Persistence ID. Set when the result is saved to disk.")
     session_ids: list[str] = Field(
         description="Session IDs that were successfully loaded and analyzed."
     )
@@ -108,15 +107,15 @@ class FrictionAnalysisResult(BaseModel):
     friction_types: list[FrictionType] = Field(
         default_factory=list, description="Friction categories ordered by severity descending."
     )
-    backend_id: BackendType = Field(description="Inference backend used.")
+    backend: BackendType = Field(description="Inference backend used.")
     model: str = Field(description="Model identifier.")
     created_at: str = Field(description="ISO timestamp of analysis completion.")
     batch_count: int = Field(default=1, description="Number of LLM batches used.")
-    metrics: Metrics = Field(
-        default_factory=Metrics, description="Token usage and cost from the inference step."
+    batch_metrics: list[Metrics] = Field(
+        default_factory=list, description="Per-batch token usage and cost entries."
     )
-    duration_seconds: float | None = Field(
-        default=None, description="Wall-clock analysis duration in seconds."
+    final_metrics: FinalMetrics = Field(
+        default_factory=FinalMetrics, description="Aggregate cost and token totals."
     )
     warnings: list[str] = Field(
         default_factory=list, description="Non-fatal issues encountered during analysis."

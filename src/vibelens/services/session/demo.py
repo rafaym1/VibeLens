@@ -217,7 +217,7 @@ def seed_example_analyses() -> None:
     """Copy pre-built example analyses into the user's analysis stores.
 
     Looks for bundled example analyses adjacent to the configured example
-    session paths (e.g. examples/recipe-book/friction_analyses/). Only
+    session paths (e.g. examples/recipe-book/friction/). Only
     copies when the target store is empty to avoid overwriting user data.
     """
     settings = get_settings()
@@ -225,14 +225,14 @@ def seed_example_analyses() -> None:
         if not example_path.is_dir():
             continue
         _copy_example_store(
-            example_path / "friction_analyses",
-            settings.storage.friction_dir,
-            "friction",
+            src_dir=example_path / "friction",
+            dst_dir=settings.storage.friction_dir,
+            label="friction",
         )
         _copy_example_store(
-            example_path / "personalization",
-            settings.storage.personalization_dir,
-            "personalization",
+            src_dir=example_path / "personalization",
+            dst_dir=settings.storage.personalization_dir,
+            label="personalization",
         )
 
 
@@ -288,13 +288,13 @@ def _copy_example_json_files(src_dir: Path, dst_dir: Path) -> int:
 
 
 def _read_existing_analysis_ids(index_path: Path) -> set[str]:
-    """Read analysis_id values from an existing JSONL index file.
+    """Read analysis ID values from an existing JSONL index file.
 
     Args:
         index_path: Path to the destination index.jsonl.
 
     Returns:
-        Set of analysis_id strings already present.
+        Set of analysis ID strings already present.
     """
     existing_ids: set[str] = set()
     if not index_path.exists():
@@ -304,7 +304,8 @@ def _read_existing_analysis_ids(index_path: Path) -> set[str]:
         if not line:
             continue
         with contextlib.suppress(json.JSONDecodeError, ValueError):
-            existing_ids.add(json.loads(line).get("analysis_id", ""))
+            entry = json.loads(line)
+            existing_ids.add(entry.get("id") or entry.get("analysis_id", ""))
     return existing_ids
 
 
@@ -323,7 +324,8 @@ def _append_example_index_entries(src_index: Path, dst_index: Path, existing_ids
             continue
         with contextlib.suppress(json.JSONDecodeError, ValueError):
             entry = json.loads(line)
-            if entry.get("analysis_id", "") not in existing_ids:
+            entry_id = entry.get("id") or entry.get("analysis_id", "")
+            if entry_id not in existing_ids:
                 entry["is_example"] = True
                 new_lines.append(json.dumps(entry))
 
