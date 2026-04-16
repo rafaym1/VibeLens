@@ -4,7 +4,8 @@ import time
 from dataclasses import dataclass
 
 from vibelens.models.enums import AgentType
-from vibelens.models.extension.skill import VALID_SKILL_NAME, Skill
+from vibelens.models.extension.skill import Skill
+from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 from vibelens.storage.extension.skill_store import SkillStore
 from vibelens.utils.log import get_logger
 
@@ -46,7 +47,7 @@ class SkillService:
             ValueError: If name invalid or content empty.
             FileExistsError: If skill already exists.
         """
-        if not VALID_SKILL_NAME.match(name):
+        if not VALID_EXTENSION_NAME.match(name):
             raise ValueError(f"Skill name must be kebab-case: {name!r}")
         if not content.strip():
             raise ValueError("Skill content must not be empty")
@@ -120,7 +121,7 @@ class SkillService:
                 if imported:
                     logger.info("Imported %d skills from %s", len(imported), agent_key)
                     total += len(imported)
-            except Exception:
+            except (OSError, ValueError):
                 logger.warning("Failed to import from %s", agent_key, exc_info=True)
         if total:
             logger.info("Total skills imported into central: %d", total)
@@ -227,6 +228,10 @@ class SkillService:
     def find_installed_agents(self, name: str) -> list[str]:
         """Return agent keys where this skill exists on disk."""
         return [key for key, store in self._agents.items() if store.exists(name)]
+
+    def get_item_path(self, name: str) -> str:
+        """Return the central-store file path for a skill."""
+        return str(self._central.path_for(name))
 
     def list_sync_targets(self) -> list[SkillSyncTarget]:
         """List available agent platforms with skill counts."""

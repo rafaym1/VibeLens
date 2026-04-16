@@ -20,6 +20,7 @@ _cache_checked = False
 # Bundled catalog shipped with VibeLens releases (inside package data)
 # parent chain: extension/ → storage/ → vibelens/
 _VIBELENS_PACKAGE_DIR = Path(__file__).resolve().parent.parent.parent
+# Path to the bundled catalog.json file within the package data
 BUNDLED_CATALOG_PATH = _VIBELENS_PACKAGE_DIR / "data" / "catalog.json"
 # User-cached catalog downloaded from update URL
 USER_CATALOG_DIR = Path.home() / ".vibelens" / "catalog"

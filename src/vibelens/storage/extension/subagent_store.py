@@ -14,10 +14,7 @@ from pathlib import Path
 
 from vibelens.models.extension.subagent import Subagent
 from vibelens.storage.extension.base_store import BaseExtensionStore
-from vibelens.utils.content import (
-    compute_content_hash,
-    parse_frontmatter,
-)
+from vibelens.utils.content import compute_content_hash, parse_frontmatter
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)

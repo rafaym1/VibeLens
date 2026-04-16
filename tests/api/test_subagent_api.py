@@ -12,7 +12,6 @@ from vibelens.storage.extension.subagent_store import SubagentStore
 SAMPLE_SUBAGENT_MD = """\
 ---
 description: Test subagent
-fork: true
 tags:
   - test
 ---
@@ -117,7 +116,7 @@ class TestModifySubagent:
         subagent_service.install(name="my-subagent", content=SAMPLE_SUBAGENT_MD)
         res = client.put(
             "/api/subagents/my-subagent",
-            json={"content": "---\ndescription: Updated\nfork: true\n---\nNew body."},
+            json={"content": "---\ndescription: Updated\n---\nNew body."},
         )
         assert res.status_code == 200
         assert res.json()["description"] == "Updated"

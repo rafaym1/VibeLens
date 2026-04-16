@@ -54,6 +54,10 @@ class BaseExtensionStore(ABC, Generic[TItem]):
         """Root directory for this store."""
         return self._root
 
+    def path_for(self, name: str) -> Path:
+        """Return the filesystem path this store would use for an item (may not exist)."""
+        return self._item_path(name)
+
     @abstractmethod
     def _item_path(self, name: str) -> Path:
         """Return the primary file path for a given item name."""

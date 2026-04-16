@@ -86,7 +86,7 @@ def get_hook(name: str) -> HookDetailResponse:
     return HookDetailResponse(
         hook=hook,
         content=content,
-        path=str(service._central.root / f"{name}.json"),
+        path=service.get_item_path(name),
     )
 
 

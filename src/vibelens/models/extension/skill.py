@@ -1,10 +1,8 @@
 """Skill metadata model parsed from SKILL.md files."""
 
-import re
-
 from pydantic import BaseModel, Field, field_validator
 
-VALID_SKILL_NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 
 
 class Skill(BaseModel):
@@ -24,6 +22,6 @@ class Skill(BaseModel):
     @classmethod
     def validate_kebab_case(cls, v: str) -> str:
         """Ensure name is valid kebab-case."""
-        if not VALID_SKILL_NAME.match(v):
+        if not VALID_EXTENSION_NAME.match(v):
             raise ValueError(f"Skill name must be kebab-case: {v!r}")
         return v

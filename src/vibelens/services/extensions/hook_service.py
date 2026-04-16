@@ -14,7 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vibelens.models.enums import AgentType
-from vibelens.models.extension.hook import VALID_HOOK_NAME, Hook
+from vibelens.models.extension.hook import Hook
+from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 from vibelens.storage.extension.hook_store import HookStore, serialize_hook
 from vibelens.utils.log import get_logger
 
@@ -78,7 +79,7 @@ class HookService:
             ValueError: If name is not valid kebab-case.
             FileExistsError: If hook already exists.
         """
-        if not VALID_HOOK_NAME.match(name):
+        if not VALID_EXTENSION_NAME.match(name):
             raise ValueError(f"Hook name must be kebab-case: {name!r}")
         if self._central.exists(name):
             raise FileExistsError(f"Hook {name!r} already exists. Use modify() to update.")
@@ -214,7 +215,7 @@ class HookService:
             FileNotFoundError: If no matching hook group found.
             FileExistsError: If a central hook with this name already exists.
         """
-        if not VALID_HOOK_NAME.match(name):
+        if not VALID_EXTENSION_NAME.match(name):
             raise ValueError(f"Hook name must be kebab-case: {name!r}")
         if self._central.exists(name):
             raise FileExistsError(f"Hook {name!r} already exists in central store")
@@ -292,6 +293,10 @@ class HookService:
     def find_installed_agents(self, name: str) -> list[str]:
         """Return agent keys whose settings.json has any group marked with this hook."""
         return [key for key in self._agent_settings if self._agent_has_marker(name, key)]
+
+    def get_item_path(self, name: str) -> str:
+        """Return the central-store file path for a hook."""
+        return str(self._central.path_for(name))
 
     def list_sync_targets(self) -> list[HookSyncTarget]:
         """List available agent platforms with counts of managed hooks."""

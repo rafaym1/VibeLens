@@ -1,10 +1,8 @@
 """Command metadata model parsed from flat .md command files."""
 
-import re
-
 from pydantic import BaseModel, Field, field_validator
 
-VALID_COMMAND_NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 
 
 class Command(BaseModel):
@@ -20,6 +18,6 @@ class Command(BaseModel):
     @classmethod
     def validate_kebab_case(cls, v: str) -> str:
         """Ensure name is valid kebab-case."""
-        if not VALID_COMMAND_NAME.match(v):
+        if not VALID_EXTENSION_NAME.match(v):
             raise ValueError(f"Command name must be kebab-case: {v!r}")
         return v

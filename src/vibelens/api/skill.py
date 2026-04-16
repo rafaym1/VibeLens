@@ -67,7 +67,7 @@ def get_skill(name: str) -> SkillDetailResponse:
         content = service.get_skill_content(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Skill {name!r} not found") from None
-    return SkillDetailResponse(skill=skill, content=content, path=str(service._central.root / name))
+    return SkillDetailResponse(skill=skill, content=content, path=service.get_item_path(name))
 
 
 @router.post("")

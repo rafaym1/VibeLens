@@ -4,7 +4,8 @@ import time
 from dataclasses import dataclass
 
 from vibelens.models.enums import AgentType
-from vibelens.models.extension.command import VALID_COMMAND_NAME, Command
+from vibelens.models.extension.command import Command
+from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 from vibelens.storage.extension.command_store import CommandStore
 from vibelens.utils.log import get_logger
 
@@ -46,7 +47,7 @@ class CommandService:
             ValueError: If name invalid or content empty.
             FileExistsError: If command already exists.
         """
-        if not VALID_COMMAND_NAME.match(name):
+        if not VALID_EXTENSION_NAME.match(name):
             raise ValueError(f"Command name must be kebab-case: {name!r}")
         if not content.strip():
             raise ValueError("Command content must not be empty")
@@ -210,6 +211,10 @@ class CommandService:
     def find_installed_agents(self, name: str) -> list[str]:
         """Return agent keys where this command exists on disk."""
         return [key for key, store in self._agents.items() if store.exists(name)]
+
+    def get_item_path(self, name: str) -> str:
+        """Return the central-store file path for a command."""
+        return str(self._central.path_for(name))
 
     def list_sync_targets(self) -> list[CommandSyncTarget]:
         """List available agent platforms with command counts."""

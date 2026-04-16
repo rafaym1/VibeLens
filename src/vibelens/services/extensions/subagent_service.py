@@ -4,7 +4,8 @@ import time
 from dataclasses import dataclass
 
 from vibelens.models.enums import AgentType
-from vibelens.models.extension.subagent import VALID_SUBAGENT_NAME, Subagent
+from vibelens.models.extension.subagent import Subagent
+from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 from vibelens.storage.extension.subagent_store import SubagentStore
 from vibelens.utils.log import get_logger
 
@@ -46,7 +47,7 @@ class SubagentService:
             ValueError: If name invalid or content empty.
             FileExistsError: If subagent already exists.
         """
-        if not VALID_SUBAGENT_NAME.match(name):
+        if not VALID_EXTENSION_NAME.match(name):
             raise ValueError(f"Subagent name must be kebab-case: {name!r}")
         if not content.strip():
             raise ValueError("Subagent content must not be empty")
@@ -210,6 +211,10 @@ class SubagentService:
     def find_installed_agents(self, name: str) -> list[str]:
         """Return agent keys where this subagent exists on disk."""
         return [key for key, store in self._agents.items() if store.exists(name)]
+
+    def get_item_path(self, name: str) -> str:
+        """Return the central-store file path for a subagent."""
+        return str(self._central.path_for(name))
 
     def list_sync_targets(self) -> list[SubagentSyncTarget]:
         """List available agent platforms with subagent counts."""

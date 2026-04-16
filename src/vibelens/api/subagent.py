@@ -68,7 +68,7 @@ def get_subagent(name: str) -> SubagentDetailResponse:
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Subagent {name!r} not found") from None
     return SubagentDetailResponse(
-        subagent=subagent, content=content, path=str(service._central.root / f"{name}.md")
+        subagent=subagent, content=content, path=service.get_item_path(name)
     )
 
 

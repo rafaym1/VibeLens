@@ -68,7 +68,7 @@ def get_command(name: str) -> CommandDetailResponse:
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Command {name!r} not found") from None
     return CommandDetailResponse(
-        command=command, content=content, path=str(service._central.root / f"{name}.md")
+        command=command, content=content, path=service.get_item_path(name)
     )
 
 
