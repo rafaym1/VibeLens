@@ -8,6 +8,8 @@ import {
 import { useEffect, useRef, useState, useCallback, useMemo, createContext, useContext } from "react";
 import { ConfirmDialog } from "./components/confirm-dialog";
 import { DonateConsentDialog } from "./components/donate-consent-dialog";
+import { DonateResultDialog } from "./components/donate-result-dialog";
+import { DonationHistoryDialog } from "./components/donation-history-dialog";
 import { ResizeHandle } from "./components/resize-handle";
 import { SessionList, type ViewMode } from "./components/session/session-list";
 import { SessionView } from "./components/session/session-view";
@@ -28,11 +30,14 @@ type MainView = "browse" | "analyze" | "friction" | "skills";
 
 type AppMode = "self" | "demo";
 
+type DialogReturnTo = "hidden" | "donate-confirm";
+
 type DialogState =
   | { kind: "hidden" }
   | { kind: "donate-confirm" }
   | { kind: "donating" }
-  | { kind: "donate-result"; result: DonateResult };
+  | { kind: "donate-result"; result: DonateResult }
+  | { kind: "donation-history"; returnTo: DialogReturnTo };
 
 interface AppContextValue {
   sessionToken: string;
@@ -44,6 +49,7 @@ interface AppContextValue {
 
 const DEFAULT_MAX_ZIP_BYTES = 500 * 1024 * 1024;
 const DEFAULT_MAX_SESSIONS = 30;
+const LAST_SESSION_ID_KEY = "vibelens.lastSessionId";
 
 const AppContext = createContext<AppContextValue>({
   sessionToken: "",
@@ -64,7 +70,7 @@ export function App() {
   const [projects, setProjects] = useState<string[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("session") || null;
+    return params.get("session") || localStorage.getItem(LAST_SESSION_ID_KEY) || null;
   });
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<DialogState>({ kind: "hidden" });
@@ -171,13 +177,14 @@ export function App() {
 
   useEffect(() => {
     setSessionsLoading(true);
-    fetchWithToken(`/api/sessions?refresh=true`)
+    fetchWithToken(`/api/sessions`)
       .then((r) => r.json())
       .then((data: Trajectory[]) => {
         setSessions(data);
-        if (!selectedSessionId && data.length > 0) {
-          setSelectedSessionId(data[0].session_id);
-        }
+        setSelectedSessionId((prev) => {
+          if (prev && data.some((s) => s.session_id === prev)) return prev;
+          return data.length > 0 ? data[0].session_id : null;
+        });
       })
       .catch((err) => console.error("Failed to load sessions:", err))
       .finally(() => setSessionsLoading(false));
@@ -231,7 +238,12 @@ export function App() {
 
   const handleSelectSession = useCallback((id: string | null) => {
     setSelectedSessionId(id);
-    if (id) setMainView("browse");
+    if (id) {
+      localStorage.setItem(LAST_SESSION_ID_KEY, id);
+      setMainView("browse");
+    } else {
+      localStorage.removeItem(LAST_SESSION_ID_KEY);
+    }
   }, []);
 
 
@@ -318,6 +330,9 @@ export function App() {
             sessionCount={checkedIds.size}
             onConfirm={handleDonateConfirm}
             onCancel={handleDialogClose}
+            onShowHistory={() =>
+              setDialog({ kind: "donation-history", returnTo: "donate-confirm" })
+            }
           />
         );
       case "donating":
@@ -330,33 +345,22 @@ export function App() {
             loading
           />
         );
-      case "donate-result": {
-        const dr = dialog.result;
-        const hasDonateErrors = dr.errors.length > 0;
-        const donateLines = [
-          `Donated: ${dr.donated}`,
-          `Total: ${dr.total}`,
-        ];
-        if (dr.donation_id) {
-          donateLines.push("");
-          donateLines.push(`Donation ID: ${dr.donation_id}`);
-          donateLines.push(`Session Token: ${sessionToken}`);
-        }
-        if (hasDonateErrors) {
-          donateLines.push("");
-          donateLines.push(`Errors: ${dr.errors.length}`);
-          for (const e of dr.errors.slice(0, 3)) {
-            donateLines.push(`  ${e.session_id || "(unknown)"}: ${e.error}`);
-          }
-        }
+      case "donate-result":
         return (
-          <ConfirmDialog
-            title={hasDonateErrors ? "Completed with errors" : "Donation complete"}
-            message={donateLines.join("\n")}
-            confirmLabel="OK"
-            cancelLabel="Close"
-            onConfirm={handleDialogClose}
-            onCancel={handleDialogClose}
+          <DonateResultDialog result={dialog.result} onClose={handleDialogClose} />
+        );
+      case "donation-history": {
+        const returnTo = dialog.returnTo;
+        return (
+          <DonationHistoryDialog
+            fetchWithToken={fetchWithToken}
+            onClose={() => {
+              if (returnTo === "donate-confirm") {
+                setDialog({ kind: "donate-confirm" });
+              } else {
+                setDialog({ kind: "hidden" });
+              }
+            }}
           />
         );
       }
