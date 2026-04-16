@@ -16,14 +16,13 @@ from pathlib import Path
 from fastapi import HTTPException, UploadFile
 
 from vibelens.deps import get_settings
+from vibelens.services.donation import INDEX_FILENAME
 from vibelens.utils.identifiers import generate_timestamped_id
 from vibelens.utils.json import locked_jsonl_append
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
 
-# Append-only log of received donations in the donation directory
-INDEX_FILENAME = "index.jsonl"
 # Metadata file inside each donated ZIP describing its contents
 MANIFEST_FILENAME = "manifest.json"
 
