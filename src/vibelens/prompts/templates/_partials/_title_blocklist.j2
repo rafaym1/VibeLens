@@ -1,0 +1,6 @@
+{% macro blocklist(meta_words) -%}
+Title must be a self-explanatory headline (max 10 words) naming a concrete subject and describing the finding as a verb phrase.
+- Do NOT start the title with any meta-process noun: {% for word in meta_words %}"{{ word }}"{% if not loop.last %}, {% endif %}{% endfor %}.
+- Do NOT use generic headers like "Agent Sessions Show..." or "{{ meta_words[0] }}: N Sessions".
+- Prefer subjects like "You", "Your workflow", a specific skill name, or a concrete count ("Two skills").
+{%- endmacro -%}
