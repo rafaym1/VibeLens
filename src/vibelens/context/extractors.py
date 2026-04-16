@@ -11,24 +11,23 @@ analysis use case:
   error observations. Used for friction analysis and deep inspection.
 """
 
-from vibelens.context.base import ContextExtractor, _IndexTracker
+from vibelens.context.base import (
+    ContextExtractor,
+    _format_steps_available,
+    _IndexTracker,
+)
 from vibelens.context.formatter import (
     build_metadata_block,
     format_agent_message,
     format_user_prompt,
     summarize_tool_args,
 )
-from vibelens.context.params import (
-    PRESET_CONCISE,
-    PRESET_DETAIL,
-    PRESET_MEDIUM,
-    ContextParams,
-)
+from vibelens.context.params import PRESET_CONCISE, PRESET_MEDIUM, ContextParams
 from vibelens.models.context import SessionContext
 from vibelens.models.enums import StepSource
 from vibelens.models.trajectories import Trajectory
 from vibelens.models.trajectories.step import Step
-from vibelens.utils.content import content_to_text, is_error_content, truncate
+from vibelens.utils.content import content_to_text
 
 
 class MetadataExtractor(ContextExtractor):
@@ -131,9 +130,10 @@ class SummaryExtractor(ContextExtractor):
     ) -> SessionContext:
         """Extract context using compaction-as-TLDR strategy.
 
-        With compaction agents: outputs metadata + first prompt + latest
-        compaction summary only. Without compaction: outputs metadata +
-        all user prompts (truncated).
+        Always emits indexed user prompts so every session has a populated
+        step_index2id (and the LLM has real indices to reference). With
+        compaction agents, also appends the latest compaction summary as
+        a TLDR block.
 
         Args:
             trajectory_group: All trajectories for one session.
@@ -153,15 +153,19 @@ class SummaryExtractor(ContextExtractor):
         if first_prompt:
             parts.append(f"FIRST PROMPT: {first_prompt}")
 
+        user_prompts_block = self._format_all_user_prompts(main, tracker)
+        if user_prompts_block:
+            parts.append(user_prompts_block)
+
         if compaction_agents:
             summary = self._get_latest_compaction_summary(compaction_agents)
             if summary:
                 parts.append("--- COMPACTION SUMMARY (latest) ---")
                 parts.append(summary)
-        else:
-            user_prompts_block = self._format_all_user_prompts(main, tracker)
-            if user_prompts_block:
-                parts.append(user_prompts_block)
+
+        steps_available_line = _format_steps_available(tracker)
+        if steps_available_line:
+            parts.insert(1, steps_available_line)
 
         full_text = "\n\n".join(parts)
 
@@ -254,11 +258,11 @@ class DetailExtractor(ContextExtractor):
     as-is for compaction interleaving.
     """
 
-    def __init__(self, params: ContextParams = PRESET_DETAIL) -> None:
+    def __init__(self, params: ContextParams = PRESET_MEDIUM) -> None:
         """Store extraction parameters.
 
         Args:
-            params: Context extraction parameters. Defaults to PRESET_DETAIL.
+            params: Context extraction parameters. Defaults to PRESET_MEDIUM.
         """
         super().__init__(params=params)
 
@@ -322,16 +326,17 @@ class DetailExtractor(ContextExtractor):
             tool_summary = summarize_tool_args(tc.function_name, tc.arguments, self.params)
             agent_lines.append(f"  TOOL: fn={tc.function_name} {tool_summary}")
 
-        if step.observation:
-            for result in step.observation.results:
-                obs_text = content_to_text(result.content)
-                if is_error_content(obs_text):
-                    error_truncated = truncate(obs_text, self.params.error_truncate_chars)
-                    agent_lines.append(f"  ERROR: {error_truncated}")
-                elif self.params.include_non_error_obs and self.params.observation_max_chars > 0:
-                    obs_truncated = truncate(obs_text, self.params.observation_max_chars)
-                    if obs_truncated.strip():
-                        agent_lines.append(f"  RESULT: {obs_truncated}")
+        # Remove observations since it's too noisy. Can re-enable if needed.
+        # if step.observation:
+        #     for result in step.observation.results:
+        #         obs_text = content_to_text(result.content)
+        #         if is_error_content(obs_text):
+        #             error_truncated = truncate(obs_text, self.params.error_truncate_chars)
+        #             agent_lines.append(f"  ERROR: {error_truncated}")
+        #         elif self.params.include_non_error_obs and self.params.observation_max_chars > 0:
+        #             obs_truncated = truncate(obs_text, self.params.observation_max_chars)
+        #             if obs_truncated.strip():
+        #                 agent_lines.append(f"  RESULT: {obs_truncated}")
 
         # Include only if there's something beyond the header line
         if len(agent_lines) > 1:

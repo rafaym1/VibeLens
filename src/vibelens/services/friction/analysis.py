@@ -28,10 +28,7 @@ from vibelens.models.llm.inference import InferenceRequest
 from vibelens.models.step_ref import StepRef
 from vibelens.models.trajectories import Trajectory
 from vibelens.models.trajectories.metrics import Metrics
-from vibelens.prompts.friction import (
-    FRICTION_PROMPT,
-    FRICTION_SYNTHESIS_PROMPT,
-)
+from vibelens.prompts.friction import FRICTION_PROMPT, FRICTION_SYNTHESIS_PROMPT
 from vibelens.services.analysis_store import generate_analysis_id
 from vibelens.services.inference_shared import (
     CACHE_MAXSIZE,
@@ -128,7 +125,7 @@ async def analyze_friction(
     set_analysis_id(analysis_id)
 
     backend = require_backend()
-    context_set = extract_all_contexts(session_ids, session_token)
+    context_set = extract_all_contexts(session_ids, session_token, extractor=DetailExtractor())
 
     if not context_set:
         clear_analysis_id()
@@ -137,9 +134,7 @@ async def analyze_friction(
     max_input = get_settings().inference.max_input_tokens
     batches = build_batches(context_set.contexts, max_batch_tokens=max_input)
     logger.info(
-        "Friction analysis: %d sessions → %d batch(es)",
-        len(context_set.session_ids),
-        len(batches),
+        "Friction analysis: %d sessions → %d batch(es)", len(context_set.session_ids), len(batches)
     )
 
     run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -165,8 +160,7 @@ async def analyze_friction(
         all_metrics.append(syn_metrics)
         # Synthesis LLM may drop example_refs; recover from batch outputs
         _merge_friction_refs(
-            analysis_output.friction_types,
-            [output.friction_types for output, _ in batch_results],
+            analysis_output.friction_types, [output.friction_types for output, _ in batch_results]
         )
 
     # Step 3: Validate example_refs and compute friction_cost per type

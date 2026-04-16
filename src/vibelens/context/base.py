@@ -34,6 +34,25 @@ class _IndexTracker:
         return idx
 
 
+def _format_steps_available(tracker: _IndexTracker) -> str:
+    """Format a whitelist of valid step indices for this session.
+
+    Provides an explicit list of step indices the LLM may cite in
+    example_refs. Prevents the LLM from inventing indices outside the
+    range actually emitted by the extractor.
+
+    Args:
+        tracker: Index tracker populated during step formatting.
+
+    Returns:
+        A "STEPS_AVAILABLE: [...]" line, or empty string if no steps.
+    """
+    indices = sorted(tracker.index_to_real_id.keys())
+    if not indices:
+        return ""
+    return f"STEPS_AVAILABLE: {indices}"
+
+
 class ContextExtractor(ABC):
     """Template method base class for compressing trajectory groups into LLM-ready text.
 
@@ -71,7 +90,13 @@ class ContextExtractor(ABC):
 
         context_text = self._extract_steps(main, compaction_agents, tracker)
         header = build_metadata_block(main, session_index=session_index, include_details=True)
-        full_text = f"{header}\n\n{context_text}"
+        steps_available = _format_steps_available(tracker)
+        parts = [header]
+        if steps_available:
+            parts.append(steps_available)
+        if context_text:
+            parts.append(context_text)
+        full_text = "\n\n".join(parts)
 
         return SessionContext(
             session_id=main.session_id,
