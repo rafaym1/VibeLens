@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Donation UI redesign**: New `DonateResultDialog` with rose Heart header, a copy button that flashes emerald on success and rose on failure, and a direct link to the withdrawal Google Form.
+- **Donation history**: Per-browser donation log at `~/.vibelens/donations/sent.jsonl` (sender-side, separate from the receiver's `index.jsonl`). New `GET /api/sessions/donations/history` endpoint filters rows by `sha256(X-Session-Token)` so each browser only sees its own donations. New `DonationHistoryDialog` reachable from the consent dialog's "View history" button.
+- **Withdraw form**: Consent dialog now links to a pre-fillable Google Form; result and history dialogs deep-link with the Donation ID pre-populated.
+
+### Changed
+- **Consent dialog footer**: Added "View history" button and a footnote linking to the withdrawal form for users who donated previously.
+- **Donation service constants**: Hoisted `INDEX_FILENAME` to `services/donation/__init__.py` and added `SENDER_INDEX_FILENAME` for the new sender-side log.
+
 ## [0.9.31] - 2026-04-12
 
 ### Added
