@@ -1,10 +1,20 @@
-"""Content extraction and text helpers for digest and analysis modules.
+"""Content extraction, text helpers, and markdown frontmatter parsing.
 
 Pure functions for extracting, truncating, and summarizing text content
-from trajectory message and observation fields.
+from trajectory message and observation fields, plus shared YAML
+frontmatter parsing for file-based extensions.
 """
 
+import hashlib
 import json
+
+import yaml
+
+from vibelens.utils.log import get_logger
+
+logger = get_logger(__name__)
+
+FRONTMATTER_DELIMITER = "---"
 
 # Default cap for summarize_args total output length
 DEFAULT_MAX_TOTAL_CHARS = 200
@@ -145,3 +155,45 @@ def is_error_content(content: str) -> bool:
         return False
     lower = content.lower()
     return any(signal in lower for signal in ERROR_SIGNALS)
+
+
+def parse_frontmatter(text: str) -> dict:
+    """Extract YAML frontmatter from markdown text.
+
+    Returns empty dict if no valid frontmatter found.
+    """
+    lines = text.split("\n")
+    if not lines or lines[0].strip() != FRONTMATTER_DELIMITER:
+        return {}
+
+    end_idx = None
+    for i, line in enumerate(lines[1:], start=1):
+        if line.strip() == FRONTMATTER_DELIMITER:
+            end_idx = i
+            break
+
+    if end_idx is None:
+        return {}
+
+    yaml_text = "\n".join(lines[1:end_idx])
+    try:
+        parsed = yaml.safe_load(yaml_text)
+        return parsed if isinstance(parsed, dict) else {}
+    except yaml.YAMLError as exc:
+        logger.warning("Failed to parse YAML frontmatter: %s", exc)
+        return {}
+
+
+def extract_body(text: str) -> str:
+    """Extract markdown body after YAML frontmatter."""
+    if not text.startswith(FRONTMATTER_DELIMITER):
+        return text
+    end_idx = text.find(FRONTMATTER_DELIMITER, len(FRONTMATTER_DELIMITER))
+    if end_idx < 0:
+        return text
+    return text[end_idx + len(FRONTMATTER_DELIMITER) :].lstrip("\n")
+
+
+def compute_content_hash(text: str) -> str:
+    """Compute SHA256 hash of text content."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
