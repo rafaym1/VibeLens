@@ -1,10 +1,9 @@
-"""Tests for the AgentExtensionType enum, ExtensionItem, and ExtensionInfo models."""
+"""Tests for the AgentExtensionType enum, ExtensionItem models."""
 
 from vibelens.models.enums import AgentExtensionType
 from vibelens.models.extension import (
     EXTENSION_TYPE_LABELS,
     FILE_BASED_TYPES,
-    ExtensionInfo,
     ExtensionItem,
 )
 
@@ -61,23 +60,3 @@ def test_extension_item_is_file_based():
     assert repo_item.is_file_based is False
     print(f"skill.is_file_based={skill_item.is_file_based}, "
           f"repo.is_file_based={repo_item.is_file_based}")
-
-
-def test_extension_info_has_extension_type():
-    """ExtensionInfo.extension_type defaults to SKILL."""
-    info = ExtensionInfo(
-        name="test-ext",
-        description="A test extension",
-        content_hash="abc123",
-    )
-    assert info.extension_type == AgentExtensionType.SKILL
-    print(f"Default extension_type: {info.extension_type}")
-
-    info_cmd = ExtensionInfo(
-        name="test-cmd",
-        extension_type=AgentExtensionType.COMMAND,
-        description="A test command",
-        content_hash="def456",
-    )
-    assert info_cmd.extension_type == AgentExtensionType.COMMAND
-    print(f"Explicit extension_type: {info_cmd.extension_type}")

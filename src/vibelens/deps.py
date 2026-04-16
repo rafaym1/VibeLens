@@ -80,31 +80,6 @@ def get_friction_store():
     return _get_or_create("friction_store", lambda: FrictionStore(settings.storage.friction_dir))
 
 
-def get_central_extension_store():
-    """Return cached central managed extension repository."""
-    from vibelens.storage.extension.central import CentralExtensionStore
-
-    settings = get_settings()
-    return _get_or_create(
-        "central_extension_store",
-        lambda: CentralExtensionStore(settings.storage.managed_skills_dir),
-    )
-
-
-def get_agent_extension_stores() -> dict:
-    """Return cached dict of all agent extension stores whose dirs exist on disk.
-
-    Includes Claude Code, Codex, and all third-party agents.
-    Directory paths come from AGENT_EXTENSION_REGISTRY in storage/extension/agent.py.
-
-    Returns:
-        Dict mapping ExtensionSource to DiskExtensionStore for each installed agent.
-    """
-    from vibelens.storage.extension.agent import create_agent_extension_stores
-
-    return _get_or_create("agent_extension_stores", create_agent_extension_stores)
-
-
 def get_skill_service():
     """Return cached SkillService singleton."""
 

@@ -8,7 +8,6 @@ from pathlib import Path
 
 import httpx
 
-from vibelens.services.extensions.base import FileBasedHandler
 from vibelens.utils.github import GITHUB_TREE_RE
 from vibelens.utils.log import get_logger
 
@@ -17,16 +16,6 @@ logger = get_logger(__name__)
 GITHUB_API_BASE = "https://api.github.com"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
 REQUEST_TIMEOUT_SECONDS = 30
-
-
-class SkillHandler(FileBasedHandler):
-    """Handler for skill extensions.
-
-    Skills install as flat .md files inside the commands directory.
-    Supports downloading from GitHub tree URLs.
-    """
-
-    pass
 
 
 def download_skill_directory(source_url: str, target_dir: Path) -> bool:
@@ -130,33 +119,24 @@ def _fetch_file(url: str, local_path: Path) -> int:
 
 
 def import_agent_extensions() -> int:
-    """Import extensions from all agent interfaces into the central store.
+    """Import extensions from all agent interfaces into the central store."""
+    from vibelens.deps import get_skill_service
 
-    Scans all agent extension directories (Claude Code, Codex, and third-party),
-    copying any extensions not already present in the central repository
-    (~/.vibelens/skills/). Existing central extensions are never overwritten
-    to preserve user edits.
-
-    Returns:
-        Total number of extensions imported.
-    """
-    from vibelens.deps import get_agent_extension_stores, get_central_extension_store
-
-    central = get_central_extension_store()
+    service = get_skill_service()
     total_imported = 0
-    for source, store in get_agent_extension_stores().items():
+    for agent_key in service._agents:
         try:
-            imported = central.import_all_from(store, overwrite=False)
+            imported = service.import_all_from_agent(agent_key)
             if imported:
                 logger.info(
-                    "Imported %d extensions from %s into central store",
+                    "Imported %d skills from %s into central store",
                     len(imported),
-                    source.value,
+                    agent_key,
                 )
                 total_imported += len(imported)
         except Exception:
-            logger.warning("Failed to import from %s", source.value, exc_info=True)
+            logger.warning("Failed to import from %s", agent_key, exc_info=True)
 
     if total_imported:
-        logger.info("Total extensions imported into central store: %d", total_imported)
+        logger.info("Total skills imported into central store: %d", total_imported)
     return total_imported

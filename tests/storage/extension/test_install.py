@@ -274,7 +274,7 @@ def test_install_from_source_url_raises_on_no_source():
     item.install_content = None
     item.source_url = ""
     try:
-        install_from_source_url(item=item, target_platform="claude_code")
+        install_from_source_url(item=item, target_platform="claude")
         raise AssertionError("Expected ValueError")
     except ValueError as exc:
         assert "no installable content" in str(exc)

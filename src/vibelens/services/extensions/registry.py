@@ -4,11 +4,9 @@ from vibelens.models.enums import AgentExtensionType
 from vibelens.services.extensions.command import CommandHandler
 from vibelens.services.extensions.hook import HookHandler
 from vibelens.services.extensions.repo import RepoHandler
-from vibelens.services.extensions.skill import SkillHandler
 from vibelens.services.extensions.subagent import SubagentHandler
 
 _HANDLER_CLASSES = {
-    AgentExtensionType.SKILL: SkillHandler,
     AgentExtensionType.SUBAGENT: SubagentHandler,
     AgentExtensionType.COMMAND: CommandHandler,
     AgentExtensionType.HOOK: HookHandler,

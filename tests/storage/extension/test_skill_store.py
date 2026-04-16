@@ -2,7 +2,6 @@
 
 import pytest
 
-from vibelens.models.extension.skill import Skill
 from vibelens.storage.extension.skill_store import (
     SkillStore,
     extract_body,

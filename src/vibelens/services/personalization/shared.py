@@ -13,7 +13,7 @@ from typing import TypeVar
 from cachetools import TTLCache
 from pydantic import BaseModel, ValidationError
 
-from vibelens.deps import get_central_extension_store
+from vibelens.deps import get_skill_service
 from vibelens.llm.backend import InferenceError
 from vibelens.models.context import SessionContextBatch
 from vibelens.models.personalization.enums import PersonalizationMode
@@ -58,8 +58,8 @@ def gather_installed_skills(
     Returns:
         List of dicts with skill info at the requested detail level.
     """
-    managed_store = get_central_extension_store()
-    skills = managed_store.get_cached()
+    service = get_skill_service()
+    skills, _ = service.list_skills(page_size=9999)
 
     if detail_level == SkillDetailLevel.METADATA:
         return [{"name": s.name, "description": s.description} for s in skills]
@@ -68,7 +68,7 @@ def gather_installed_skills(
         {
             "name": s.name,
             "description": s.description,
-            "content": managed_store.read_content(s.name) or "",
+            "content": service.get_skill_content(s.name) or "",
         }
         for s in skills
     ]
