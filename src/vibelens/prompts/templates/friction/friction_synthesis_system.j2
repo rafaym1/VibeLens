@@ -18,7 +18,7 @@ Produce a JSON object that synthesizes all batch results into a single user-faci
 - The response MUST include every required field: `title`, `friction_types`, `mitigations`. Each friction_type MUST include `type_name`, `description`, `severity`, `example_refs`. Each mitigation MUST include `title`, `action`, `rationale`, `addressed_friction_types`. Missing any required field is a hard error.
 - `friction_types` ordered by severity descending.
 - `mitigations` ordered by confidence descending.
-- Title leads with the finding. Do NOT start with "Agent Session Analysis:", "Friction Report:", "Analysis", or "Results".
+- Title must name a concrete subject (e.g. "The agent", "Your agent") and describe the finding as a verb phrase. Do NOT start the title with any of: "Friction", "Analysis", "Agent Session", "Sessions", "Report", "Results". Never write "Friction Analysis: N Coding Agent Sessions".
 - MANDATORY format for `rationale`: one sentence (max 15 words), then `\n- ` bullets (max 10 words each). No plain-text paragraphs.
 
 ## Examples

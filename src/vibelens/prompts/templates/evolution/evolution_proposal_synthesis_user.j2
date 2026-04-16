@@ -1,5 +1,15 @@
 Merge evolution proposals from {{ batch_count }} batches analyzing {{ session_count }} total sessions.
 
+## Installed Skills (EXHAUSTIVE — the ONLY evolvable elements)
+
+The list below is the COMPLETE set of skills eligible for evolution. No other skill exists on this user's machine.
+
+{% for skill in installed_skills %}
+- **{{ skill.name }}**: {{ skill.description }}
+{% endfor %}
+
+If a per-batch proposal names a skill NOT in this list, DISCARD it — do not carry it into the merged output. Never invent new names of your own.
+
 {% for batch in batch_results %}
 ## Batch {{ loop.index }}: {{ batch.title }}
 
@@ -10,8 +20,7 @@ Merge evolution proposals from {{ batch_count }} batches analyzing {{ session_co
 
 ### Proposals
 {% for proposal in batch.proposals %}
-- **{{ proposal.skill_name }}**: {{ proposal.rationale }}
-  - Suggested changes: {{ proposal.suggested_changes }}
+- **{{ proposal.element_name }}**: {{ proposal.rationale }}
   - Addressed patterns: {{ proposal.addressed_patterns | join(", ") }}
 {% endfor %}
 

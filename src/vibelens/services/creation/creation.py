@@ -161,7 +161,7 @@ async def analyze_skill_creation(
     proposal_names = [p.element_name for p in proposal_result.proposal_batch.proposals]
     logger.info("Creation proposals: %s", proposal_names)
 
-    # Step 2: Deep create each proposal concurrently
+    # Step 2: Create each proposal concurrently
     creation_tasks = []
     for idx, p in enumerate(proposal_result.proposal_batch.proposals):
         # Filter to only relevant sessions when indices are specified
@@ -199,8 +199,8 @@ async def analyze_skill_creation(
                 all_metrics.append(step_metrics)
             else:
                 element_name = proposal_result.proposal_batch.proposals[idx].element_name
-                creation_warnings.append(f"Deep creation failed for '{element_name}': {result}")
-                logger.warning("Deep creation failed for proposal '%s': %s", element_name, result)
+                creation_warnings.append(f"Creation failed for '{element_name}': {result}")
+                logger.warning("Creation failed for proposal '%s': %s", element_name, result)
 
     duration = int(time.monotonic() - start_time)
     proposal_output = proposal_result.proposal_batch
@@ -400,7 +400,12 @@ async def _infer_skill_creation(
     result = await backend.generate(request)
     save_inference_log(log_dir, f"skill_creation{suffix}_output.txt", result.text)
 
-    creation = parse_llm_output(result.text, PersonalizationCreation, "deep creation")
+    creation = parse_llm_output(
+        result.text,
+        PersonalizationCreation,
+        "deep creation",
+        field_fallbacks={"rationale": proposal_rationale},
+    )
     creation.confidence = proposal_confidence
     creation.addressed_patterns = addressed_patterns
     return creation, metrics_from_result(result)

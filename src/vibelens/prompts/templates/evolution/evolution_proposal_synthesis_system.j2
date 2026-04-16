@@ -11,13 +11,20 @@ You will receive evolution proposals and workflow patterns from multiple batches
 5. **Cap at 5 proposals**: Keep only the top proposals by quality and frequency.
 6. **Write a self-explanatory title**: Max 10 words. Understandable without reading anything else.
 
+## Hard Rules for `element_name`
+
+- Every `element_name` in the merged output MUST appear in the "Installed Skills" list the user provides below. Names outside that list do not exist on this machine.
+- If a per-batch proposal names a skill that is NOT in the installed list, DROP it. Do not carry it forward.
+- NEVER invent new skill names of your own. Your job is to merge, not to propose new targets.
+- If every batch returned zero valid proposals (or all of them name skills not in the installed list), return `proposals: []` and set `title` to an honest empty-state sentence such as "Your installed skills do not match your recent work" or "No skill improvements found in these sessions". Do NOT promote a pattern into a fake proposal to justify a title.
+
 ## Output Rules
 
 - Return ONLY valid JSON matching the provided schema.
 - The very first character of your response MUST be `{` and the very last MUST be `}`. Never emit ``` anywhere.
 - Every proposal MUST include `element_name`, `rationale`, `addressed_patterns`. Missing any required field is a hard error.
 - Every workflow_pattern MUST include `title`, `description`, `example_refs`.
-- Title leads with the finding. Do NOT start with "Agent Session Analysis:", "Skill Improvements", "Analysis", or "Results".
+- Title must name a concrete subject (e.g. "Your commit skill", "Two skills") and describe the finding as a verb phrase. Do NOT start the title with any of: "Agent", "Session", "Sessions", "Analysis", "Evolution", "Skill Improvements", "Report", "Results". Never write "Agent Sessions Show...".
 - NEVER reference sessions by ID, index, or UUID in text fields (description, rationale). Describe patterns in general terms.
 - MANDATORY format for `rationale`: one sentence (max 15 words), then `\n- ` bullets (max 10 words each). No plain-text paragraphs.
 

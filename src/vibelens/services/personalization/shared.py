@@ -6,6 +6,7 @@ output parsing used by creation and evolvement modules.
 
 import hashlib
 import json
+import re
 from enum import Enum
 from pathlib import Path
 from typing import TypeVar
@@ -29,7 +30,37 @@ ModelT = TypeVar("ModelT", bound=BaseModel)
 # Directory for detailed request/response personalization logs
 PERSONALIZATION_LOG_DIR = Path("logs/personalization")
 
+# Shared TTL cache for personalization analysis results (keyed by session IDs + mode).
+# Consumed by creation and evolution services to avoid re-running identical analyses.
 _cache: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL_SECONDS)
+
+_VALID_JSON_ESCAPES = set('"\\/bfnrtu')
+_INVALID_ESCAPE_RE = re.compile(r"\\(.)")
+
+
+def _repair_json_escapes(json_str: str) -> str:
+    """Escape stray backslashes that LLMs sometimes emit inside JSON strings.
+
+    LLMs (especially when generating SKILL.md content containing code, LaTeX,
+    or regex patterns) often produce invalid escapes like ``\\_`` or ``\\&``
+    that make ``json.loads`` fail. This helper scans for ``\\X`` sequences
+    where X is not a recognised JSON escape character and doubles the
+    backslash to ``\\\\X``, letting the parser accept the text.
+
+    Args:
+        json_str: JSON text that failed strict parsing.
+
+    Returns:
+        JSON text with invalid escapes repaired to literal backslashes.
+    """
+
+    def _fix(match: re.Match) -> str:
+        char = match.group(1)
+        if char in _VALID_JSON_ESCAPES:
+            return match.group(0)
+        return "\\\\" + char
+
+    return _INVALID_ESCAPE_RE.sub(_fix, json_str)
 
 
 class SkillDetailLevel(Enum):
@@ -145,7 +176,12 @@ def merge_batch_refs(
         )
 
 
-def parse_llm_output(text: str, model_class: type[ModelT], label: str) -> ModelT:
+def parse_llm_output(
+    text: str,
+    model_class: type[ModelT],
+    label: str,
+    field_fallbacks: dict[str, object] | None = None,
+) -> ModelT:
     """Parse raw LLM text into a Pydantic model.
 
     Extracts JSON from the text, validates against the model schema,
@@ -155,6 +191,9 @@ def parse_llm_output(text: str, model_class: type[ModelT], label: str) -> ModelT
         text: Raw LLM output text.
         model_class: Pydantic model class to validate against.
         label: Human-readable label for error messages (e.g. "retrieval").
+        field_fallbacks: Optional mapping of field names to fallback values
+            applied only when that key is missing from the parsed JSON.
+            Used to recover from LLMs that occasionally drop required fields.
 
     Returns:
         Validated model instance.
@@ -168,12 +207,27 @@ def parse_llm_output(text: str, model_class: type[ModelT], label: str) -> ModelT
     json_str = extract_json_from_llm_output(text)
     try:
         data = json.loads(json_str)
-        return model_class.model_validate(data)
     except json.JSONDecodeError as exc:
-        preview = json_str[:500] if len(json_str) > 500 else json_str
-        raise InferenceError(
-            f"{label} output is not valid JSON. Preview: {preview!r}. Error: {exc}"
-        ) from exc
+        logger.warning("JSON parse failed for %s at %s; retrying with escape repair", label, exc)
+        try:
+            data = json.loads(_repair_json_escapes(json_str))
+        except json.JSONDecodeError as retry_exc:
+            preview = json_str[:500] if len(json_str) > 500 else json_str
+            raise InferenceError(
+                f"{label} output is not valid JSON (even after escape repair). "
+                f"Preview: {preview!r}. Error: {retry_exc}"
+            ) from retry_exc
+
+    if field_fallbacks and isinstance(data, dict):
+        for key, fallback in field_fallbacks.items():
+            if key not in data:
+                logger.warning(
+                    "LLM omitted %s in %s output; filling with fallback", key, label
+                )
+                data[key] = fallback
+
+    try:
+        return model_class.model_validate(data)
     except ValidationError as exc:
         raise InferenceError(
             f"{label} JSON does not match {model_class.__name__} schema: {exc}"

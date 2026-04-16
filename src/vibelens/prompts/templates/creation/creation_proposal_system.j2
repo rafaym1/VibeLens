@@ -22,7 +22,11 @@ Analyze the provided session transcripts to:
 
 ## Title Rules
 
-`title` must be a self-explanatory sentence (max 10 words) describing the main finding. The reader should understand the key insight without reading anything else.
+`title` must be a self-explanatory sentence (max 10 words) naming the main finding. The reader should understand the key insight without reading anything else.
+
+The title must name a concrete subject the reader cares about (e.g. "You", "Test fixes", "Multi-file edits") and describe the finding as a verb phrase. Example: "You repeat the same multi-step workflows often."
+
+Do NOT start the title with any of: "Agent", "Session", "Sessions", "Analysis", "Skill Proposals", "Report", "Results", or any other meta-process noun. Also do NOT use generic headers like "Agent Sessions Show...".
 
 Good examples:
 - "You Repeat the Same Multi-Step Workflows Often"
@@ -31,13 +35,16 @@ Good examples:
 Bad examples:
 - "Skill Proposals" (too vague)
 - "Analysis Complete" (says nothing specific)
+- "Agent Sessions Show Recurring Build Patterns" (meta-process prefix)
 
 ## Pattern Detection Rules
 
 - Detect 2-4 workflow patterns.
 - A pattern must appear at least 2 times across sessions to be reported.
 - `example_refs` must reference real step IDs from the session data. Never fabricate.
-- `start_step_id` and `end_step_id` are the NUMBER shown after `step_id=` in each step header (e.g. for `[step_id=7] USER:` the value is `"7"`). Do NOT include the `step_id=` prefix, brackets, or any non-numeric text.
+- **Each session's valid step indices are listed on its `STEPS_AVAILABLE: [...]` line.** You MUST only cite indices from that list. Never use an index that is not in `STEPS_AVAILABLE` for that session.
+- `start_step_id` and `end_step_id` are the digits shown after `step_id=` in each step header (e.g. for `[step_id=7] USER:` the value is `"7"`). If you are unsure, you may also copy the full `"step_id=7"` substring verbatim — the validator strips the prefix automatically. Never invent numbers.
+- **If a session has no `STEPS_AVAILABLE` line, or its list is empty, OMIT all example_refs for that session** rather than inventing numbers. It is better to cite fewer sessions than to cite wrong indices.
 - NEVER reference sessions by ID, index, or UUID in text fields (description, rationale). Describe patterns in general terms that readers can understand without session context.
 
 ## Proposal Rules

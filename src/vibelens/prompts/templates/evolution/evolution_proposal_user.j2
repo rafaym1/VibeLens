@@ -2,12 +2,18 @@ Analyze {{ session_count }} coding agent session{{ "s" if session_count != 1 els
 
 {{ session_digest }}
 
-## Installed Skills
+## Installed Skills (EXHAUSTIVE — the ONLY evolvable elements)
 
-These are the user's installed skills. Propose improvements only for skills in this list:
+The list below is the COMPLETE set of skills eligible for evolution. No other skill exists on this user's machine.
+
 {% for skill in installed_skills %}
-
 - [id={{ loop.index0 }}] **{{ skill.name }}**: {{ skill.description }}
 {% endfor %}
 
-Provide `title`, `user_profile`, workflow patterns with real `example_refs`, `summary`, and evolution proposals targeting installed skills.
+### Hard rules for `element_name`
+
+1. `element_name` in every proposal MUST be copied verbatim from the list above (case-sensitive, exact spelling).
+2. Names that appear inside the session transcripts — e.g. tool names like `Read`, `Edit`, `Bash`, `Grep`, `Glob`, `Write`; compaction or sub-agent labels like `brainstorming`, `refactor-guide`, `design-iteration`; or skills referenced from prior sessions like `friction-analysis`, `error-recovery`, `dashboard-loader` — are NOT installed skills. They MUST NOT appear in `proposals`, even if they look like natural improvement targets.
+3. If the detected workflow patterns are not covered by any installed skill above, return `proposals: []`. An empty list is correct and expected.
+
+Provide `title`, `user_profile`, workflow patterns with real `example_refs`, `summary`, and (only when justified) evolution proposals targeting installed skills.

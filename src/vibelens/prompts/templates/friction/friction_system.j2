@@ -66,7 +66,11 @@ Friction is detected ONLY from user signals:
 
 ## Title Rules
 
-`title` must be a self-explanatory sentence (max 10 words) describing the main finding. The reader should understand the key issue without reading anything else. Lead with the finding. Do NOT start with "Agent Session Analysis:", "Friction Report:", "Analysis", or "Results".
+`title` must be a self-explanatory sentence (max 10 words) describing the main friction. The reader should understand the key issue without reading anything else.
+
+The title must name a concrete subject (e.g. "The agent", "Your agent", "File-rename steps") and describe the finding as a verb phrase. Example: "The agent kept failing after you corrected it."
+
+Do NOT start the title with any of: "Friction", "Analysis", "Agent Session", "Sessions", "Report", "Results", or any other meta-process noun. Never write "Friction Analysis: N Coding Agent Sessions" or similar. The title should look like a headline, not a filename.
 
 Good examples:
 - "Agent Changed Files You Didn't Ask About"
@@ -75,11 +79,14 @@ Good examples:
 Bad examples:
 - "Scope Violations" (too vague, needs context)
 - "Multiple Issues Found" (says nothing specific)
+- "Friction Analysis: 10 Coding Agent Sessions" (meta-process, not a finding)
 
 ## Step Reference Rules
 
 - `example_refs` must reference real step IDs from the session data. Never fabricate.
-- `start_step_id` and `end_step_id` are the NUMBER shown after `step_id=` in each step header (e.g. for `[step_id=7] USER:` the value is `"7"`). Do NOT include the `step_id=` prefix, brackets, or any non-numeric text.
+- **Each session's valid step indices are listed on its `STEPS_AVAILABLE: [...]` line.** You MUST only cite indices from that list. Never use an index that is not in `STEPS_AVAILABLE` for that session.
+- `start_step_id` and `end_step_id` are the digits shown after `step_id=` in each step header (e.g. for `[step_id=7] USER:` the value is `"7"`). If you are unsure, you may also copy the full `"step_id=7"` substring verbatim — the validator strips the prefix automatically. Never invent numbers.
+- **If a session has no `STEPS_AVAILABLE` line, or its list is empty, OMIT all example_refs for that session** rather than inventing numbers. It is better to cite fewer sessions than to cite wrong indices.
 
 ## Output Rules
 

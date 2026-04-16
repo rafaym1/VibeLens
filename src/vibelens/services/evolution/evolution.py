@@ -181,10 +181,23 @@ async def analyze_skill_evolution(
         session_ids, session_token, log_dir, skill_names
     )
 
+    # Drop hallucinated proposals whose name is not in the installed-skill list.
+    allowed_names = skill_names or [s["name"] for s in gather_installed_skills()]
+    installed_set = set(allowed_names)
+    filtered_proposals = []
+    for p in proposal_result.proposal_batch.proposals:
+        if p.element_name not in installed_set:
+            logger.warning(
+                "Dropping hallucinated evolution proposal '%s' (not installed)",
+                p.element_name,
+            )
+            continue
+        filtered_proposals.append(p)
+
     # Deduplicate: keep only the first proposal per element_name
     seen_skills: set[str] = set()
     unique_proposals = []
-    for p in proposal_result.proposal_batch.proposals:
+    for p in filtered_proposals:
         if p.element_name in seen_skills:
             logger.warning("Dropping duplicate proposal for skill '%s'", p.element_name)
             continue
@@ -317,7 +330,7 @@ async def _infer_evolution_proposals(
         proposal_output = batch_results[0][0]
     else:
         proposal_output, syn_metrics = await _synthesize_evolution_proposals(
-            backend, batch_results, len(context_set.session_ids), log_dir
+            backend, batch_results, len(context_set.session_ids), installed_skills, log_dir
         )
         all_metrics.append(syn_metrics)
         # Synthesis LLM drops example_refs; recover from batch outputs
@@ -431,7 +444,15 @@ async def _infer_evolution(
     result = await backend.generate(request)
     save_inference_log(log_dir, f"skill_evolution{suffix}_output.txt", result.text)
 
-    evolution = parse_llm_output(result.text, PersonalizationEvolution, "evolution")
+    evolution = parse_llm_output(
+        result.text,
+        PersonalizationEvolution,
+        "evolution",
+        field_fallbacks={
+            "rationale": rationale,
+            "element_name": skill_name,
+        },
+    )
     evolution.element_type = AgentExtensionType.SKILL
     evolution.confidence = proposal_confidence
     evolution.addressed_patterns = addressed_patterns
@@ -501,6 +522,7 @@ async def _synthesize_evolution_proposals(
     backend: InferenceBackend,
     batch_results: list[tuple[EvolutionProposalBatch, Metrics]],
     session_count: int,
+    installed_skills: list[dict],
     log_dir: Path,
 ) -> tuple[EvolutionProposalBatch, Metrics]:
     """Merge evolution proposals from multiple batches via LLM synthesis.
@@ -509,6 +531,7 @@ async def _synthesize_evolution_proposals(
         backend: Configured inference backend.
         batch_results: Per-batch proposal outputs and metrics.
         session_count: Total number of sessions analyzed.
+        installed_skills: Installed skills the synthesis is allowed to propose.
         log_dir: Timestamped directory for saving prompts and outputs.
 
     Returns:
@@ -542,7 +565,10 @@ async def _synthesize_evolution_proposals(
     system_kwargs = build_system_kwargs(prompt, backend)
     system_prompt = prompt.render_system(**system_kwargs)
     user_prompt = prompt.render_user(
-        batch_count=len(batch_results), session_count=session_count, batch_results=batch_data
+        batch_count=len(batch_results),
+        session_count=session_count,
+        batch_results=batch_data,
+        installed_skills=installed_skills,
     )
 
     request = InferenceRequest(

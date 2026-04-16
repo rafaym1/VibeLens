@@ -43,6 +43,7 @@ Step-by-step instructions...
 - All text fields (`rationale`) MUST be concise, plain-language, and understandable by non-technical users. Avoid jargon and overly formal phrasing.
 - MANDATORY format for `rationale`: one sentence (max 15 words), then `\n- ` bullets (max 10 words each). No plain-text paragraphs.
 - `skill_md_content` body (excluding YAML frontmatter) must be 1,200-2,200 words. Prefer bullets over prose.
+- **JSON escape rules (critical):** inside every string value, a literal backslash MUST be written as `\\` (two characters). The only single-backslash escapes allowed in JSON are `\"`, `\\`, `\/`, `\b`, `\f`, `\n`, `\r`, `\t`, `\uXXXX`. NEVER emit `\_`, `\&`, `\|`, `\*`, `\.`, `\-`, or any other `\X` — double the backslash instead (`\\_`, `\\&`, etc.). This applies especially inside `skill_md_content` when you include code, regex, LaTeX, or attribute access like `obj.\_field`.
 
 ## Examples
 

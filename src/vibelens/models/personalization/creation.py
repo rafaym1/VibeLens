@@ -1,6 +1,8 @@
 """Creation models for the proposal and deep-generation pipeline."""
 
-from pydantic import BaseModel, Field
+import re
+
+from pydantic import BaseModel, Field, field_validator
 
 from vibelens.models.enums import AgentExtensionType
 from vibelens.models.llm.inference import BackendType
@@ -12,6 +14,21 @@ from vibelens.models.personalization.constants import (
 from vibelens.models.session.patterns import WorkflowPattern
 from vibelens.models.trajectories.final_metrics import FinalMetrics
 from vibelens.models.trajectories.metrics import Metrics
+
+_NON_KEBAB_RE = re.compile(r"[^a-z0-9-]+")
+
+
+def _normalize_kebab_name(value: str) -> str:
+    """Strip non-ASCII noise from a kebab-case element name.
+
+    LLMs occasionally inject stray Cyrillic or CJK characters at the end of
+    otherwise-valid names (e.g. ``ui-refinement-iteratorциклер``). This
+    validator lowercases, strips anything outside ``[a-z0-9-]``, then
+    collapses consecutive or leading/trailing dashes.
+    """
+    cleaned = _NON_KEBAB_RE.sub("", value.lower())
+    cleaned = re.sub(r"-+", "-", cleaned).strip("-")
+    return cleaned or value
 
 
 class CreationProposal(BaseModel):
@@ -38,6 +55,11 @@ class CreationProposal(BaseModel):
     )
     rationale: str = Field(description=DESCRIPTION_RATIONALE)
     confidence: float = Field(default=0.0, description=DESCRIPTION_CONFIDENCE)
+
+    @field_validator("element_name", mode="before")
+    @classmethod
+    def _kebab_case(cls, value: str) -> str:
+        return _normalize_kebab_name(value) if isinstance(value, str) else value
 
 
 class CreationProposalBatch(BaseModel):
@@ -112,3 +134,8 @@ class PersonalizationCreation(BaseModel):
         default_factory=list, description="Titles of workflow patterns addressed by this element."
     )
     confidence: float = Field(default=0.0, description=DESCRIPTION_CONFIDENCE)
+
+    @field_validator("element_name", mode="before")
+    @classmethod
+    def _kebab_case(cls, value: str) -> str:
+        return _normalize_kebab_name(value) if isinstance(value, str) else value

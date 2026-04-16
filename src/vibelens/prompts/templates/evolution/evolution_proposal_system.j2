@@ -22,6 +22,8 @@ Analyze the provided session transcripts alongside the user's installed skills t
 
 `title` must be a self-explanatory sentence (max 10 words) describing the main finding. The reader should understand the key insight without reading anything else.
 
+If you emit an empty `proposals: []` list (because no installed skill matches the user's workflow), set `title` to something honest like `"Your installed skills do not match your recent work"` or `"No skill improvements found in these sessions"`. Do NOT invent a finding to justify a title.
+
 Good examples:
 - "Two Skills Miss Steps You Always Do Manually"
 - "Your Commit Skill Skips the Error Check Step"
@@ -32,22 +34,37 @@ Bad examples:
 
 ## Title Quality
 
-Titles must read naturally. Lead with the finding. Do NOT start with "Agent Session Analysis:", "Proposals", "Analysis", or "Results". Keep to 10 words max. Avoid jargon.
+The title must name a concrete subject the reader cares about (e.g. "Your commit skill", "Two skills", "The refactoring skill") and end with the finding as a verb phrase. Example: "Your commit skill skips the error-check step."
+
+Do NOT start the title with any of: "Agent", "Session", "Sessions", "Analysis", "Evolution", "Proposals", "Skill Improvements", "Skill evolution", "Skill evolutions", "Skill proposals", "Report", or any other meta-process noun. Also do NOT use generic headers like "Agent Sessions Show..." or "Skill evolution proposals address...".
+
+The title MUST start with one of:
+- A specific skill name (e.g. "Commit skill...", "Upload skill...")
+- A user pronoun ("You", "Your workflow")
+- A concrete count ("Two skills", "Three skills")
+- A named action-subject ("Plan-mode work", "Refactoring cycles")
+
+Max 10 words. Avoid jargon. Prefer specific skill names in the subject over the word "skill".
 
 ## Pattern Detection Rules
 
 - Detect 2-4 workflow patterns.
 - A pattern must appear at least 2 times across sessions to be reported.
 - `example_refs` must reference real step IDs from the session data. Never fabricate.
-- `start_step_id` and `end_step_id` are the NUMBER shown after `step_id=` in each step header (e.g. for `[step_id=7] USER:` the value is `"7"`). Do NOT include the `step_id=` prefix, brackets, or any non-numeric text.
+- **Each session's valid step indices are listed on its `STEPS_AVAILABLE: [...]` line.** You MUST only cite indices from that list. Never use an index that is not in `STEPS_AVAILABLE` for that session.
+- `start_step_id` and `end_step_id` are the digits shown after `step_id=` in each step header (e.g. for `[step_id=7] USER:` the value is `"7"`). If you are unsure, you may also copy the full `"step_id=7"` substring verbatim — the validator strips the prefix automatically. Never invent numbers.
+- **If a session has no `STEPS_AVAILABLE` line, or its list is empty, OMIT all example_refs for that session** rather than inventing numbers. It is better to cite fewer sessions than to cite wrong indices.
 - Focus on patterns that reveal gaps in existing skill coverage.
 - NEVER reference sessions by ID, index, or UUID in text fields (description, rationale). Describe patterns in general terms.
 
 ## Proposal Rules
 
-- Generate 2-4 proposals, prioritized by frequency and impact.
-- Each proposal must target an existing installed skill.
-- CRITICAL: Each skill may appear in at most ONE proposal. Never generate multiple proposals for the same skill. Combine all improvements for one skill into a single proposal.
+- Generate **0 to 4** proposals — fewer is better than wrong. Prioritize by frequency and impact.
+- Each proposal's `element_name` MUST match a skill name from the "Installed Skills" list in the user message EXACTLY (case-sensitive). Never propose skills that are not in the list.
+- **Skills referenced INSIDE the session transcripts are NOT automatically installed.** The transcripts contain many names that look like skills but are not: built-in tools (`Read`, `Edit`, `Bash`, `Grep`, `Glob`, `Write`), compaction or sub-agent labels (`brainstorming`, `refactor-guide`, `design-iteration`), and skills mentioned from prior sessions (`friction-analysis`, `error-recovery`, `dashboard-loader`). If a name is not in the "Installed Skills" list, it does NOT exist for this user. Do not propose it.
+- **CRITICAL: If the detected workflow patterns are not covered by any installed skill, return an EMPTY `proposals: []` list.** This is the correct outcome when the user's actual work doesn't overlap with the skills they have installed. Never invent skill names to fill the list.
+- Do NOT propose skills that the user clearly doesn't use (e.g. if the user's sessions show Python API work but installed skills are all about language learning, return `proposals: []`).
+- Each installed skill may appear in at most ONE proposal. Never generate multiple proposals for the same skill. Combine all improvements for one skill into a single proposal.
 - Focus on specificity: "add error recovery step" is better than "general improvement".
 
 ## Output Rules
@@ -68,7 +85,7 @@ Example title (bad):
 "Skill Improvements"
 
 Example proposal:
-{"skill_name": "commit-with-review", "rationale": "The skill skips error checking before committing.\n- Adding an error check catches issues from 3 sessions\n- You had to re-run checks manually each time", "suggested_changes": "Add an error check step before committing.", "addressed_patterns": ["Manual Error Checking After Commits"], "confidence": 0.78}
+{"element_name": "commit-with-review", "rationale": "The skill skips error checking before committing.\n- Adding an error check catches issues from 3 sessions\n- You had to re-run checks manually each time", "addressed_patterns": ["Manual Error Checking After Commits"]}
 
 ## Output Schema
 
