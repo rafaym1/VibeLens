@@ -9,24 +9,21 @@ is file-based only (``.cursor/rules/`` directory, legacy ``.cursorrules``),
 requiring persistent project files unsuitable for per-invocation overrides.
 System and user prompts are combined in stdin.
 
+Envelope shape (per Cursor docs):
+
+    {"type": "result", "result": "<text>", "duration_ms": <int>, ...}
+
+Cursor's CLI does not surface token usage or cost in the envelope.
+
 References:
+    - Output format: https://cursor.com/docs/cli/reference/output-format
     - CLI parameters: https://cursor.com/docs/cli/reference/parameters
     - Rules system: https://cursor.com/docs/rules
 """
 
-
 from vibelens.llm.backends.cli_base import CliBackend
-from vibelens.models.llm.inference import BackendType, InferenceRequest
-
-# Models supported by the Cursor CLI, ordered cheapest-first
-CURSOR_CLI_MODELS = [
-    "claude-sonnet-4-6",
-    "claude-opus-4-6",
-    "gpt-5.4",
-    "gemini-2.5-pro",
-]
-# Cheapest model used when no model is explicitly configured
-CURSOR_CLI_DEFAULT_MODEL = "claude-sonnet-4-6"
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
+from vibelens.models.trajectories.metrics import Metrics
 
 
 class CursorCliBackend(CliBackend):
@@ -39,14 +36,6 @@ class CursorCliBackend(CliBackend):
     @property
     def backend_id(self) -> BackendType:
         return BackendType.CURSOR
-
-    @property
-    def available_models(self) -> list[str]:
-        return CURSOR_CLI_MODELS
-
-    @property
-    def default_model(self) -> str | None:
-        return CURSOR_CLI_DEFAULT_MODEL
 
     @property
     def supports_native_json(self) -> bool:
@@ -65,3 +54,11 @@ class CursorCliBackend(CliBackend):
         if self._model:
             cmd.extend(["--model", self._model])
         return cmd
+
+    def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
+        """Parse Cursor's single-JSON envelope (text only, no usage)."""
+        return self._parse_single_json(output, duration_ms, self._extract)
+
+    def _extract(self, data: dict) -> tuple[str, Metrics | None, str]:
+        """Pull the ``result`` string; Cursor reports no usage or cost."""
+        return str(data.get("result", "")), None, self.model

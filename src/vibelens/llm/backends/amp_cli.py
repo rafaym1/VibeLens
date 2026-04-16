@@ -9,14 +9,34 @@ System prompt: Amp has no CLI flag for system prompts. The
 ``AGENTS.md`` files provide project-level context but require persistent
 files. System and user prompts are combined in stdin.
 
+NDJSON event stream (per ``--stream-json`` docs)::
+
+    {"type": "initial", ...}
+    {"type": "assistant", "message": {
+        "role": "assistant",
+        "content": [{"type": "text", "text": "..."}],
+        "usage": {
+            "input_tokens": <int>,
+            "output_tokens": <int>,
+            "cache_creation_input_tokens": <int>,
+            "cache_read_input_tokens": <int>
+        }
+    }}
+    {"type": "result", "result": "<aggregate text>"}
+
 References:
     - Owner's manual: https://ampcode.com/manual
+    - Streaming JSON format: https://ampcode.com/news/streaming-json
 """
 
-import json
-
+from vibelens.llm.backend import InferenceError
 from vibelens.llm.backends.cli_base import CliBackend
 from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
+from vibelens.models.trajectories.metrics import Metrics
+
+# NDJSON event type labels emitted by ``amp --stream-json``
+EVENT_ASSISTANT = "assistant"
+EVENT_RESULT = "result"
 
 
 class AmpCliBackend(CliBackend):
@@ -42,11 +62,11 @@ class AmpCliBackend(CliBackend):
         return [self._cli_path or self.cli_executable, "--headless", "--stream-json"]
 
     def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
-        """Parse NDJSON output by extracting the last valid JSON line.
+        """Parse Amp's NDJSON event stream.
 
-        ``--stream-json`` emits one JSON object per line. We take the last
-        valid JSON line (typically the final event/result) and delegate
-        to the base class parser for envelope extraction.
+        Prefers the last ``assistant`` event's ``message.content[*].text``
+        plus its ``usage``. Falls back to a trailing ``result`` event's
+        ``result`` string if no assistant event was seen.
 
         Args:
             output: Raw NDJSON stdout from amp.
@@ -55,26 +75,46 @@ class AmpCliBackend(CliBackend):
         Returns:
             Parsed InferenceResult.
         """
-        last_json_line = self._extract_last_json_line(output)
-        return super()._parse_output(last_json_line, duration_ms)
+        last_assistant: dict | None = None
+        last_result_text: str | None = None
+        for event in self._iter_ndjson_events(output):
+            event_type = event.get("type")
+            if event_type == EVENT_ASSISTANT:
+                last_assistant = event
+            elif event_type == EVENT_RESULT:
+                fallback = event.get("result")
+                if isinstance(fallback, str):
+                    last_result_text = fallback
 
-    def _extract_last_json_line(self, output: str) -> str:
-        """Find the last valid JSON line in NDJSON output.
+        text = ""
+        metrics: Metrics | None = None
+        if last_assistant:
+            message = last_assistant.get("message", {})
+            if isinstance(message, dict):
+                text = _join_content_text(message.get("content", []))
+                usage_data = message.get("usage")
+                if isinstance(usage_data, dict):
+                    metrics = self._metrics_from_anthropic(usage_data)
+        if not text and last_result_text is not None:
+            text = last_result_text
 
-        Args:
-            output: Raw NDJSON output.
+        if not text:
+            raise InferenceError("amp NDJSON stream contained no assistant text or result event")
 
-        Returns:
-            The last line that parses as valid JSON, or the full output
-            if no valid JSON line is found.
-        """
-        for line in reversed(output.splitlines()):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                json.loads(stripped)
-                return stripped
-            except (json.JSONDecodeError, ValueError):
-                continue
-        return output
+        if metrics is None:
+            metrics = Metrics()
+        metrics.duration_ms = duration_ms
+        return InferenceResult(text=text, model=self.model, metrics=metrics)
+
+
+def _join_content_text(content: object) -> str:
+    """Concatenate ``text`` fields from Anthropic-style content blocks."""
+    if not isinstance(content, list):
+        return ""
+    parts: list[str] = []
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "text":
+            block_text = block.get("text")
+            if isinstance(block_text, str):
+                parts.append(block_text)
+    return "".join(parts)

@@ -12,32 +12,40 @@ are top-level flags for the interactive ``codex`` command — the ``exec``
 subcommand does not accept them. System and user prompts are combined
 in stdin as a workaround.
 
+NDJSON event stream (verified 2026-04-16 via ``codex exec --json``)::
+
+    {"type": "thread.started", ...}
+    {"type": "turn.started"}
+    {"type": "item.completed", "item": {"type": "agent_message", "text": "..."}}
+    {"type": "turn.completed", "usage": {
+        "input_tokens": <int>,
+        "cached_input_tokens": <int>,
+        "output_tokens": <int>
+    }}
+
+The model name is not echoed per-event; we report the configured
+``self._model`` (see https://github.com/openai/codex/issues/14736).
+
 References:
     - Config reference: https://developers.openai.com/codex/config-reference
     - CLI options: https://developers.openai.com/codex/cli/reference
+    - Non-interactive mode: https://developers.openai.com/codex/noninteractive
     - Feature request for --system-prompt: https://github.com/openai/codex/issues/11588
+    - Model-in-jsonl gap: https://github.com/openai/codex/issues/14736
 """
 
 import json
 
+from vibelens.llm.backend import InferenceError
 from vibelens.llm.backends.cli_base import CliBackend
-from vibelens.models.llm.inference import BackendType, InferenceRequest
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
+from vibelens.models.trajectories.metrics import Metrics
 
-# Models supported by the Codex CLI, ordered cheapest-first
-CODEX_CLI_MODELS = [
-    "gpt-4.1-nano",
-    "gpt-5.4-nano",
-    "gpt-4.1-mini",
-    "gpt-5.4-mini",
-    "o4-mini",
-    "gpt-4.1",
-    "o3",
-    "gpt-5.4",
-    "o3-pro",
-    "gpt-5.4-pro",
-]
-# Cheapest model used when no model is explicitly configured
-CODEX_CLI_DEFAULT_MODEL = "gpt-5.4-mini"
+# NDJSON event type labels emitted by ``codex exec --json``
+EVENT_ITEM_COMPLETED = "item.completed"
+EVENT_TURN_COMPLETED = "turn.completed"
+# Item type within an ``item.completed`` event that carries assistant text
+ITEM_AGENT_MESSAGE = "agent_message"
 
 
 class CodexCliBackend(CliBackend):
@@ -50,14 +58,6 @@ class CodexCliBackend(CliBackend):
     @property
     def backend_id(self) -> BackendType:
         return BackendType.CODEX
-
-    @property
-    def available_models(self) -> list[str]:
-        return CODEX_CLI_MODELS
-
-    @property
-    def default_model(self) -> str | None:
-        return CODEX_CLI_DEFAULT_MODEL
 
     @property
     def supports_native_json(self) -> bool:
@@ -94,3 +94,42 @@ class CodexCliBackend(CliBackend):
             )
             cmd.extend(["--output-schema", str(schema_path)])
         return cmd
+
+    def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
+        """Parse Codex's NDJSON event stream.
+
+        Text comes from every ``item.completed`` event whose item type
+        is ``agent_message``. Usage is taken from the final
+        ``turn.completed`` event.
+
+        Args:
+            output: Raw NDJSON stdout from ``codex exec --json``.
+            duration_ms: Elapsed time in milliseconds.
+
+        Returns:
+            Parsed InferenceResult.
+        """
+        text_parts: list[str] = []
+        metrics: Metrics | None = None
+        for event in self._iter_ndjson_events(output):
+            event_type = event.get("type")
+            if event_type == EVENT_ITEM_COMPLETED:
+                item = event.get("item", {})
+                if isinstance(item, dict) and item.get("type") == ITEM_AGENT_MESSAGE:
+                    item_text = item.get("text")
+                    if isinstance(item_text, str):
+                        text_parts.append(item_text)
+            elif event_type == EVENT_TURN_COMPLETED:
+                usage_data = event.get("usage")
+                if isinstance(usage_data, dict):
+                    metrics = Metrics(
+                        prompt_tokens=usage_data.get("input_tokens", 0),
+                        completion_tokens=usage_data.get("output_tokens", 0),
+                        cached_tokens=usage_data.get("cached_input_tokens", 0),
+                    )
+        if not text_parts:
+            raise InferenceError("codex NDJSON stream contained no agent_message items")
+        if metrics is None:
+            metrics = Metrics()
+        metrics.duration_ms = duration_ms
+        return InferenceResult(text="\n".join(text_parts), model=self.model, metrics=metrics)

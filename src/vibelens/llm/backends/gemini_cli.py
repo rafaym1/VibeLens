@@ -9,23 +9,64 @@ pointing to a temp file, keeping it separate from the user prompt in stdin.
 
 Gemini has no native JSON schema enforcement, so schema instructions are
 always included in the user prompt regardless of the JSON output envelope.
+
+Envelope shape (verified 2026-04-16 via ``gemini -p "..." -o json --yolo``)::
+
+    {
+        "session_id": "...",
+        "response": "<assistant text>",
+        "stats": {
+            "models": {
+                "<model-name>": {
+                    "tokens": {
+                        "input": <int>, "candidates": <int>,
+                        "cached": <int>, "thoughts": <int>, ...
+                    },
+                    "roles": {"main": {...}, "utility_router": {...}}
+                },
+                ...
+            }
+        }
+    }
+
+The Gemini CLI may dispatch to several models in one turn (a cheap
+"utility_router" plus a "main" model). We report the entry carrying
+``roles.main`` when present, so the usage we surface matches the model
+that actually produced the response.
+
+References:
+    - Headless mode: https://geminicli.com/docs/cli/headless/
+    - Headless docs: https://google-gemini.github.io/gemini-cli/docs/cli/headless.html
 """
 
 from pathlib import Path
 
 from vibelens.llm.backends.cli_base import CliBackend
-from vibelens.models.llm.inference import BackendType, InferenceRequest
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
+from vibelens.models.trajectories.metrics import Metrics
 
-# Models supported by the Gemini CLI, ordered cheapest-first
-GEMINI_CLI_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-3.1-pro",
-]
-# Cheapest model used when no model is explicitly configured
-GEMINI_CLI_DEFAULT_MODEL = "gemini-2.0-flash"
+
+def _select_main_model(models: dict) -> tuple[str, dict]:
+    """Pick the ``roles.main`` model entry, falling back to first key.
+
+    Gemini CLI may log several models per turn (e.g. a utility router
+    plus the main answering model). The one carrying ``roles.main``
+    is the one whose output reached the user.
+
+    Args:
+        models: ``stats.models`` dict from the Gemini CLI envelope.
+
+    Returns:
+        Tuple of (model name, model entry dict).
+    """
+    for name, entry in models.items():
+        if isinstance(entry, dict) and "main" in entry.get("roles", {}):
+            return name, entry
+    first_name = next(iter(models))
+    first_entry = models[first_name]
+    if not isinstance(first_entry, dict):
+        first_entry = {}
+    return first_name, first_entry
 
 
 class GeminiCliBackend(CliBackend):
@@ -48,14 +89,6 @@ class GeminiCliBackend(CliBackend):
     @property
     def backend_id(self) -> BackendType:
         return BackendType.GEMINI
-
-    @property
-    def available_models(self) -> list[str]:
-        return GEMINI_CLI_MODELS
-
-    @property
-    def default_model(self) -> str | None:
-        return GEMINI_CLI_DEFAULT_MODEL
 
     @property
     def supports_native_json(self) -> bool:
@@ -115,3 +148,27 @@ class GeminiCliBackend(CliBackend):
         if request.json_schema:
             prompt = self._augment_prompt_with_schema(prompt, request.json_schema)
         return prompt
+
+    def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
+        """Parse the Gemini CLI JSON envelope."""
+        return self._parse_single_json(output, duration_ms, self._extract)
+
+    def _extract(self, data: dict) -> tuple[str, Metrics | None, str]:
+        """Pull text, usage, and model name from Gemini's ``stats.models`` map."""
+        text = str(data.get("response", ""))
+        model = self.model
+        metrics: Metrics | None = None
+
+        models = data.get("stats", {}).get("models")
+        if isinstance(models, dict) and models:
+            name, entry = _select_main_model(models)
+            model = name
+            tokens = entry.get("tokens", {}) if isinstance(entry, dict) else {}
+            reasoning_tokens = tokens.get("thoughts", 0)
+            metrics = Metrics(
+                prompt_tokens=tokens.get("prompt", tokens.get("input", 0)),
+                completion_tokens=tokens.get("candidates", 0),
+                cached_tokens=tokens.get("cached", 0),
+                extra={"reasoning_tokens": reasoning_tokens} if reasoning_tokens else None,
+            )
+        return text, metrics, model

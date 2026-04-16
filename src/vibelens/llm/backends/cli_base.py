@@ -12,17 +12,20 @@ import os
 import shutil
 import tempfile
 from abc import abstractmethod
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 from vibelens.llm.backend import InferenceBackend, InferenceError, InferenceTimeoutError
-from vibelens.models.llm.inference import (
-    BackendType,
-    InferenceRequest,
-    InferenceResult,
-    TokenUsage,
-)
+from vibelens.llm.model_catalog import available_models, default_model
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
+from vibelens.models.trajectories.metrics import Metrics
 from vibelens.utils.log import get_logger
 from vibelens.utils.timestamps import monotonic_ms
+
+# Signature for per-backend extractors passed to ``_parse_single_json``.
+# Returns (text, metrics, model) — metrics may be None when the backend
+# reports no usage; cost lives inside ``Metrics.cost_usd``.
+JsonExtractor = Callable[[dict], tuple[str, "Metrics | None", str]]
 
 logger = get_logger(__name__)
 
@@ -73,13 +76,17 @@ class CliBackend(InferenceBackend):
 
     @property
     def available_models(self) -> list[str]:
-        """Models this CLI supports, ordered cheapest first."""
-        return []
+        """Models this CLI supports, ordered cheapest first.
+
+        Resolved through the central ``model_catalog`` keyed by
+        ``self.backend_id``.
+        """
+        return available_models(self.backend_id)
 
     @property
     def default_model(self) -> str | None:
         """Cheapest recommended model for this CLI, or None if no selection."""
-        return None
+        return default_model(self.backend_id)
 
     @property
     def supports_freeform_model(self) -> bool:
@@ -245,14 +252,13 @@ class CliBackend(InferenceBackend):
         self._tempfiles.append(temp_path)
         return temp_path
 
+    @abstractmethod
     def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
-        """Parse CLI output into InferenceResult.
+        """Parse CLI stdout into an InferenceResult.
 
-        Handles JSON envelope formats from various CLIs (Claude Code,
-        Codex, Gemini, Cursor, etc.) with keys like ``result``,
-        ``content``, ``text``, or ``response``.
-
-        Falls back to treating the entire output as plain text if not JSON.
+        Each backend knows its own envelope shape; implementations should
+        delegate to one of the helpers below (``_parse_plain_text``,
+        ``_parse_single_json``, ``_iter_ndjson_events``).
 
         Args:
             output: Raw stdout from the CLI process.
@@ -260,39 +266,121 @@ class CliBackend(InferenceBackend):
 
         Returns:
             Parsed InferenceResult.
-        """
-        text = output
-        usage = None
-        cost_usd = None
-        model = self._model or self.cli_executable
 
+        Raises:
+            InferenceError: If the output cannot be parsed per the backend's envelope.
+        """
+
+    def _parse_plain_text(self, output: str, duration_ms: int) -> InferenceResult:
+        """Wrap raw stdout as an InferenceResult with no usage or cost.
+
+        Used for CLIs whose entire stdout is the assistant's reply
+        (aider, openclaw, kimi).
+
+        Args:
+            output: Raw stdout text.
+            duration_ms: Elapsed time in milliseconds.
+
+        Returns:
+            InferenceResult with text=output, model=self.model, and a
+            Metrics that records only the wall-clock duration.
+        """
+        return InferenceResult(
+            text=output,
+            model=self.model,
+            metrics=Metrics(duration_ms=duration_ms),
+        )
+
+    def _parse_single_json(
+        self, output: str, duration_ms: int, extract: JsonExtractor
+    ) -> InferenceResult:
+        """Parse stdout as a single JSON object and apply ``extract``.
+
+        Args:
+            output: Raw stdout assumed to be a single JSON object.
+            duration_ms: Elapsed time in milliseconds.
+            extract: Backend-specific callable that pulls (text, metrics,
+                model) out of the parsed dict.
+
+        Returns:
+            InferenceResult assembled from the extractor's tuple, with
+            ``duration_ms`` injected into the returned Metrics.
+
+        Raises:
+            InferenceError: If stdout is not a valid JSON object.
+        """
         try:
             data = json.loads(output)
-            if isinstance(data, dict):
-                text = data.get(
-                    "result", data.get("content", data.get("text", data.get("response", output)))
-                )
-                if "usage" in data:
-                    usage_data = data["usage"]
-                    usage = TokenUsage(
-                        input_tokens=usage_data.get("input_tokens", 0),
-                        output_tokens=usage_data.get("output_tokens", 0),
-                    )
-                if "model" in data:
-                    model = data["model"]
-                # Claude Code envelope: extract model from modelUsage keys
-                if "modelUsage" in data and not data.get("model"):
-                    model_keys = list(data["modelUsage"].keys())
-                    if model_keys:
-                        model = model_keys[0].split("[")[0]
-                if "total_cost_usd" in data:
-                    cost_usd = data["total_cost_usd"]
-        except (json.JSONDecodeError, TypeError):
-            pass
+        except json.JSONDecodeError as exc:
+            logger.error(
+                "CLI %s returned non-JSON output (len=%d): %r",
+                self.cli_executable,
+                len(output),
+                output[:200],
+            )
+            raise InferenceError(
+                f"{self.cli_executable} returned non-JSON output: {exc.msg}"
+            ) from exc
+        if not isinstance(data, dict):
+            raise InferenceError(
+                f"{self.cli_executable} returned JSON of type "
+                f"{type(data).__name__}, expected object"
+            )
+        text, metrics, model = extract(data)
+        if metrics is None:
+            metrics = Metrics()
+        metrics.duration_ms = duration_ms
+        return InferenceResult(text=text, model=model, metrics=metrics)
 
-        return InferenceResult(
-            text=str(text), model=model, usage=usage, cost_usd=cost_usd, duration_ms=duration_ms
+    def _metrics_from_anthropic(self, usage_data: dict) -> Metrics:
+        """Build a Metrics from an Anthropic-style usage dict.
+
+        Shared by Claude Code and Amp, which both emit the same four
+        ``*_input_tokens`` / ``*_tokens`` key names.
+
+        Args:
+            usage_data: Dict with ``input_tokens``, ``output_tokens``,
+                ``cache_creation_input_tokens``, ``cache_read_input_tokens``.
+
+        Returns:
+            Populated Metrics (missing keys default to 0).
+        """
+        return Metrics(
+            prompt_tokens=usage_data.get("input_tokens", 0),
+            completion_tokens=usage_data.get("output_tokens", 0),
+            cached_tokens=usage_data.get("cache_read_input_tokens", 0),
+            cache_creation_tokens=usage_data.get("cache_creation_input_tokens", 0),
         )
+
+    def _iter_ndjson_events(self, output: str) -> Iterator[dict]:
+        """Yield each JSON object from an NDJSON stdout stream.
+
+        Blank lines are silently skipped. Lines that fail to parse (e.g.
+        stderr-style warnings interleaved by the CLI) are logged at
+        debug level and skipped so a single malformed line doesn't
+        abort the whole event stream.
+
+        Args:
+            output: Raw NDJSON stdout.
+
+        Yields:
+            Each parsed JSON object that is a dict.
+        """
+        for line in output.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                event = json.loads(stripped)
+            except json.JSONDecodeError:
+                logger.debug(
+                    "Skipping non-JSON line in %s NDJSON stream: %r",
+                    self.cli_executable,
+                    stripped[:120],
+                )
+                continue
+            if isinstance(event, dict):
+                yield event
 
 
 async def _kill_process(proc: asyncio.subprocess.Process) -> None:

@@ -10,7 +10,7 @@ import json
 from collections.abc import Coroutine
 from pathlib import Path
 
-from vibelens.context import ContextExtractor, DetailExtractor
+from vibelens.context import ContextExtractor
 from vibelens.deps import get_inference_backend
 from vibelens.llm.backend import InferenceBackend, InferenceError
 from vibelens.llm.tokenizer import count_tokens
@@ -65,11 +65,7 @@ def require_backend() -> InferenceBackend:
 
 def metrics_from_result(result: InferenceResult) -> Metrics:
     """Extract a Metrics snapshot from an LLM InferenceResult."""
-    return Metrics(
-        prompt_tokens=result.usage.input_tokens if result.usage else 0,
-        completion_tokens=result.usage.output_tokens if result.usage else 0,
-        cost_usd=result.cost_usd,
-    )
+    return result.metrics
 
 
 def aggregate_final_metrics(
@@ -125,7 +121,7 @@ async def run_batches_concurrent(
 
 
 def extract_all_contexts(
-    session_ids: list[str], session_token: str | None, extractor: ContextExtractor | None = None
+    session_ids: list[str], session_token: str | None, extractor: ContextExtractor
 ) -> SessionContextBatch:
     """Load sessions and extract compressed contexts.
 
@@ -140,8 +136,6 @@ def extract_all_contexts(
     Returns:
         SessionContextBatch wrapping extracted contexts and load status.
     """
-    if extractor is None:
-        extractor = DetailExtractor()
     contexts: list[SessionContext] = []
     loaded_ids: list[str] = []
     skipped_ids: list[str] = []

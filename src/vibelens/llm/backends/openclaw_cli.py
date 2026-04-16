@@ -16,22 +16,8 @@ References:
     - System prompt docs: https://docs.openclaw.ai/concepts/system-prompt
 """
 
-
 from vibelens.llm.backends.cli_base import CliBackend
-from vibelens.models.llm.inference import BackendType, InferenceRequest
-
-# Models supported by the OpenClaw CLI, ordered cheapest-first
-OPENCLAW_CLI_MODELS = [
-    "deepseek-v3",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "claude-haiku-4-5",
-    "claude-sonnet-4-6",
-    "gpt-5.4-mini",
-    "gpt-5.4",
-]
-# Cheapest model used when no model is explicitly configured
-OPENCLAW_CLI_DEFAULT_MODEL = "deepseek-v3"
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
 
 
 class OpenClawCliBackend(CliBackend):
@@ -44,14 +30,6 @@ class OpenClawCliBackend(CliBackend):
     @property
     def backend_id(self) -> BackendType:
         return BackendType.OPENCLAW
-
-    @property
-    def available_models(self) -> list[str]:
-        return OPENCLAW_CLI_MODELS
-
-    @property
-    def default_model(self) -> str | None:
-        return OPENCLAW_CLI_DEFAULT_MODEL
 
     @property
     def supports_freeform_model(self) -> bool:
@@ -70,3 +48,7 @@ class OpenClawCliBackend(CliBackend):
         if self._model:
             cmd.extend(["--model", self._model])
         return cmd
+
+    def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
+        """Return raw stdout as plain text (OpenClaw emits no JSON envelope)."""
+        return self._parse_plain_text(output, duration_ms)

@@ -28,6 +28,9 @@ class Metrics(BaseModel):
     cost_usd: float | None = Field(
         default=None, description="Monetary cost of the API call in USD."
     )
+    duration_ms: int = Field(
+        default=0, description="[VibeLens] Wall-clock generation time in milliseconds."
+    )
     prompt_token_ids: list[int] | None = Field(
         default=None, description="Token IDs for prompt tokens sent to the LLM (ATIF v1.4)."
     )

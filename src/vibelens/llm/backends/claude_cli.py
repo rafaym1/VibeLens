@@ -2,28 +2,38 @@
 
 Invokes ``claude -p`` with ``--system-prompt`` to properly separate system
 and user prompts. The ``--output-format json`` flag wraps the response in a
-JSON envelope with ``result``, ``usage``, and ``modelUsage`` fields.
+JSON envelope with ``result``, ``usage``, ``modelUsage``, and
+``total_cost_usd`` fields.
+
+Envelope shape (verified 2026-04-16 via ``claude -p - --output-format json``)::
+
+    {
+        "type": "result",
+        "result": "<assistant text>",
+        "model": "<optional>",
+        "usage": {
+            "input_tokens": <int>,
+            "output_tokens": <int>,
+            "cache_creation_input_tokens": <int>,
+            "cache_read_input_tokens": <int>,
+            ...
+        },
+        "modelUsage": {"<model-name>": {...}},
+        "total_cost_usd": <float>
+    }
 
 Safety flags prevent agentic behavior during scripted inference:
   --no-session-persistence: avoids polluting history
   --tools "": disables all tool use for pure text inference.
+
+References:
+    - CLI reference: https://code.claude.com/docs/en/cli-reference
+    - Headless mode: https://code.claude.com/docs/en/headless
 """
 
-
 from vibelens.llm.backends.cli_base import CliBackend
-from vibelens.models.llm.inference import BackendType, InferenceRequest
-
-# Models supported by the Claude Code CLI, ordered cheapest-first
-CLAUDE_CLI_MODELS = [
-    "claude-haiku-4-5",
-    "claude-3-5-haiku",
-    "claude-sonnet-4-5",
-    "claude-sonnet-4-6",
-    "claude-opus-4-6",
-    "claude-opus-4-1",
-]
-# Cheapest model used when no model is explicitly configured
-CLAUDE_CLI_DEFAULT_MODEL = "claude-haiku-4-5"
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
+from vibelens.models.trajectories.metrics import Metrics
 
 
 class ClaudeCliBackend(CliBackend):
@@ -36,14 +46,6 @@ class ClaudeCliBackend(CliBackend):
     @property
     def backend_id(self) -> BackendType:
         return BackendType.CLAUDE_CODE
-
-    @property
-    def available_models(self) -> list[str]:
-        return CLAUDE_CLI_MODELS
-
-    @property
-    def default_model(self) -> str | None:
-        return CLAUDE_CLI_DEFAULT_MODEL
 
     @property
     def supports_native_json(self) -> bool:
@@ -90,3 +92,28 @@ class ClaudeCliBackend(CliBackend):
             User prompt text only.
         """
         return request.user
+
+    def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
+        """Parse the Claude Code JSON envelope."""
+        return self._parse_single_json(output, duration_ms, self._extract)
+
+    def _extract(self, data: dict) -> tuple[str, Metrics | None, str]:
+        """Pull Claude Code's text, usage, model, and cost from the envelope."""
+        text = str(data.get("result", ""))
+        usage_data = data.get("usage")
+        metrics = self._metrics_from_anthropic(usage_data) if isinstance(usage_data, dict) else None
+        cost_usd = data.get("total_cost_usd")
+        if cost_usd is not None:
+            if metrics is None:
+                metrics = Metrics()
+            metrics.cost_usd = cost_usd
+        model = data.get("model") or self._model_from_usage(data)
+        return text, metrics, model or self.model
+
+    def _model_from_usage(self, data: dict) -> str | None:
+        """Derive model name from ``modelUsage`` keys (e.g. ``claude-opus-4-6[plan]``)."""
+        model_usage = data.get("modelUsage")
+        if not isinstance(model_usage, dict) or not model_usage:
+            return None
+        first_key = next(iter(model_usage))
+        return first_key.split("[")[0]

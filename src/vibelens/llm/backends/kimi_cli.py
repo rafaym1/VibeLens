@@ -17,14 +17,8 @@ References:
     - CLI reference: https://moonshotai.github.io/kimi-cli/en/reference/kimi-command.html
 """
 
-
 from vibelens.llm.backends.cli_base import CliBackend
-from vibelens.models.llm.inference import BackendType, InferenceRequest
-
-# Models supported by the Kimi CLI, ordered cheapest-first
-KIMI_CLI_MODELS = ["kimi-k2.5", "kimi-k2"]
-# Cheapest model used when no model is explicitly configured
-KIMI_CLI_DEFAULT_MODEL = "kimi-k2.5"
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
 
 
 class KimiCliBackend(CliBackend):
@@ -37,14 +31,6 @@ class KimiCliBackend(CliBackend):
     @property
     def backend_id(self) -> BackendType:
         return BackendType.KIMI
-
-    @property
-    def available_models(self) -> list[str]:
-        return KIMI_CLI_MODELS
-
-    @property
-    def default_model(self) -> str | None:
-        return KIMI_CLI_DEFAULT_MODEL
 
     def _build_command(self, request: InferenceRequest) -> list[str]:
         """Build kimi CLI command.
@@ -59,3 +45,7 @@ class KimiCliBackend(CliBackend):
         if self._model:
             cmd.extend(["--model", self._model])
         return cmd
+
+    def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
+        """Return raw stdout as plain text (``--final-message-only`` yields plain text)."""
+        return self._parse_plain_text(output, duration_ms)

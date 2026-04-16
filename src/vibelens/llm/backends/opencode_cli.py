@@ -6,23 +6,19 @@ for scripted usage, and ``-f json`` returns structured JSON output.
 
 The system prompt is passed via ``--system`` to properly separate system
 and user prompts, avoiding duplication in stdin.
+
+Envelope shape (per OpenCode CLI docs): a single JSON object whose
+assistant text lives under ``result`` (or ``text`` in older versions).
+Token usage may appear under ``usage`` when supplied by the upstream
+provider; otherwise None.
+
+References:
+    - CLI docs: https://opencode.ai/docs/cli/
 """
 
-
 from vibelens.llm.backends.cli_base import CliBackend
-from vibelens.models.llm.inference import BackendType, InferenceRequest
-
-# Models supported by the OpenCode CLI, ordered cheapest-first
-OPENCODE_CLI_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "claude-haiku-4-5",
-    "claude-sonnet-4-6",
-    "gpt-5.4-mini",
-    "gpt-5.4",
-]
-# Cheapest model used when no model is explicitly configured
-OPENCODE_CLI_DEFAULT_MODEL = "gemini-2.5-flash"
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
+from vibelens.models.trajectories.metrics import Metrics
 
 
 class OpenCodeCliBackend(CliBackend):
@@ -35,14 +31,6 @@ class OpenCodeCliBackend(CliBackend):
     @property
     def backend_id(self) -> BackendType:
         return BackendType.OPENCODE
-
-    @property
-    def available_models(self) -> list[str]:
-        return OPENCODE_CLI_MODELS
-
-    @property
-    def default_model(self) -> str | None:
-        return OPENCODE_CLI_DEFAULT_MODEL
 
     @property
     def supports_freeform_model(self) -> bool:
@@ -91,3 +79,24 @@ class OpenCodeCliBackend(CliBackend):
             User prompt text only.
         """
         return request.user
+
+    def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
+        """Parse OpenCode's single-JSON envelope."""
+        return self._parse_single_json(output, duration_ms, self._extract)
+
+    def _extract(self, data: dict) -> tuple[str, Metrics | None, str]:
+        """Pull text and optional usage from OpenCode's envelope.
+
+        The exact key for the assistant text has varied across OpenCode
+        versions; we try ``result``, ``text``, and ``response`` in order.
+        """
+        text = data.get("result") or data.get("text") or data.get("response") or ""
+        metrics: Metrics | None = None
+        usage_data = data.get("usage")
+        if isinstance(usage_data, dict):
+            metrics = Metrics(
+                prompt_tokens=usage_data.get("input_tokens", 0),
+                completion_tokens=usage_data.get("output_tokens", 0),
+            )
+        model = data.get("model") or self.model
+        return str(text), metrics, model

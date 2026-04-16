@@ -17,22 +17,14 @@ References:
     - Feature request: https://github.com/Aider-AI/aider/issues/3364
 """
 
+import re
 
 from vibelens.llm.backends.cli_base import CliBackend
-from vibelens.models.llm.inference import BackendType, InferenceRequest
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
 
-# Models supported by the Aider CLI, ordered cheapest-first
-AIDER_CLI_MODELS = [
-    "deepseek-v3",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "claude-haiku-4-5",
-    "claude-sonnet-4-6",
-    "gpt-5.4-mini",
-    "gpt-5.4",
-]
-# Cheapest model used when no model is explicitly configured
-AIDER_CLI_DEFAULT_MODEL = "deepseek-v3"
+# Matches ANSI CSI/OSC escape sequences so we can strip color/control codes
+# from aider's terminal-oriented output before handing it to callers.
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07")
 
 
 class AiderCliBackend(CliBackend):
@@ -45,14 +37,6 @@ class AiderCliBackend(CliBackend):
     @property
     def backend_id(self) -> BackendType:
         return BackendType.AIDER
-
-    @property
-    def available_models(self) -> list[str]:
-        return AIDER_CLI_MODELS
-
-    @property
-    def default_model(self) -> str | None:
-        return AIDER_CLI_DEFAULT_MODEL
 
     @property
     def supports_freeform_model(self) -> bool:
@@ -78,3 +62,8 @@ class AiderCliBackend(CliBackend):
         if self._model:
             cmd.extend(["--model", self._model])
         return cmd
+
+    def _parse_output(self, output: str, duration_ms: int) -> InferenceResult:
+        """Strip ANSI escapes and return stdout as plain text."""
+        clean = _ANSI_ESCAPE_RE.sub("", output)
+        return self._parse_plain_text(clean, duration_ms)

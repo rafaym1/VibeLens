@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field
 
+from vibelens.models.trajectories.metrics import Metrics
 from vibelens.utils.compat import StrEnum
 
 
@@ -47,13 +48,6 @@ _BACKEND_LEGACY_ALIASES: dict[str, str] = {
 }
 
 
-class TokenUsage(BaseModel):
-    """Token counts for an inference request."""
-
-    input_tokens: int = Field(default=0, description="Number of input tokens consumed.")
-    output_tokens: int = Field(default=0, description="Number of output tokens generated.")
-
-
 class InferenceRequest(BaseModel):
     """Provider-agnostic LLM inference request.
 
@@ -84,9 +78,7 @@ class InferenceResult(BaseModel):
 
     text: str = Field(description="Generated text content.")
     model: str = Field(description="Model identifier that produced this result.")
-    usage: TokenUsage | None = Field(default=None, description="Token usage statistics.")
-    cost_usd: float | None = Field(
-        default=None,
-        description="Estimated cost in USD. None for free backends (CLI subscriptions).",
+    metrics: Metrics = Field(
+        default_factory=Metrics,
+        description="Token usage, cost, and timing for this inference call.",
     )
-    duration_ms: int = Field(default=0, description="Wall-clock generation time in milliseconds.")

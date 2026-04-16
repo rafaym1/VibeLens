@@ -19,12 +19,8 @@ from vibelens.llm.backend import (
     InferenceTimeoutError,
 )
 from vibelens.llm.providers import resolve_base_url
-from vibelens.models.llm.inference import (
-    BackendType,
-    InferenceRequest,
-    InferenceResult,
-    TokenUsage,
-)
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
+from vibelens.models.trajectories.metrics import Metrics
 from vibelens.utils.log import get_logger
 from vibelens.utils.timestamps import monotonic_ms
 
@@ -88,26 +84,19 @@ class LiteLLMBackend(InferenceBackend):
         duration_ms = monotonic_ms() - start_ms
 
         text = response.choices[0].message.content or ""
-        usage = _parse_usage(response)
-        cost = _extract_cost(response)
+        metrics = _parse_metrics(response)
+        metrics.cost_usd = _extract_cost(response)
+        metrics.duration_ms = duration_ms
 
-        input_tokens = usage.input_tokens if usage else 0
-        output_tokens = usage.output_tokens if usage else 0
         logger.info(
             "LiteLLM inference complete: model=%s duration_ms=%d in_tokens=%d out_tokens=%d",
             response.model or self._model,
             duration_ms,
-            input_tokens,
-            output_tokens,
+            metrics.prompt_tokens,
+            metrics.completion_tokens,
         )
 
-        return InferenceResult(
-            text=text,
-            model=response.model or self._model,
-            usage=usage,
-            cost_usd=cost,
-            duration_ms=duration_ms,
-        )
+        return InferenceResult(text=text, model=response.model or self._model, metrics=metrics)
 
     async def generate_stream(self, request: InferenceRequest) -> AsyncIterator[str]:
         """Stream generated text via litellm.
@@ -170,14 +159,14 @@ def _build_messages(request: InferenceRequest) -> list[dict]:
     ]
 
 
-def _parse_usage(response) -> TokenUsage | None:
-    """Extract token usage from a litellm response."""
+def _parse_metrics(response) -> Metrics:
+    """Extract token usage from a litellm response into a Metrics."""
     usage = getattr(response, "usage", None)
     if not usage:
-        return None
-    return TokenUsage(
-        input_tokens=getattr(usage, "prompt_tokens", 0) or 0,
-        output_tokens=getattr(usage, "completion_tokens", 0) or 0,
+        return Metrics()
+    return Metrics(
+        prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+        completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
     )
 
 
