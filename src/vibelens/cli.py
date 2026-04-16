@@ -50,8 +50,10 @@ def serve(
 ) -> None:
     """Start the VibeLens server."""
     from vibelens.deps import set_settings
+    from vibelens.utils.log import configure_logging
 
     settings = load_settings(config_path=config)
+    configure_logging(settings.logging)
     set_settings(settings)
     bind_host = host or settings.server.host
     bind_port = port or settings.server.port
@@ -139,10 +141,12 @@ def recommend(
     from vibelens.llm.backend import InferenceError
     from vibelens.models.llm.inference import BackendType
     from vibelens.services.recommendation.engine import analyze_recommendation
+    from vibelens.utils.log import configure_logging
 
     typer.echo(f"VibeLens v{__version__}\n")
 
     settings = load_settings(config_path=config)
+    configure_logging(settings.logging)
 
     # Check if backend is configured; if not, run auto-discovery
     inference_config = get_inference_config()
