@@ -15,6 +15,30 @@ of April 2026; bump them whenever a vendor ships a new generation.
 
 from vibelens.models.llm.inference import BackendType
 
+# Curated preset list for the LiteLLM backend. Shown in the UI model
+# combobox with inline pricing; users can also type any litellm-routable
+# name. Ordered cheapest-first across providers to surface low-cost
+# defaults near the top.
+LITELLM_MODEL_PRESETS: list[str] = [
+    "anthropic/claude-haiku-4-5",
+    "anthropic/claude-sonnet-4-5",
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-opus-4-6",
+    "openai/gpt-4.1-mini",
+    "openai/gpt-4.1",
+    "openai/gpt-5-mini",
+    "openai/gpt-5",
+    "google/gemini-2.5-flash-lite",
+    "google/gemini-2.5-flash",
+    "google/gemini-2.5-pro",
+    "google/gemini-3-pro",
+    "deepseek/deepseek-chat",
+    "deepseek/deepseek-v3.2",
+    "moonshotai/kimi-k2-thinking",
+    "x-ai/grok-4-fast",
+    "openrouter/anthropic/claude-sonnet-4-6",
+]
+
 # Per-backend (available models, default model) pairs.
 # Models are ordered cheapest-first; ``default`` is the cheapest model
 # the catalog recommends when no model is explicitly configured.
@@ -26,7 +50,6 @@ AGENT_MODEL_CATALOG: dict[BackendType, tuple[list[str], str | None]] = {
             "claude-sonnet-4-6",
             "claude-opus-4-5",
             "claude-opus-4-6",
-            "claude-opus-4-7",
         ],
         "claude-haiku-4-5",
     ),

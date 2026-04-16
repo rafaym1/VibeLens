@@ -132,7 +132,37 @@ PRICING_TABLE: dict[str, ModelPricing] = {
         cache_read_per_mtok=0.025,
         cache_write_per_mtok=0.10,
     ),
+    "gpt-5": ModelPricing(
+        input_per_mtok=1.25,
+        output_per_mtok=10.00,
+        cache_read_per_mtok=0.125,
+        cache_write_per_mtok=1.25,
+    ),
+    "gpt-5-mini": ModelPricing(
+        input_per_mtok=0.25,
+        output_per_mtok=2.00,
+        cache_read_per_mtok=0.025,
+        cache_write_per_mtok=0.25,
+    ),
+    "gpt-5.3-codex": ModelPricing(
+        input_per_mtok=1.75,
+        output_per_mtok=14.00,
+        cache_read_per_mtok=0.175,
+        cache_write_per_mtok=1.75,
+    ),
+    "gpt-4o-mini": ModelPricing(
+        input_per_mtok=0.15,
+        output_per_mtok=0.60,
+        cache_read_per_mtok=0.075,
+        cache_write_per_mtok=0.15,
+    ),
     # Google Gemini (<=200k context pricing; cache_write = input rate)
+    "gemini-3-pro": ModelPricing(
+        input_per_mtok=2.00,
+        output_per_mtok=12.00,
+        cache_read_per_mtok=0.20,
+        cache_write_per_mtok=2.00,
+    ),
     "gemini-3.1-pro": ModelPricing(
         input_per_mtok=2.00,
         output_per_mtok=12.00,
@@ -164,6 +194,12 @@ PRICING_TABLE: dict[str, ModelPricing] = {
         cache_write_per_mtok=0.10,
     ),
     # xAI Grok
+    "grok-4-fast": ModelPricing(
+        input_per_mtok=0.20,
+        output_per_mtok=0.50,
+        cache_read_per_mtok=0.05,
+        cache_write_per_mtok=0.20,
+    ),
     "grok-4.20-beta": ModelPricing(
         input_per_mtok=2.00,
         output_per_mtok=6.00,
@@ -188,6 +224,18 @@ PRICING_TABLE: dict[str, ModelPricing] = {
         output_per_mtok=0.42,
         cache_read_per_mtok=0.028,
         cache_write_per_mtok=0.28,
+    ),
+    "deepseek-v3.2": ModelPricing(
+        input_per_mtok=0.27,
+        output_per_mtok=0.41,
+        cache_read_per_mtok=0.027,
+        cache_write_per_mtok=0.27,
+    ),
+    "deepseek-chat": ModelPricing(
+        input_per_mtok=0.32,
+        output_per_mtok=0.89,
+        cache_read_per_mtok=0.032,
+        cache_write_per_mtok=0.32,
     ),
     # Mistral
     "magistral-medium": ModelPricing(
@@ -247,6 +295,18 @@ PRICING_TABLE: dict[str, ModelPricing] = {
         cache_write_per_mtok=0.45,
     ),
     "kimi-k2": ModelPricing(
+        input_per_mtok=0.60,
+        output_per_mtok=2.50,
+        cache_read_per_mtok=0.15,
+        cache_write_per_mtok=0.60,
+    ),
+    "kimi-k2-0905": ModelPricing(
+        input_per_mtok=0.40,
+        output_per_mtok=2.00,
+        cache_read_per_mtok=0.10,
+        cache_write_per_mtok=0.40,
+    ),
+    "kimi-k2-thinking": ModelPricing(
         input_per_mtok=0.60,
         output_per_mtok=2.50,
         cache_read_per_mtok=0.15,

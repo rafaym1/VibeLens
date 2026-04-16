@@ -23,6 +23,10 @@ _MODEL_PREFIX_MAP: list[tuple[str, str]] = [
     ("gpt-5.4-mini", "gpt-5.4-mini"),
     ("gpt-5.4-nano", "gpt-5.4-nano"),
     ("gpt-5.4", "gpt-5.4"),
+    ("gpt-5.3-codex", "gpt-5.3-codex"),
+    ("gpt-5-mini", "gpt-5-mini"),
+    ("gpt-5", "gpt-5"),
+    ("gpt-4o-mini", "gpt-4o-mini"),
     ("gpt-4.1-mini", "gpt-4.1-mini"),
     ("gpt-4.1-nano", "gpt-4.1-nano"),
     ("gpt-4.1", "gpt-4.1"),
@@ -31,6 +35,7 @@ _MODEL_PREFIX_MAP: list[tuple[str, str]] = [
     ("o3", "o3"),
     # Google Gemini — more specific before less specific
     ("gemini-3.1-pro", "gemini-3.1-pro"),
+    ("gemini-3-pro", "gemini-3-pro"),
     ("gemini-2.5-flash-lite", "gemini-2.5-flash-lite"),
     ("gemini-2.5-flash", "gemini-2.5-flash"),
     ("gemini-2.5-pro", "gemini-2.5-pro"),
@@ -38,9 +43,12 @@ _MODEL_PREFIX_MAP: list[tuple[str, str]] = [
     # xAI Grok — more specific before less specific
     ("grok-4.20", "grok-4.20-beta"),
     ("grok-4.1-fast", "grok-4.1-fast"),
+    ("grok-4-fast", "grok-4-fast"),
     ("grok-4", "grok-4"),
     # DeepSeek
+    ("deepseek-v3.2", "deepseek-v3.2"),
     ("deepseek-v3", "deepseek-v3"),
+    ("deepseek-chat", "deepseek-chat"),
     # Mistral — more specific before less specific
     ("magistral-medium", "magistral-medium"),
     ("mistral-medium-3.1", "mistral-medium-3.1"),
@@ -53,6 +61,8 @@ _MODEL_PREFIX_MAP: list[tuple[str, str]] = [
     ("qwen3-coder-next", "qwen3-coder-next"),
     # Moonshot Kimi — more specific before less specific
     ("kimi-k2.5", "kimi-k2.5"),
+    ("kimi-k2-0905", "kimi-k2-0905"),
+    ("kimi-k2-thinking", "kimi-k2-thinking"),
     ("kimi-k2", "kimi-k2"),
     # MiniMax
     ("minimax-m2.7", "minimax-m2.7"),
