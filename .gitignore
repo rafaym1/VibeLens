@@ -27,8 +27,9 @@ config/redteam.yaml
 # Database
 *.db
 
-# Docs (internal reference only, except specs)
+# Docs (internal reference only, except specs and the public install guide)
 docs/*
+!docs/INSTALL.md
 
 # Datasets
 datasets/

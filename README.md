@@ -37,8 +37,13 @@
 Your AI coding agents run hundreds of tool calls, burn thousands of tokens, and you have no idea what happened. VibeLens changes that.
 
 ```bash
-pip install vibelens && vibelens serve
+# macOS / Linux. Paste into Terminal.
+curl -LsSf https://raw.githubusercontent.com/CHATS-lab/VibeLens/main/install.sh | sh
 ```
+
+No Python, no pip, nothing to set up first. The script installs [uv](https://docs.astral.sh/uv/) (a single binary), fetches VibeLens, and opens it in your browser.
+
+> **Just want a look?** Try the [live demo](https://vibelens.chats-lab.org/). Nothing to install.
 
 One install. Reads local logs. Works with **Claude Code**, **Codex CLI**, **Gemini CLI**, and **OpenClaw** out of the box.
 
@@ -48,8 +53,8 @@ One install. Reads local logs. Works with **Claude Code**, **Codex CLI**, **Gemi
 |---------|-------------|
 | **Session visualization** | Step-by-step timeline with tool calls, thinking, and sub-agents |
 | **Dashboard analytics** | Usage heatmaps, cost breakdowns, and per-project stats |
-| **Productivity tips** | Detects recurring frustration patterns and suggests concrete fixes |
-| **Personalization** | Retrieve, customize, and evolve reusable skills from your real sessions |
+| **Productivity tips** _(needs LLM key or Agent)_ | Detects recurring frustration patterns and suggests concrete fixes |
+| **Personalization** _(needs LLM key or Agent)_ | Retrieve, customize, and evolve reusable skills from your real sessions |
 | **Session sharing** | Share sessions via one-click links |
 | **Multi-agent support** | Claude Code, Codex CLI, Gemini CLI, OpenClaw with auto-detection |
 
@@ -108,44 +113,74 @@ VibeLens auto-detects the agent format. Just point it at your session directory 
 
 ## Quick Start
 
-### pip (recommended)
+### One-liner (recommended)
 
-The simplest way to install. Requires **Python 3.10+** — check with `python3 --version`. If you need to install or upgrade Python:
+Zero prerequisites: no Python, no pip. The commands below install [uv](https://docs.astral.sh/uv/) first, then run VibeLens.
 
 ```bash
-# macOS (Homebrew)
-brew install python@3.12
-
-# Ubuntu/Debian
-sudo apt update && sudo apt install python3.12
-
-# Windows — download from https://www.python.org/downloads/
+# macOS / Linux. Paste into Terminal.
+curl -LsSf https://raw.githubusercontent.com/CHATS-lab/VibeLens/main/install.sh | sh
 ```
 
-Then install and run VibeLens:
+```powershell
+# Windows. Paste into PowerShell.
+irm https://raw.githubusercontent.com/CHATS-lab/VibeLens/main/install.ps1 | iex
+```
+
+VibeLens starts on **http://localhost:12001** and your browser opens automatically. Change it with `--port` (for example, `vibelens serve --port 8080`).
+
+<details>
+<summary><b>New to the terminal? Click to open one.</b></summary>
+
+- **macOS**: press `Cmd+Space`, type `Terminal`, press Enter.
+- **Windows**: press the Windows key, type `PowerShell`, press Enter.
+- **Linux** (GNOME/Ubuntu): press `Ctrl+Alt+T`.
+
+Then paste the one-liner above and press Enter.
+</details>
+
+### Pick your path
+
+| Your situation | Command |
+|----------------|---------|
+| **Nothing installed** (recommended) | one-liner above |
+| Already have Python 3.10+ | `pip install vibelens && vibelens serve` |
+| Prefer the npm workflow (Python also required) | `npx @chats-lab/vibelens serve` |
+| Want to hack on VibeLens | [developer setup](#developer-setup) |
+
+### What happens on first run
+
+1. Your browser opens to **http://localhost:12001**.
+2. If you have Claude Code, Codex CLI, Gemini CLI, or OpenClaw sessions, VibeLens auto-detects them from `~/.claude/`, `~/.codex/`, `~/.gemini/`, or `~/.openclaw/`.
+3. Otherwise, bundled example sessions (recipe-book) show up so you can look around.
+4. **Productivity Tips** and **Personalization** need a language-model API key. Optional; configure later in Settings.
+
+### pip (if you already have Python 3.10+)
 
 ```bash
 pip install vibelens
 vibelens serve
 ```
 
-### uv (run without installing)
+Check your version first with `python3 --version`. Need Python? See [docs/INSTALL.md](docs/INSTALL.md#installing-python).
 
-One command, no permanent install. Requires [uv](https://docs.astral.sh/uv/).
+### uv (run without a permanent install)
 
 ```bash
 uvx vibelens serve
 ```
 
-### npm
+This fetches VibeLens into uv's cache and runs it without a global install. The one-liner above calls this under the hood.
 
-For Node.js users. Requires **Node.js 16+** and **Python 3.10+** with `pip install vibelens`.
+### npm (if you already have Python and prefer the npm workflow)
+
+VibeLens is a Python app with an npm wrapper for convenience. The wrapper still requires **Python 3.10+** and an installed `vibelens` package. Use this when you already have both and want `npx`/`npm` ergonomics.
 
 ```bash
 npx @chats-lab/vibelens serve
 ```
 
-Or install globally: `npm install -g @chats-lab/vibelens`
+Or install globally: `npm install -g @chats-lab/vibelens`.
 
 ### Developer setup
 
@@ -156,11 +191,9 @@ uv sync --extra dev
 uv run vibelens serve
 ```
 
-VibeLens opens your browser at **http://localhost:12001** and reads your local `~/.claude/` sessions by default.
-
 ### Configuration
 
-YAML-based configuration with environment variable overrides (`VIBELENS_*`). See [`config/vibelens.example.yaml`](config/vibelens.example.yaml) for all options.
+YAML configuration with environment variable overrides (`VIBELENS_*`). See [`config/vibelens.example.yaml`](config/vibelens.example.yaml) for all options.
 
 ```bash
 # Use a config file
@@ -170,11 +203,15 @@ vibelens serve --config config/self-use.yaml
 vibelens serve --host 0.0.0.0 --port 8080
 ```
 
+### Troubleshooting
+
+Top issues. For the full list, see [docs/INSTALL.md](docs/INSTALL.md#troubleshooting).
+
 ## Data Donation
 
 VibeLens supports donating your agent session data to advance research on coding agent behavior. Donated sessions are collected by [CHATS-Lab](https://github.com/CHATS-lab) (Conversation, Human-AI Technology, and Safety Lab) at Northeastern University.
 
-To donate, upload your data, select the sessions you want to share, and click the **Donate** button.
+To donate, upload your data, select the sessions you want to share, and click the **Donate Data** button.
 
 ## Contributing
 

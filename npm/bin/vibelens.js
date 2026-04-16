@@ -79,29 +79,51 @@ function isVibelensInstalled(pythonCmd) {
 
 function printNoPythonError() {
   console.error("Error: vibelens requires Python >= 3.10.\n");
-  if (process.platform === "darwin") {
-    console.error("Install Python with Homebrew:");
-    console.error("  brew install python@3.12\n");
-  } else if (process.platform === "win32") {
-    console.error("Install Python from the Microsoft Store or python.org:");
-    console.error("  winget install Python.Python.3.12\n");
-  } else {
-    console.error("Install Python with your package manager:");
-    console.error("  sudo apt install python3  # Debian/Ubuntu");
-    console.error("  sudo dnf install python3  # Fedora\n");
-  }
-  console.error("Or download from https://www.python.org/downloads/");
   console.error(
-    "\nIf Python is installed at a non-standard path, set VIBELENS_PYTHON=/path/to/python3"
+    "Fastest fix (skips Python/pip entirely): install uv and let it handle Python for you.\n"
+  );
+  if (process.platform === "win32") {
+    console.error(
+      '  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"'
+    );
+    console.error("  uvx vibelens serve\n");
+  } else {
+    console.error("  curl -LsSf https://astral.sh/uv/install.sh | sh");
+    console.error("  uvx vibelens serve\n");
+  }
+  console.error("Or install Python yourself:");
+  if (process.platform === "darwin") {
+    console.error("  brew install python@3.12");
+  } else if (process.platform === "win32") {
+    console.error("  winget install Python.Python.3.12");
+  } else {
+    console.error("  sudo apt install python3  # Debian/Ubuntu");
+    console.error("  sudo dnf install python3  # Fedora");
+  }
+  console.error("  (or download from https://www.python.org/downloads/)\n");
+  console.error(
+    "Full install guide: https://github.com/CHATS-lab/VibeLens/blob/main/docs/INSTALL.md"
+  );
+  console.error(
+    "If Python is installed at a non-standard path, set VIBELENS_PYTHON=/path/to/python3"
   );
 }
 
 function printNotInstalledError() {
   console.error(
-    "Python found but vibelens is not installed. Install it with:\n"
+    "Python found but vibelens is not installed. Install it with one of:\n"
   );
-  console.error("  pip install vibelens\n");
-  console.error("Then run this command again.");
+  console.error("  pip install vibelens");
+  console.error(
+    "  pipx install vibelens      # if pip reports 'externally-managed-environment'"
+  );
+  console.error(
+    "  uvx vibelens serve         # if you don't want to manage Python at all"
+  );
+  console.error("\nThen run this command again.");
+  console.error(
+    "Full install guide: https://github.com/CHATS-lab/VibeLens/blob/main/docs/INSTALL.md"
+  );
 }
 
 // --- Main ---

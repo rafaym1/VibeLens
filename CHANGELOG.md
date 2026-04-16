@@ -3,11 +3,15 @@
 ## [Unreleased]
 
 ### Added
+- **One-liner install scripts**: New `install.sh` (macOS/Linux) and `install.ps1` (Windows) at the repo root bootstrap [uv](https://docs.astral.sh/uv/) and run `uvx vibelens serve` with zero prerequisites.
+- **Install guide**: New `docs/INSTALL.md` with per-platform walkthrough, comparison of install methods, troubleshooting matrix, and uninstall steps.
 - **Donation UI redesign**: New `DonateResultDialog` with rose Heart header, a copy button that flashes emerald on success and rose on failure, and a direct link to the withdrawal Google Form.
 - **Donation history**: Per-browser donation log at `~/.vibelens/donations/sent.jsonl` (sender-side, separate from the receiver's `index.jsonl`). New `GET /api/sessions/donations/history` endpoint filters rows by `sha256(X-Session-Token)` so each browser only sees its own donations. New `DonationHistoryDialog` reachable from the consent dialog's "View history" button.
 - **Withdraw form**: Consent dialog now links to a pre-fillable Google Form; result and history dialogs deep-link with the Donation ID pre-populated.
 
 ### Changed
+- **README Quick Start**: Leads with the curl one-liner, adds a decision table, a "what happens on first run" block, inline troubleshooting, and a collapsible "open a terminal" micro-guide. Features table annotates rows that need a language-model key.
+- **npm wrapper error copy**: `printNoPythonError` and `printNotInstalledError` in `npm/bin/vibelens.js` now recommend uv first and `pipx install vibelens` as a fallback for `externally-managed-environment`.
 - **Consent dialog footer**: Added "View history" button and a footnote linking to the withdrawal form for users who donated previously.
 - **Donation service constants**: Hoisted `INDEX_FILENAME` to `services/donation/__init__.py` and added `SENDER_INDEX_FILENAME` for the new sender-side log.
 
