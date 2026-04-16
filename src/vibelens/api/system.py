@@ -14,6 +14,7 @@ from vibelens.deps import (
     set_inference_config,
 )
 from vibelens.llm.backends import _CLI_BACKEND_REGISTRY
+from vibelens.llm.model_catalog import LITELLM_MODEL_PRESETS
 from vibelens.llm.pricing import lookup_pricing
 from vibelens.llm.providers import mask_api_key
 from vibelens.models.llm.inference import BackendType
@@ -138,8 +139,12 @@ async def configure_llm(body: LLMConfigureRequest) -> dict:
 async def list_cli_models() -> dict:
     """Return model metadata and pricing for all CLI backends.
 
+    The ``available`` flag reflects whether the CLI executable is on the
+    user's PATH so the frontend can mark installed agents.
+
     Returns:
-        Dict mapping backend_id to models, default, freeform flag, and pricing.
+        Dict mapping backend_id to models, default, freeform flag,
+        pricing, and installed-availability.
     """
     result: dict[str, dict] = {}
     for backend_type, (module_path, class_name) in _CLI_BACKEND_REGISTRY.items():
@@ -160,8 +165,28 @@ async def list_cli_models() -> dict:
             "models": models_with_pricing,
             "default_model": backend.default_model,
             "supports_freeform": backend.supports_freeform_model,
+            "available": await backend.is_available(),
         }
     return result
+
+
+@router.get("/llm/litellm-presets")
+async def list_litellm_presets() -> dict:
+    """Return curated LiteLLM model presets with pricing.
+
+    Returns:
+        Dict with a ``models`` list where each entry is
+        ``{name, input_per_mtok?, output_per_mtok?}``.
+    """
+    models: list[dict] = []
+    for preset in LITELLM_MODEL_PRESETS:
+        entry: dict = {"name": preset}
+        pricing = lookup_pricing(preset)
+        if pricing:
+            entry["input_per_mtok"] = pricing.input_per_mtok
+            entry["output_per_mtok"] = pricing.output_per_mtok
+        models.append(entry)
+    return {"models": models}
 
 
 def _format_pricing(model_name: str) -> dict | None:
