@@ -1,5 +1,7 @@
 """Session-related request and response models."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -25,4 +27,20 @@ class DonateResult(BaseModel):
     )
     errors: list[dict] = Field(
         default_factory=list, description="Per-session error details for failed donations."
+    )
+
+
+class DonationHistoryEntry(BaseModel):
+    """Single donation history entry returned to the client."""
+
+    donation_id: str = Field(description="Unique donation identifier.")
+    session_count: int = Field(description="Number of sessions donated in this operation.")
+    donated_at: datetime = Field(description="UTC timestamp of the donation.")
+
+
+class DonationHistoryResponse(BaseModel):
+    """Response payload for GET /api/sessions/donations/history."""
+
+    entries: list[DonationHistoryEntry] = Field(
+        description="Donations for this browser, newest first."
     )
