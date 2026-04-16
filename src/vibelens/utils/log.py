@@ -117,7 +117,7 @@ def _resolve_domain(name: str) -> str | None:
 
 
 def _bootstrap_root() -> None:
-    """Phase 1 — attach a stderr handler to the ``vibelens`` root once.
+    """Phase 1: attach a stderr handler to the ``vibelens`` root once.
 
     Called lazily by ``get_logger`` so import-time logs still appear somewhere
     before ``configure_logging`` runs.
@@ -215,7 +215,7 @@ def _attach_domain_handler_for(logger: logging.Logger) -> None:
 
 
 def configure_logging(config: "LoggingConfig") -> None:
-    """Phase 2 — attach file handlers, apply per-domain levels, emit summary.
+    """Phase 2: attach file handlers, apply per-domain levels, emit summary.
 
     Idempotent: repeat calls update levels but do not duplicate handlers.
     Safe to call after any number of ``get_logger`` calls; pending loggers
@@ -231,7 +231,6 @@ def configure_logging(config: "LoggingConfig") -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
 
     level = logging.getLevelName(config.level)
-    assert isinstance(level, int), f"Invalid log level: {config.level}"
     _current_max_bytes = config.max_bytes
     _current_backup_count = config.backup_count
 
