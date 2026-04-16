@@ -1,10 +1,11 @@
 """Tests for catalog extension install/uninstall service."""
 
 import json
+import shutil
 from pathlib import Path
 from unittest.mock import patch
 
-from vibelens.models.enums import AgentExtensionType, ExtensionSource
+from vibelens.models.enums import AgentExtensionType, AgentType, ExtensionSource
 from vibelens.models.extension import ExtensionItem
 from vibelens.services.extensions.catalog_install import (
     install_catalog_item,
@@ -12,6 +13,8 @@ from vibelens.services.extensions.catalog_install import (
     uninstall_extension,
 )
 from vibelens.services.extensions.platforms import AgentPlatform
+from vibelens.services.extensions.skill_service import SkillService
+from vibelens.storage.extension.skill_store import SkillStore
 
 DEFAULT_SKILL_CONTENT = "# Test Skill\nContent"
 
@@ -399,3 +402,90 @@ def test_uninstall_not_found_raises(tmp_path: Path):
         except FileNotFoundError:
             pass
     print("Correctly raised FileNotFoundError for missing extension")
+
+
+# ---------------------------------------------------------------------------
+# Central store multi-file persistence tests
+# ---------------------------------------------------------------------------
+
+
+def _fake_download_source(source_dir: Path):
+    """Return a download_directory stub that copies a prepared tree."""
+
+    def _fake(source_url: str, target_dir: Path) -> bool:
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        shutil.copytree(source_dir, target_dir)
+        return True
+
+    return _fake
+
+
+def _build_multi_file_source(root: Path) -> Path:
+    """Create a fake downloaded skill tree with SKILL.md + scripts/ + references/."""
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "SKILL.md").write_text(
+        "---\ndescription: Claude API helpers\n---\n# Claude API\nBody text.\n",
+        encoding="utf-8",
+    )
+    scripts_dir = root / "scripts"
+    scripts_dir.mkdir()
+    (scripts_dir / "tool.py").write_text("print('hi')\n", encoding="utf-8")
+    refs_dir = root / "references"
+    refs_dir.mkdir()
+    (refs_dir / "note.md").write_text("# Note\n", encoding="utf-8")
+    return root
+
+
+def test_install_from_source_copies_full_tree_to_central(tmp_path: Path):
+    """Catalog install copies SKILL.md + scripts/ + references/ into the central store."""
+    platforms = _make_platforms(tmp_path=tmp_path)
+    source_tree = _build_multi_file_source(root=tmp_path / "source" / "claude-api")
+
+    central_root = tmp_path / "central"
+    codex_root = tmp_path / "codex-central-skills"
+    central = SkillStore(root=central_root, create=True)
+    codex_store = SkillStore(root=codex_root, create=True)
+    service = SkillService(central=central, agents={AgentType.CODEX: codex_store})
+
+    item = ExtensionItem(
+        extension_id="featured:skill:claude-api",
+        extension_type=AgentExtensionType.SKILL,
+        name="claude-api",
+        description="Claude API helpers",
+        tags=[],
+        category="featured",
+        platforms=["claude_code"],
+        quality_score=90.0,
+        popularity=0.8,
+        updated_at="",
+        source_url="https://github.com/anthropics/skills/tree/main/skills/claude-api",
+        repo_full_name="",
+        install_method="skill_file",
+        install_content=None,
+    )
+
+    with (
+        patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms),
+        patch(f"{INSTALL_MODULE}.get_skill_service", return_value=service),
+        patch(
+            f"{INSTALL_MODULE}.download_directory",
+            side_effect=_fake_download_source(source_dir=source_tree),
+        ),
+    ):
+        install_from_source_url(item=item, target_platform="claude_code")
+
+    central_skill_dir = central_root / "claude-api"
+    assert (central_skill_dir / "SKILL.md").is_file()
+    assert (central_skill_dir / "scripts" / "tool.py").is_file()
+    assert (central_skill_dir / "references" / "note.md").is_file()
+    central_entries = sorted(p.name for p in central_skill_dir.iterdir())
+    print(f"Central store contents for claude-api: {central_entries}")
+
+    # End-to-end: syncing from central to codex must carry auxiliary files too.
+    service.sync_to_agents(name="claude-api", agents=["codex"])
+    codex_skill_dir = codex_root / "claude-api"
+    assert (codex_skill_dir / "SKILL.md").is_file()
+    assert (codex_skill_dir / "scripts" / "tool.py").is_file()
+    assert (codex_skill_dir / "references" / "note.md").is_file()
+    print(f"Codex skill contents after sync: {sorted(p.name for p in codex_skill_dir.iterdir())}")

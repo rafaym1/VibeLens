@@ -125,12 +125,13 @@ def install_from_source_url(
     if item.extension_type == AgentExtensionType.SKILL:
         try:
             service = get_skill_service()
-            if not service._central.exists(item.name):
-                skill_md = (target_dir / "SKILL.md").read_text(encoding="utf-8")
-                service._central.write(item.name, skill_md)
-                service.invalidate()
-        except Exception as exc:
-            logger.warning("Failed to import %s to central: %s", item.name, exc)
+            central_dir = Path(service.get_item_path(item.name)).parent
+            if central_dir.exists():
+                shutil.rmtree(central_dir)
+            shutil.copytree(target_dir, central_dir)
+            service.invalidate()
+        except OSError as exc:
+            logger.warning("Failed to copy %s to central: %s", item.name, exc)
 
     return target_dir
 

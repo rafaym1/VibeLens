@@ -15,8 +15,8 @@ class ExtensionListResponse(BaseModel):
 class ExtensionInstallRequest(BaseModel):
     """Request body for installing an extension item."""
 
-    target_platforms: list[str] | None = Field(
-        default=None, description="Target agent platforms for installation."
+    target_platforms: list[str] = Field(
+        min_length=1, description="Target agent platforms for installation."
     )
     overwrite: bool = Field(
         default=False, description="Overwrite existing file if it already exists."
