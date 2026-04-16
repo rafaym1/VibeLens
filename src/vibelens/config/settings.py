@@ -53,6 +53,18 @@ class StorageConfig(BaseModel):
         default=Path.home() / ".vibelens" / "skills",
         description="Central directory containing VibeLens-managed skills.",
     )
+    managed_commands_dir: Path = Field(
+        default=Path.home() / ".vibelens" / "commands",
+        description="Central directory for VibeLens-managed commands.",
+    )
+    managed_subagents_dir: Path = Field(
+        default=Path.home() / ".vibelens" / "subagents",
+        description="Central directory for VibeLens-managed subagents.",
+    )
+    managed_hooks_dir: Path = Field(
+        default=Path.home() / ".vibelens" / "hooks",
+        description="Central directory for VibeLens-managed hooks.",
+    )
     friction_dir: Path = Field(
         default=Path.home() / ".vibelens" / "friction",
         description="Directory for persisted friction analysis results.",
@@ -185,6 +197,9 @@ class Settings(BaseSettings):
         """Expand ~ in Path fields and resolve the examples cache dir."""
         self.storage.share_dir = self.storage.share_dir.expanduser()
         self.storage.managed_skills_dir = self.storage.managed_skills_dir.expanduser()
+        self.storage.managed_commands_dir = self.storage.managed_commands_dir.expanduser()
+        self.storage.managed_subagents_dir = self.storage.managed_subagents_dir.expanduser()
+        self.storage.managed_hooks_dir = self.storage.managed_hooks_dir.expanduser()
         self.storage.friction_dir = self.storage.friction_dir.expanduser()
         self.storage.personalization_dir = self.storage.personalization_dir.expanduser()
         self.storage.recommendation_dir = self.storage.recommendation_dir.expanduser()
