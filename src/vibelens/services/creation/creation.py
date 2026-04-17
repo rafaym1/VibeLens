@@ -61,7 +61,7 @@ from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 
 logger = get_logger(__name__)
 
-CREATION_LOG_DIR = Path("logs/creation")
+CREATION_LOG_DIR = Path(__file__).resolve().parents[3] / "logs" / "creation"
 
 # LLM inference limits for each step of the skill creation pipeline
 SKILL_CREATION_PROPOSAL_OUTPUT_TOKENS = 4096
@@ -495,7 +495,7 @@ async def _synthesize_skill_creation_proposals(
             ],
             "proposals": [
                 {
-                    "skill_name": p.element_name,
+                    "element_name": p.element_name,
                     "description": p.description,
                     "rationale": p.rationale,
                     "addressed_patterns": p.addressed_patterns,

@@ -183,7 +183,10 @@ def _build_agent_subagent_stores() -> dict:
         if platform.subagents_dir is None:
             continue
         resolved = platform.subagents_dir.expanduser().resolve()
-        stores[source.value] = SubagentStore(resolved)
+        if platform.install_key:
+            stores[source.value] = SubagentStore(resolved, create=True)
+        elif resolved.is_dir():
+            stores[source.value] = SubagentStore(resolved)
     return stores
 
 

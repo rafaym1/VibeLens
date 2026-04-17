@@ -60,7 +60,7 @@ from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 
 logger = get_logger(__name__)
 
-EVOLUTION_LOG_DIR = Path("logs/evolution")
+EVOLUTION_LOG_DIR = Path(__file__).resolve().parents[3] / "logs" / "evolution"
 
 # LLM inference limits for each step of the skill evolution pipeline
 EVOLUTION_PROPOSAL_OUTPUT_TOKENS = 4096
@@ -87,7 +87,7 @@ def _filter_skills(
     Returns:
         Filtered skill list.
     """
-    if not skill_names:
+    if skill_names is None:
         return skills
     allowed = set(skill_names)
     return [s for s in skills if s["name"] in allowed]

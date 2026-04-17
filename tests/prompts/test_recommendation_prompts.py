@@ -22,12 +22,19 @@ def test_profile_prompt_renders():
 
 def test_rationale_prompt_renders():
     """L4 rationale prompt renders system and user templates."""
-    system = RECOMMENDATION_RATIONALE_PROMPT.render_system(output_schema="{}", backend_rules="")
+    system = RECOMMENDATION_RATIONALE_PROMPT.render_system(
+        output_schema="{}",
+        backend_rules="",
+        max_results=10,
+        min_relevance=0.4,
+    )
     assert "rationale" in system.lower() or "recommend" in system.lower()
 
     user = RECOMMENDATION_RATIONALE_PROMPT.render_user(
         user_profile={"domains": ["web-dev"], "languages": ["python"]},
-        candidates=[{"name": "test-runner", "description": "Runs tests"}],
+        candidates=[
+            {"name": "test-runner", "item_id": "test-runner-001", "description": "Runs tests"},
+        ],
     )
     assert "test-runner" in user
     print(f"Rationale user prompt: {len(user)} chars")

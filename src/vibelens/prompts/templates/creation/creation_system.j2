@@ -16,7 +16,7 @@ Generate a complete, production-ready SKILL.md for the given proposal. Ground ev
 
 - Return ONLY valid JSON matching the schema. No ``` fences around the JSON object itself (the ``` inside `skill_md_content` is fine — escape normally).
 - The YAML frontmatter inside `skill_md_content` must contain ONLY `name` and `description`.
-- `description` field in the JSON must mirror the frontmatter `description` (third person, what + when).
+- `description` field in the JSON is a concise trigger summary (max 30 words, third person, what + when).
 - `tools_used` (top-level JSON field) lists the tool names referenced by the skill — do NOT add it to the YAML frontmatter.
 - NEVER reference sessions by ID, index, or UUID in text fields. Describe patterns in general terms.
 - All text fields must be plain language, understandable by non-technical users.

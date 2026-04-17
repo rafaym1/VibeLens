@@ -3,7 +3,7 @@
 import copy
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader, StrictUndefined, Template
 from pydantic import BaseModel, ConfigDict, Field
 
 # Root directory for Jinja2 system/user prompt templates
@@ -14,6 +14,7 @@ _jinja_env = Environment(
     keep_trailing_newline=False,
     trim_blocks=True,
     lstrip_blocks=True,
+    undefined=StrictUndefined,
 )
 
 

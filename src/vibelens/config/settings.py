@@ -169,7 +169,7 @@ class LoggingConfig(BaseModel):
     )
     per_domain: dict[str, LogLevelName] = Field(
         default_factory=dict,
-        description="Override global level for a specific domain (e.g. friction: DEBUG).",
+        description="Override global level for a specific domain (e.g. analysis: DEBUG).",
     )
 
     @field_validator("per_domain")

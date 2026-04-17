@@ -10,7 +10,7 @@ Merge proposals from {{ batch_count }} batches analyzing {{ session_count }} tot
 
 ### Proposals
 {% for proposal in batch.proposals %}
-- **{{ proposal.skill_name }}**: {{ proposal.description }}
+- **{{ proposal.element_name }}**: {{ proposal.description }}
   - Rationale: {{ proposal.rationale }}
   - Addresses: {{ proposal.addressed_patterns | join(", ") }}
   - Session IDs: {{ proposal.session_ids | join(", ") }}
