@@ -313,7 +313,7 @@ class HookService(BaseExtensionService[Hook]):
 
     def _resolve_agent_key(self, agent: str) -> str:
         """Look up an agent key from the settings paths dict."""
-        key = str(agent)
+        key = agent.value if hasattr(agent, "value") else str(agent)
         if key not in self._settings_paths:
             raise KeyError(f"Unknown agent: {agent!r}")
         return key
