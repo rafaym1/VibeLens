@@ -15,13 +15,13 @@ class TestBlocklistMatching:
     @pytest.mark.parametrize(
         "method, path",
         [
-            ("POST", "/api/skills"),
-            ("PUT", "/api/skills/my-skill"),
-            ("DELETE", "/api/commands/cmd-name"),
-            ("POST", "/api/hooks/import/claude"),
-            ("POST", "/api/subagents/sub-name/agents"),
-            ("DELETE", "/api/hooks/hook-name/agents/codex"),
-            ("POST", "/api/extensions/item-123/install"),
+            ("POST", "/api/extensions/skills"),
+            ("PUT", "/api/extensions/skills/my-skill"),
+            ("DELETE", "/api/extensions/commands/cmd-name"),
+            ("POST", "/api/extensions/hooks/import/claude"),
+            ("POST", "/api/extensions/subagents/sub-name/agents"),
+            ("DELETE", "/api/extensions/hooks/hook-name/agents/codex"),
+            ("POST", "/api/extensions/catalog/item-123/install"),
             ("POST", "/api/llm/configure"),
             ("POST", "/api/shares"),
             ("DELETE", "/api/shares/session-abc"),
@@ -44,7 +44,7 @@ class TestBlocklistMatching:
         "method, path",
         [
             # GET requests always pass
-            ("GET", "/api/skills"),
+            ("GET", "/api/extensions/skills"),
             ("GET", "/api/sessions"),
             ("GET", "/api/shares"),
             ("GET", "/api/analysis/dashboard"),
