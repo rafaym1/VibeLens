@@ -1,8 +1,9 @@
-import { Check, History, Info, PanelRightClose, PanelRightOpen, Search, Sparkles, Square, TrendingUp } from "lucide-react";
+import { Check, History, Info, PanelRightClose, PanelRightOpen, Search, Sparkles, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppContext } from "../../app";
 import type { AnalysisJobResponse, AnalysisJobStatus, CostEstimate, LLMStatus, PersonalizationResult, Skill, PersonalizationMode } from "../../types";
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from "../../styles";
+import { AnalysisLoadingScreen } from "../analysis-loading-screen";
 import { AnalysisWelcomePage, TutorialBanner } from "../analysis-welcome";
 import { CostEstimateDialog } from "../cost-estimate-dialog";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "../modal";
@@ -10,7 +11,6 @@ import { Tooltip } from "../tooltip";
 import { ExtensionExploreTab } from "./extensions/extension-explore-tab";
 import { LocalExtensionsTab } from "./local-extensions-tab";
 import {
-  AnalysisLoadingState,
   AnalysisResultView,
   type PersonalizationTab,
 } from "./personalization-view";
@@ -72,6 +72,12 @@ const MODE_DESCRIPTIONS: Record<PersonalizationMode, {
       description: "VibeLens compares your installed skills with how you actually use your agents. Where it finds gaps or outdated instructions, it suggests edits to make those skills work better for you.",
     },
   },
+};
+
+const MODE_LOADING_TITLES: Record<PersonalizationMode, string> = {
+  recommendation: "Discovering skills that match your coding patterns",
+  creation: "Generating custom skills from your workflow",
+  evolution: "Checking installed skills against your usage",
 };
 
 const POLL_INTERVAL_MS = 3000;
@@ -438,28 +444,26 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
             </div>
           )}
           {activeTab === "local" && <LocalExtensionsTab refreshTrigger={localRefresh} />}
-          {activeTab === "explore" && <ExtensionExploreTab resetKey={exploreResetKey} />}
-          {isAnalysisTab && (analysisLoading || estimating) && (
-            <div className="flex items-center justify-center pt-16">
-              <div className="flex flex-col items-center gap-5 max-w-md">
-                <AnalysisLoadingState mode={currentMode} sessionCount={activeTab === "retrieve" ? resolvedSessionIdsRef.current.length : checkedIds.size} />
-                {activeJobId && (
-                  <div className="flex flex-col items-center gap-3 mt-1">
-                    <button
-                      onClick={handleStopAnalysis}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 dark:text-rose-300 dark:hover:text-white dark:bg-rose-900/30 dark:hover:bg-rose-800/50 dark:border-rose-700/50 rounded-md transition"
-                    >
-                      <Square className="w-3 h-3" />
-                      Stop
-                    </button>
-                    <div className="text-center space-y-1">
-                      <p className="text-sm text-muted">Usually takes 2-5 minutes</p>
-                      <p className="text-sm text-muted">Running in background. You can switch tabs.</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+          {activeTab === "explore" && (
+            <ExtensionExploreTab
+              resetKey={exploreResetKey}
+              onSwitchToRecommend={() => {
+                setActiveTab("retrieve");
+                localStorage.setItem("vibelens-personalization-tab", "retrieve");
+                setAnalysisResult(null);
+                setAnalysisError(null);
+                if (appMode === "demo") loadDemoAnalysis("recommendation");
+              }}
+            />
+          )}
+          {isAnalysisTab && (analysisLoading || estimating) && !analysisResult && (
+            <AnalysisLoadingScreen
+              accent="teal"
+              title={MODE_LOADING_TITLES[currentMode]}
+              sublabel={estimating ? "Estimating cost..." : "Usually takes 2-5 minutes"}
+              sessionCount={activeTab === "retrieve" ? resolvedSessionIdsRef.current.length : checkedIds.size}
+              onStop={activeJobId ? handleStopAnalysis : undefined}
+            />
           )}
           {isAnalysisTab && !analysisLoading && !estimating && !analysisResult && (
             <AnalysisWelcomePage
@@ -478,13 +482,19 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
               {...(activeTab === "retrieve" ? { onRunAll: handleRunAll } : {})}
             />
           )}
-          {isAnalysisTab && !analysisLoading && analysisResult && (
+          {isAnalysisTab && analysisResult && (
             <AnalysisResultView
               result={analysisResult}
               activeTab={activeTab}
               onNew={handleNewAnalysis}
               fetchWithToken={fetchWithToken}
               onInstalled={handleSkillInstalled}
+              onSwitchTab={(tab) => {
+                setActiveTab(tab);
+                localStorage.setItem("vibelens-personalization-tab", tab);
+                setAnalysisResult(null);
+                setAnalysisError(null);
+              }}
             />
           )}
         </div>
@@ -514,7 +524,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
                 </Tooltip>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto p-3 pt-1">
-                <PersonalizationHistory onSelect={handleHistorySelect} refreshTrigger={historyRefresh} filterMode={currentMode} activeJobId={activeJobId} />
+                <PersonalizationHistory onSelect={handleHistorySelect} refreshTrigger={historyRefresh} filterMode={currentMode} activeJobId={activeJobId} onStop={handleStopAnalysis} />
               </div>
             </div>
           </>

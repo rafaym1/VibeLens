@@ -11,10 +11,6 @@ mode: demo
 demo:
   example_sessions: "examples/recipe-book"
 
-storage:
-  friction_dir: "examples/recipe-book/friction_analyses"
-  personalization_dir: "examples/recipe-book/personalization"
-
 donation:
   dir: ~/.vibelens/donations
 

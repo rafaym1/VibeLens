@@ -11,6 +11,8 @@ logger = get_logger(__name__)
 CONFIG_ENV_VAR = "VIBELENS_CONFIG"
 # Config file names auto-discovered in the working directory
 DEFAULT_CONFIG_NAMES = ["vibelens.yaml", "vibelens.yml"]
+# Fallback config shipped with the project source
+FALLBACK_CONFIG_NAME = "config/self-use.yaml"
 
 
 def discover_config_path() -> Path | None:
@@ -19,6 +21,7 @@ def discover_config_path() -> Path | None:
     Checks (in order):
         1. ``VIBELENS_CONFIG`` environment variable
         2. ``vibelens.yaml`` or ``vibelens.yml`` in the current directory
+        3. ``config/self-use.yaml`` in the current directory
 
     Returns:
         Path to the config file, or None if not found.
@@ -35,5 +38,9 @@ def discover_config_path() -> Path | None:
         path = Path(name)
         if path.exists():
             return path
+
+    fallback = Path(FALLBACK_CONFIG_NAME)
+    if fallback.exists():
+        return fallback
 
     return None

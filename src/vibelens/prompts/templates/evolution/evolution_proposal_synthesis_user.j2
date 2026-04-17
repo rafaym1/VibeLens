@@ -22,6 +22,7 @@ If a per-batch proposal names a skill NOT in this list, DISCARD it — do not ca
 {% for proposal in batch.proposals %}
 - **{{ proposal.element_name }}**: {{ proposal.rationale }}
   - Addressed patterns: {{ proposal.addressed_patterns | join(", ") }}
+  - Session IDs: {{ proposal.session_ids | join(", ") }}
 {% endfor %}
 
 {% endfor %}

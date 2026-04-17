@@ -5,7 +5,7 @@ import secrets
 
 from fastapi import APIRouter, Header, HTTPException
 
-from vibelens.deps import get_friction_store, is_demo_mode, is_test_mode
+from vibelens.deps import get_friction_store
 from vibelens.models.friction import FrictionAnalysisResult
 from vibelens.schemas.analysis import AnalysisJobResponse, AnalysisJobStatus
 from vibelens.schemas.cost_estimate import CostEstimateResponse
@@ -53,9 +53,6 @@ async def friction_analysis(
     """
     if not body.session_ids:
         raise HTTPException(status_code=400, detail="session_ids must not be empty")
-
-    if is_test_mode() or is_demo_mode():
-        raise HTTPException(status_code=503, detail="Friction analysis unavailable in demo mode")
 
     job_id = secrets.token_urlsafe(12)
     try:

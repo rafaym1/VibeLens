@@ -39,8 +39,8 @@ class EvolutionProposal(BaseModel):
         default=AgentExtensionType.SKILL, description="Type of element to evolve."
     )
     element_name: str = Field(description="Name of the existing element to modify.")
-    session_indices: list[int] = Field(
-        default_factory=list, description="0-indexed session indices relevant to this proposal."
+    session_ids: list[str] = Field(
+        default_factory=list, description="Session UUIDs where this pattern was observed."
     )
     addressed_patterns: list[str] = Field(
         default_factory=list, description="Workflow pattern titles this proposal addresses."

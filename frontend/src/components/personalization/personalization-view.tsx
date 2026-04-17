@@ -1,17 +1,20 @@
-import { BarChart3, Plus, Timer } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, BarChart3, Plus, Search, Sparkles, Timer, TrendingUp } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import type {
+  ExtensionItemSummary,
   PersonalizationResult,
   PersonalizationMode,
   SkillSyncTarget,
 } from "../../types";
 import { DemoBanner } from "../demo-banner";
-import { LoadingSpinnerRings } from "../loading-spinner";
 import { Tooltip } from "../tooltip";
 import { SHOW_ANALYSIS_DETAIL_SECTIONS } from "../../constants";
 import { WarningsBanner } from "../warnings-banner";
 import { CreationSection } from "./creations-view";
 import { EvolutionSection } from "./evolutions-view";
+import { ExtensionDetailView } from "./extensions/extension-detail-view";
+import { useSyncTargetsByType } from "./extensions/use-sync-targets";
 import { PatternSection } from "./patterns-view";
 import { RecommendationSection } from "./recommendations-view";
 
@@ -32,40 +35,25 @@ const MODE_ITEM_LABELS: Record<PersonalizationMode, string> = {
   evolution: "evolved skill",
 };
 
-const MODE_SUBLABELS: Record<PersonalizationMode, string> = {
-  recommendation: "Discovering skills that match your coding patterns",
-  creation: "Generating custom skills from your workflow",
-  evolution: "Checking installed skills against your usage",
-};
-
-export function AnalysisLoadingState({ mode, sessionCount }: { mode: PersonalizationMode; sessionCount: number }) {
-  return (
-    <div className="flex flex-col items-center gap-5">
-      <LoadingSpinnerRings color="teal" />
-      <div className="text-center space-y-1.5">
-        <p className="text-base font-semibold text-primary">
-          Analyzing {sessionCount} session{sessionCount !== 1 ? "s" : ""}
-        </p>
-        <p className="text-sm text-secondary">{MODE_SUBLABELS[mode]}</p>
-      </div>
-    </div>
-  );
-}
-
 export function AnalysisResultView({
   result,
   activeTab,
   onNew,
   fetchWithToken,
   onInstalled,
+  onSwitchTab,
 }: {
   result: PersonalizationResult;
   activeTab: PersonalizationTab;
   onNew: () => void;
   fetchWithToken: (url: string, init?: RequestInit) => Promise<Response>;
   onInstalled?: () => void;
+  onSwitchTab?: (tab: PersonalizationTab) => void;
 }) {
   const [syncTargets, setSkillSyncTargets] = useState<SkillSyncTarget[]>([]);
+  const [detailItem, setDetailItem] = useState<ExtensionItemSummary | null>(null);
+  const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
+  const syncTargetsByType = useSyncTargetsByType(fetchWithToken);
 
   useEffect(() => {
     (async () => {
@@ -81,6 +69,28 @@ export function AnalysisResultView({
     })();
   }, [fetchWithToken]);
 
+  const handleInstalled = useCallback(
+    (itemId: string) => {
+      setInstalledIds((prev) => new Set([...prev, itemId]));
+      onInstalled?.();
+    },
+    [onInstalled],
+  );
+
+  // When a detail item is selected, render ExtensionDetailView at top level
+  // (outside the max-w-4xl wrapper) to match the explore tab layout.
+  if (detailItem) {
+    return (
+      <ExtensionDetailView
+        item={detailItem}
+        isInstalled={installedIds.has(detailItem.extension_id)}
+        onBack={() => setDetailItem(null)}
+        onInstalled={handleInstalled}
+        syncTargets={syncTargetsByType[detailItem.extension_type] ?? []}
+      />
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-6 space-y-8">
       {result.backend === "mock" && <DemoBanner />}
@@ -94,9 +104,9 @@ export function AnalysisResultView({
       {activeTab === "retrieve" && result.recommendations.length > 0 && (
         <RecommendationSection
           recommendations={result.recommendations}
+          installedIds={installedIds}
           fetchWithToken={fetchWithToken}
-          syncTargets={syncTargets}
-          onInstalled={onInstalled}
+          onOpenDetail={setDetailItem}
         />
       )}
 
@@ -122,6 +132,11 @@ export function AnalysisResultView({
         />
       )}
 
+      {/* Empty-state for Evolve with zero surviving proposals */}
+      {activeTab === "evolve" && result.evolutions.length === 0 && (
+        <EvolveEmptyState onSwitchTab={onSwitchTab} />
+      )}
+
       {/* Workflow Patterns — shown at the bottom (hidden for retrieve) */}
       {SHOW_ANALYSIS_DETAIL_SECTIONS && activeTab !== "retrieve" && result.workflow_patterns.length > 0 && (
         <PatternSection patterns={result.workflow_patterns} />
@@ -130,6 +145,99 @@ export function AnalysisResultView({
       {/* Metadata footer */}
       <MetadataFooter result={result} />
     </div>
+  );
+}
+
+function EvolveEmptyState({
+  onSwitchTab,
+}: {
+  onSwitchTab?: (tab: PersonalizationTab) => void;
+}) {
+  return (
+    <div className="relative w-full rounded-lg border border-teal-300 dark:border-tutorial-teal-border bg-teal-50 dark:bg-tutorial-teal-bg px-6 py-8 overflow-hidden">
+      <div className="flex flex-col items-center text-center gap-3 mb-6">
+        <div className="shrink-0 p-3 rounded-xl bg-teal-100 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/20">
+          <TrendingUp className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+        </div>
+        <div className="space-y-1.5 max-w-md">
+          <h3 className="text-base font-semibold text-primary">
+            No skill evolutions to suggest
+          </h3>
+          <p className="text-sm text-secondary leading-relaxed">
+            Your installed skills do not match your recent work. Try finding skills that fit your workflow, or generate a new one from scratch.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl mx-auto">
+        <EmptyStateAction
+          icon={Search}
+          label="Recommend skills"
+          description="Search the catalog for skills that match your sessions."
+          accent="teal"
+          onClick={() => onSwitchTab?.("retrieve")}
+          disabled={!onSwitchTab}
+        />
+        <EmptyStateAction
+          icon={Sparkles}
+          label="Generate a skill"
+          description="Create a custom SKILL.md from patterns we detected."
+          accent="emerald"
+          onClick={() => onSwitchTab?.("create")}
+          disabled={!onSwitchTab}
+        />
+      </div>
+    </div>
+  );
+}
+
+function EmptyStateAction({
+  icon: Icon,
+  label,
+  description,
+  accent,
+  onClick,
+  disabled,
+}: {
+  icon: LucideIcon;
+  label: string;
+  description: string;
+  accent: "teal" | "emerald";
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  const styles = {
+    teal: {
+      container: "border-teal-200 dark:border-teal-500/20 bg-panel hover:border-teal-400 dark:hover:border-teal-400/40 hover:bg-teal-50/80 dark:hover:bg-teal-500/10",
+      iconBg: "bg-teal-100 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/20",
+      icon: "text-teal-600 dark:text-teal-400",
+      arrow: "text-teal-600 dark:text-teal-400",
+    },
+    emerald: {
+      container: "border-emerald-200 dark:border-emerald-500/20 bg-panel hover:border-emerald-400 dark:hover:border-emerald-400/40 hover:bg-emerald-50/80 dark:hover:bg-emerald-500/10",
+      iconBg: "bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/20",
+      icon: "text-emerald-600 dark:text-emerald-400",
+      arrow: "text-emerald-600 dark:text-emerald-400",
+    },
+  }[accent];
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`group flex items-start gap-3 px-4 py-3 text-left rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${styles.container}`}
+    >
+      <div className={`shrink-0 p-2 rounded-lg ${styles.iconBg}`}>
+        <Icon className={`w-4 h-4 ${styles.icon}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold text-primary">{label}</span>
+          <ArrowRight className={`w-3.5 h-3.5 ${styles.arrow} opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition`} />
+        </div>
+        <p className="text-xs text-secondary mt-0.5 leading-relaxed">{description}</p>
+      </div>
+    </button>
   );
 }
 

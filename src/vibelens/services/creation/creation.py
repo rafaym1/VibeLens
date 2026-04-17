@@ -49,17 +49,19 @@ from vibelens.services.inference_shared import (
     truncate_digest_to_fit,
 )
 from vibelens.services.personalization.shared import (
-    PERSONALIZATION_LOG_DIR,
     _cache,
     gather_installed_skills,
     merge_batch_refs,
     parse_llm_output,
     personalization_cache_key,
+    resolve_proposal_session_ids,
     validate_patterns,
 )
 from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 
 logger = get_logger(__name__)
+
+CREATION_LOG_DIR = Path("logs/creation")
 
 # LLM inference limits for each step of the skill creation pipeline
 SKILL_CREATION_PROPOSAL_OUTPUT_TOKENS = 4096
@@ -151,7 +153,7 @@ async def analyze_skill_creation(
 
     start_time = time.monotonic()
     run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
+    log_dir = CREATION_LOG_DIR / run_timestamp
 
     # Step 1: Generate proposals
     proposal_result = await _infer_skill_creation_proposals(
@@ -164,15 +166,9 @@ async def analyze_skill_creation(
     # Step 2: Create each proposal concurrently
     creation_tasks = []
     for idx, p in enumerate(proposal_result.proposal_batch.proposals):
-        # Filter to only relevant sessions when indices are specified
-        if p.session_indices:
-            relevant_ids = [
-                proposal_result.session_ids[i]
-                for i in p.session_indices
-                if i < len(proposal_result.session_ids)
-            ]
-        else:
-            relevant_ids = session_ids
+        relevant_ids = resolve_proposal_session_ids(
+            proposal_session_ids=p.session_ids, loaded_session_ids=proposal_result.session_ids
+        )
         creation_tasks.append(
             _infer_skill_creation(
                 proposal_name=p.element_name,
@@ -264,7 +260,7 @@ async def _infer_skill_creation_proposals(
 
     if log_dir is None:
         run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
+        log_dir = CREATION_LOG_DIR / run_timestamp
 
     installed_skills = gather_installed_skills()
 
@@ -391,7 +387,7 @@ async def _infer_skill_creation(
 
     if log_dir is None:
         run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
+        log_dir = CREATION_LOG_DIR / run_timestamp
 
     suffix = f"_{proposal_index}" if proposal_index is not None else ""
     save_inference_log(log_dir, f"skill_creation{suffix}_system.txt", system_prompt)
@@ -503,6 +499,7 @@ async def _synthesize_skill_creation_proposals(
                     "description": p.description,
                     "rationale": p.rationale,
                     "addressed_patterns": p.addressed_patterns,
+                    "session_ids": p.session_ids,
                 }
                 for p in output.proposals
             ],

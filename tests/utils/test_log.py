@@ -18,8 +18,8 @@ from vibelens.utils.log import (
 )
 
 
-def test_resolve_domain_parsers_wins_over_ingest():
-    assert _resolve_domain("vibelens.ingest.parsers.claude_code") == "parsers"
+def test_resolve_domain_ingest_covers_parsers():
+    assert _resolve_domain("vibelens.ingest.parsers.claude_code") == "ingest"
     assert _resolve_domain("vibelens.ingest.discovery") == "ingest"
 
 
@@ -28,11 +28,15 @@ def test_resolve_domain_donation_wins_over_session():
     assert _resolve_domain("vibelens.services.session.search") == "session"
 
 
-def test_resolve_domain_specific_personalization_subdomains():
-    assert _resolve_domain("vibelens.services.creation.creation") == "creation"
-    assert _resolve_domain("vibelens.services.evolution.evolution") == "evolution"
-    assert _resolve_domain("vibelens.services.recommendation.engine") == "recommendation"
-    assert _resolve_domain("vibelens.services.personalization.store") == "personalization"
+def test_resolve_domain_analysis_consolidation():
+    assert _resolve_domain("vibelens.services.creation.creation") == "analysis"
+    assert _resolve_domain("vibelens.services.evolution.evolution") == "analysis"
+    assert _resolve_domain("vibelens.services.recommendation.engine") == "analysis"
+    assert _resolve_domain("vibelens.services.personalization.store") == "analysis"
+    assert _resolve_domain("vibelens.services.friction.analysis") == "analysis"
+    assert _resolve_domain("vibelens.services.inference_shared") == "analysis"
+    assert _resolve_domain("vibelens.api.creation") == "analysis"
+    assert _resolve_domain("vibelens.api.friction") == "analysis"
 
 
 def test_resolve_domain_extensions_covers_api_and_storage():
@@ -52,8 +56,7 @@ def test_resolve_domain_unmatched_returns_none():
 
 def test_domain_prefixes_has_all_expected_domains():
     expected = {
-        "parsers", "ingest", "creation", "evolution", "recommendation",
-        "personalization", "friction", "donation", "upload", "extensions",
+        "ingest", "analysis", "donation", "upload", "extensions",
         "dashboard", "session", "llm",
     }
     assert set(DOMAIN_PREFIXES) == expected
@@ -76,8 +79,8 @@ def test_logging_config_rejects_unknown_domain_in_per_domain():
 
 
 def test_logging_config_accepts_known_domain_overrides():
-    config = LoggingConfig(per_domain={"friction": "DEBUG", "donation": "WARNING"})
-    assert config.per_domain == {"friction": "DEBUG", "donation": "WARNING"}
+    config = LoggingConfig(per_domain={"analysis": "DEBUG", "donation": "WARNING"})
+    assert config.per_domain == {"analysis": "DEBUG", "donation": "WARNING"}
 
 
 @pytest.fixture
@@ -133,8 +136,8 @@ def test_configure_logging_creates_overall_and_errors_log(reset_logging, tmp_pat
 def test_configure_logging_creates_domain_log_on_first_use(reset_logging, tmp_path):
     configure_logging(_make_config(tmp_path))
     get_logger("vibelens.services.friction.analysis").info("friction event")
-    assert (tmp_path / "friction.log").exists()
-    assert "friction event" in (tmp_path / "friction.log").read_text()
+    assert (tmp_path / "analysis.log").exists()
+    assert "friction event" in (tmp_path / "analysis.log").read_text()
 
 
 def test_configure_logging_is_idempotent(reset_logging, tmp_path):
@@ -164,11 +167,11 @@ def test_errors_log_filters_warning_and_above(reset_logging, tmp_path):
 
 
 def test_per_domain_debug_override(reset_logging, tmp_path):
-    configure_logging(_make_config(tmp_path, per_domain={"friction": "DEBUG"}))
+    configure_logging(_make_config(tmp_path, per_domain={"analysis": "DEBUG"}))
     logger = get_logger("vibelens.services.friction.analysis")
     logger.debug("debug detail")
-    friction_text = (tmp_path / "friction.log").read_text()
-    assert "debug detail" in friction_text
+    analysis_text = (tmp_path / "analysis.log").read_text()
+    assert "debug detail" in analysis_text
     # DEBUG must NOT reach stderr / vibelens.log because those handlers stay at INFO
     overall_text = (tmp_path / "vibelens.log").read_text()
     assert "debug detail" not in overall_text
@@ -182,7 +185,27 @@ def test_analysis_id_prefix_still_works(reset_logging, tmp_path):
         logger.info("tagged message")
     finally:
         clear_analysis_id()
-    assert "[abc123] tagged message" in (tmp_path / "friction.log").read_text()
+    assert "[abc123] tagged message" in (tmp_path / "analysis.log").read_text()
+
+
+def test_analysis_id_no_duplicate_prefix(reset_logging, tmp_path):
+    """Verify the analysis_id prefix appears exactly once per log line.
+
+    The old _AnalysisIdFormatter mutated record.msg, causing duplicate
+    prefixes when multiple handlers processed the same record.
+    """
+    configure_logging(_make_config(tmp_path))
+    logger = get_logger("vibelens.services.friction.analysis")
+    set_analysis_id("dup-test")
+    try:
+        logger.info("should not duplicate")
+    finally:
+        clear_analysis_id()
+
+    for log_file in ("analysis.log", "vibelens.log"):
+        text = (tmp_path / log_file).read_text()
+        assert "[dup-test] should not duplicate" in text
+        assert "[dup-test] [dup-test]" not in text, f"Duplicate prefix in {log_file}"
 
 
 def test_pending_loggers_retroactively_attached(reset_logging, tmp_path):

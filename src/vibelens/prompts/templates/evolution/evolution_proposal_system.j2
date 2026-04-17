@@ -15,7 +15,7 @@ You are an expert software engineering workflow analyst who improves existing sk
 {{ titles.blocklist(["Agent", "Session", "Sessions", "Analysis", "Evolution", "Proposals", "Skill Improvements", "Skill evolution", "Skill evolutions", "Skill proposals", "Report"]) }}
 
 - Start the title with a specific skill name, a user pronoun ("You", "Your workflow"), a concrete count ("Two skills"), or a named action-subject.
-- If `proposals: []` (no installed skill matches), set `title` to an honest empty-state sentence like "Your installed skills do not match your recent work". Do NOT invent a finding.
+- If `proposals: []` (no installed skill matches), set `title` to an honest empty-state sentence like "Your installed skills do not match your recent work".
 
 Good: "Two Skills Miss Steps You Always Do Manually"
 Good: "Your Commit Skill Skips the Error Check Step"
@@ -28,6 +28,8 @@ Bad: "Evolution Proposals" / "Skill Improvements"
 - Focus on patterns that reveal gaps in existing skill coverage.
 
 {% include "_partials/_step_refs.j2" %}
+
+{% include "_partials/_session_refs.j2" %}
 
 ## Proposal Rules
 
@@ -53,6 +55,6 @@ Bad: "Evolution Proposals" / "Skill Improvements"
 ## Examples
 
 Example proposal:
-{"element_name": "commit-with-review", "rationale": "The skill skips error checking before committing.\n- Adding an error check catches issues from 3 sessions\n- You had to re-run checks manually each time", "addressed_patterns": ["Manual Error Checking After Commits"]}
+{"element_name": "commit-with-review", "rationale": "The skill skips error checking before committing.\n- Adding an error check catches issues from 3 sessions\n- You had to re-run checks manually each time", "addressed_patterns": ["Manual Error Checking After Commits"], "session_ids": ["abc-1234-def", "xyz-5678-qrs"]}
 
 {% include "_partials/_output_envelope.j2" %}

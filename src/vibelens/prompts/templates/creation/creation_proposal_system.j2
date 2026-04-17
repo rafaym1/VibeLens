@@ -25,6 +25,8 @@ Bad: "Agent Sessions Show Recurring Build Patterns" (meta-process prefix)
 
 {% include "_partials/_step_refs.j2" %}
 
+{% include "_partials/_session_refs.j2" %}
+
 ## Proposal Rules
 
 - Generate 2-4 proposals, prioritized by frequency and pain severity.
@@ -43,6 +45,6 @@ Bad: "Agent Sessions Show Recurring Build Patterns" (meta-process prefix)
 ## Examples
 
 Example proposal:
-{"element_name": "test-fix-loop", "description": "Automatically find why tests fail and fix the right code.", "rationale": "This fix-and-rerun cycle appeared 4 times across sessions.\n- Automating it saves many rounds of back-and-forth\n- The steps are consistent enough to reuse", "addressed_patterns": ["Fixing Failing Tests Takes Many Rounds"], "confidence": 0.82}
+{"element_name": "test-fix-loop", "description": "Automatically find why tests fail and fix the right code.", "rationale": "This fix-and-rerun cycle appeared 4 times across sessions.\n- Automating it saves many rounds of back-and-forth\n- The steps are consistent enough to reuse", "addressed_patterns": ["Fixing Failing Tests Takes Many Rounds"], "session_ids": ["abc-1234-def", "xyz-5678-qrs"], "confidence": 0.82}
 
 {% include "_partials/_output_envelope.j2" %}

@@ -47,18 +47,20 @@ from vibelens.services.inference_shared import (
     truncate_digest_to_fit,
 )
 from vibelens.services.personalization.shared import (
-    PERSONALIZATION_LOG_DIR,
     SkillDetailLevel,
     _cache,
     gather_installed_skills,
     merge_batch_refs,
     parse_llm_output,
     personalization_cache_key,
+    resolve_proposal_session_ids,
     validate_patterns,
 )
 from vibelens.utils.log import clear_analysis_id, get_logger, set_analysis_id
 
 logger = get_logger(__name__)
+
+EVOLUTION_LOG_DIR = Path("logs/evolution")
 
 # LLM inference limits for each step of the skill evolution pipeline
 EVOLUTION_PROPOSAL_OUTPUT_TOKENS = 4096
@@ -69,6 +71,8 @@ EVOLUTION_OUTPUT_TOKENS = 8192
 EVOLUTION_TIMEOUT_SECONDS = 300
 # Number of sequential LLM calls in the full pipeline (proposal → synthesis → evolution)
 EXPECTED_EVOLUTION_CALLS = 3
+# Canonical title when no evolution proposals survive filtering.
+EVOLUTION_EMPTY_STATE_TITLE = "Your installed skills do not match your recent work"
 
 
 def _filter_skills(
@@ -174,7 +178,7 @@ async def analyze_skill_evolution(
 
     start_time = time.monotonic()
     run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
+    log_dir = EVOLUTION_LOG_DIR / run_timestamp
 
     # Step 1: Generate proposals (filtered to user-selected skills)
     proposal_result = await _infer_evolution_proposals(
@@ -211,20 +215,13 @@ async def analyze_skill_evolution(
     # Step 2: Generate evolutions concurrently
     evolution_tasks = []
     for idx, p in enumerate(unique_proposals):
-        # Filter to only relevant sessions when indices are specified
-        if p.session_indices:
-            relevant_ids = [
-                proposal_result.session_ids[i]
-                for i in p.session_indices
-                if i < len(proposal_result.session_ids)
-            ]
-        else:
-            relevant_ids = session_ids
+        relevant_ids = resolve_proposal_session_ids(
+            proposal_session_ids=p.session_ids, loaded_session_ids=proposal_result.session_ids
+        )
         evolution_tasks.append(
             _infer_evolution(
                 skill_name=p.element_name,
                 rationale=p.rationale,
-                suggested_changes=p.rationale,
                 addressed_patterns=p.addressed_patterns,
                 session_ids=relevant_ids,
                 session_token=session_token,
@@ -252,10 +249,13 @@ async def analyze_skill_evolution(
 
     duration = int(time.monotonic() - start_time)
     proposal_output = proposal_result.proposal_batch
+    result_title = (
+        EVOLUTION_EMPTY_STATE_TITLE if len(unique_proposals) == 0 else proposal_output.title
+    )
     skill_result = PersonalizationResult(
         id=analysis_id,
         mode=PersonalizationMode.EVOLUTION,
-        title=proposal_output.title,
+        title=result_title,
         workflow_patterns=proposal_output.workflow_patterns,
         evolutions=evolutions,
         session_ids=proposal_result.session_ids,
@@ -364,7 +364,6 @@ async def _infer_evolution_proposals(
 async def _infer_evolution(
     skill_name: str,
     rationale: str,
-    suggested_changes: str,
     addressed_patterns: list[str],
     session_ids: list[str],
     session_token: str | None = None,
@@ -376,8 +375,7 @@ async def _infer_evolution(
 
     Args:
         skill_name: Name of the installed skill to evolve.
-        rationale: Why this skill should be evolved.
-        suggested_changes: High-level description of proposed changes.
+        rationale: Why this skill should be evolved and what to change.
         addressed_patterns: Pattern titles this evolution addresses.
         session_ids: Sessions to use as evidence.
         session_token: Browser tab token for upload scoping.
@@ -411,7 +409,6 @@ async def _infer_evolution(
     non_digest_overhead = EVOLUTION_PROMPT.render_user(
         skill_name=skill_name,
         rationale=rationale,
-        suggested_changes=suggested_changes,
         skill_content=target_skill["content"],
         session_digest="",
     )
@@ -420,7 +417,6 @@ async def _infer_evolution(
     user_prompt = EVOLUTION_PROMPT.render_user(
         skill_name=skill_name,
         rationale=rationale,
-        suggested_changes=suggested_changes,
         skill_content=target_skill["content"],
         session_digest=digest,
     )
@@ -435,7 +431,7 @@ async def _infer_evolution(
 
     if log_dir is None:
         run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        log_dir = PERSONALIZATION_LOG_DIR / run_timestamp
+        log_dir = EVOLUTION_LOG_DIR / run_timestamp
 
     suffix = f"_{proposal_index}" if proposal_index is not None else ""
     save_inference_log(log_dir, f"skill_evolution{suffix}_system.txt", system_prompt)
@@ -448,10 +444,7 @@ async def _infer_evolution(
         result.text,
         PersonalizationEvolution,
         "evolution",
-        field_fallbacks={
-            "rationale": rationale,
-            "element_name": skill_name,
-        },
+        field_fallbacks={"rationale": rationale, "element_name": skill_name},
     )
     evolution.element_type = AgentExtensionType.SKILL
     evolution.confidence = proposal_confidence
@@ -554,6 +547,7 @@ async def _synthesize_evolution_proposals(
                     "element_name": p.element_name,
                     "rationale": p.rationale,
                     "addressed_patterns": p.addressed_patterns,
+                    "session_ids": p.session_ids,
                 }
                 for p in output.proposals
             ],

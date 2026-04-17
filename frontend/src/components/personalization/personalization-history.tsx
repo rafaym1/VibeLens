@@ -1,4 +1,4 @@
-import { Calendar, Clock, Coins, Layers, Loader2, Timer, Trash2, Workflow } from "lucide-react";
+import { Calendar, Clock, Coins, Layers, Loader2, Square, Timer, Trash2, Workflow } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppContext } from "../../app";
 import { useDemoGuard } from "../../hooks/use-demo-guard";
@@ -152,11 +152,13 @@ export function PersonalizationHistory({
   refreshTrigger,
   filterMode,
   activeJobId,
+  onStop,
 }: {
   onSelect: (result: PersonalizationResult) => void;
   refreshTrigger: number;
   filterMode: PersonalizationMode | null;
   activeJobId?: string | null;
+  onStop?: () => void;
 }) {
   const { fetchWithToken } = useAppContext();
   const [analyses, setAnalyses] = useState<PersonalizationMeta[]>([]);
@@ -246,10 +248,21 @@ export function PersonalizationHistory({
   return (
     <div>
       {activeJobId && (
-        <div className="px-3 py-2.5 border-b border-card animate-pulse">
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-3 h-3 text-muted animate-spin" />
-            <span className="text-xs text-muted font-medium">Analysis running...</span>
+        <div className="px-3 py-2.5 border-b border-card">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 animate-pulse">
+              <Loader2 className="w-3 h-3 text-muted animate-spin" />
+              <span className="text-xs text-muted font-medium">Analysis running...</span>
+            </div>
+            {onStop && (
+              <button
+                onClick={onStop}
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 dark:text-rose-300 dark:hover:text-white dark:bg-rose-900/30 dark:hover:bg-rose-800/50 dark:border-rose-700/50 rounded transition"
+              >
+                <Square className="w-2.5 h-2.5" />
+                Stop
+              </button>
+            )}
           </div>
         </div>
       )}

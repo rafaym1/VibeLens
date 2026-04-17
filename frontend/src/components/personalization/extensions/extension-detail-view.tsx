@@ -15,7 +15,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { formatCount, formatRelativeDate } from "./extension-format";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../../app";
 import type { ExtensionItemSummary, ExtensionSyncTarget } from "../../../types";
 import { InstallTargetDialog } from "../install-target-dialog";
@@ -69,6 +69,14 @@ export function ExtensionDetailView({ item, isInstalled, onBack, onInstalled, sy
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
   const [showTargetDialog, setShowTargetDialog] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [descClamped, setDescClamped] = useState(false);
+  const descRef = useRef<HTMLParagraphElement>(null);
+
+  useLayoutEffect(() => {
+    const el = descRef.current;
+    if (el) setDescClamped(el.scrollHeight > el.clientHeight);
+  }, [item.description]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,29 +108,6 @@ export function ExtensionDetailView({ item, isInstalled, onBack, onInstalled, sy
     })();
     return () => { cancelled = true; };
   }, [fetchWithToken, item.extension_id]);
-
-  const doInstall = useCallback(async (platforms: string[]) => {
-    setInstalling(true);
-    setInstallError(null);
-    try {
-      const res = await fetchWithToken(`/api/extensions/${encodeURIComponent(item.extension_id)}/install`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target_platforms: platforms, overwrite: true }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || `HTTP ${res.status}`);
-      }
-      setInstalled(true);
-      onInstalled(item.extension_id);
-      setShowTargetDialog(false);
-    } catch (err) {
-      setInstallError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setInstalling(false);
-    }
-  }, [fetchWithToken, item.extension_id, onInstalled]);
 
   const handleDialogSubmit = useCallback(
     async (toAdd: string[], toRemove: string[]) => {
@@ -170,12 +155,8 @@ export function ExtensionDetailView({ item, isInstalled, onBack, onInstalled, sy
   );
 
   const handleInstall = useCallback(() => {
-    if (syncTargets.length > 0) {
-      setShowTargetDialog(true);
-    } else {
-      doInstall(["claude"]);
-    }
-  }, [syncTargets.length, doInstall]);
+    setShowTargetDialog(true);
+  }, []);
 
   const tocEntries = useMemo(
     () => (displayContent ? extractTocEntries(stripFrontmatter(displayContent)) : []),
@@ -215,7 +196,20 @@ export function ExtensionDetailView({ item, isInstalled, onBack, onInstalled, sy
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-secondary leading-relaxed">{item.description}</p>
+                <p
+                  ref={descRef}
+                  className={`text-sm text-secondary leading-relaxed ${!descExpanded ? "line-clamp-3" : ""}`}
+                >
+                  {item.description}
+                </p>
+                {descClamped && (
+                  <button
+                    onClick={() => setDescExpanded((v) => !v)}
+                    className="text-xs text-accent-teal hover:underline mt-0.5"
+                  >
+                    {descExpanded ? "Show less" : "Show more"}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -367,6 +361,7 @@ export function ExtensionDetailView({ item, isInstalled, onBack, onInstalled, sy
           syncTargets={syncTargets}
           onInstall={handleDialogSubmit}
           onCancel={() => setShowTargetDialog(false)}
+          installedIn={installed ? undefined : []}
         />
       )}
     </div>

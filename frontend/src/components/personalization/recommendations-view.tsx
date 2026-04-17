@@ -2,7 +2,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Eye,
   ExternalLink,
   Lightbulb,
   Search,
@@ -10,45 +9,42 @@ import {
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import type {
+  ExtensionItemSummary,
   RankedRecommendationItem,
-  Skill,
-  SkillSyncTarget,
 } from "../../types";
 import { BulletText } from "../bullet-text";
 import { CollapsibleText } from "../collapsible-text";
-import { InstallLocallyDialog } from "../install-locally-dialog";
 import { Tooltip } from "../tooltip";
-import { useDemoGuard } from "../../hooks/use-demo-guard";
 import { TagList } from "./badges";
-import { ExtensionDetailPopup } from "./cards";
+import { TypeBadge } from "./extensions/extension-card";
 import { ConfidenceBar, SectionHeader } from "./shared";
 
 export function RecommendationSection({
   recommendations,
+  installedIds,
   fetchWithToken,
-  syncTargets,
-  onInstalled,
+  onOpenDetail,
 }: {
   recommendations: RankedRecommendationItem[];
+  installedIds: Set<string>;
   fetchWithToken: (url: string, init?: RequestInit) => Promise<Response>;
-  syncTargets: SkillSyncTarget[];
-  onInstalled?: () => void;
+  onOpenDetail: (item: ExtensionItemSummary) => void;
 }) {
   return (
     <section>
       <SectionHeader
         icon={<Search className="w-5 h-5" />}
-        title="Recommended Skills"
-        tooltip="Catalog skills matching your workflow"
+        title="Recommendations"
+        tooltip="Catalog extensions matching your workflow"
       />
       <div className="space-y-3">
         {recommendations.map((rec) => (
           <RecommendationCard
             key={rec.item.extension_id}
             rec={rec}
+            isInstalled={installedIds.has(rec.item.extension_id)}
             fetchWithToken={fetchWithToken}
-            syncTargets={syncTargets}
-            onInstalled={onInstalled}
+            onOpenDetail={onOpenDetail}
           />
         ))}
       </div>
@@ -58,74 +54,62 @@ export function RecommendationSection({
 
 function RecommendationCard({
   rec,
+  isInstalled,
   fetchWithToken,
-  syncTargets,
-  onInstalled,
+  onOpenDetail,
 }: {
   rec: RankedRecommendationItem;
+  isInstalled: boolean;
   fetchWithToken: (url: string, init?: RequestInit) => Promise<Response>;
-  syncTargets: SkillSyncTarget[];
-  onInstalled?: () => void;
+  onOpenDetail: (item: ExtensionItemSummary) => void;
 }) {
-  const { guardAction, showInstallDialog, setShowInstallDialog } = useDemoGuard();
-  const [showDetail, setShowDetail] = useState(false);
-  const [detailContent, setDetailContent] = useState<string | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [installed, setInstalled] = useState(false);
   const [rationaleExpanded, setRationaleExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const relevance = rec.scores.relevance ?? 0;
   const tags = rec.item.tags ?? [];
 
-  const handleOpenDetail = useCallback(async () => {
-    setShowDetail(true);
-    if (detailContent !== null) return;
-    setLoadingDetail(true);
+  const handleClick = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await fetchWithToken(`/api/extensions/${rec.item.extension_id}/content`);
-      if (res.ok) {
-        const data = await res.json();
-        setDetailContent(data.content);
-      } else {
-        setDetailContent("(Content unavailable)");
+      const res = await fetchWithToken(
+        `/api/extensions/${encodeURIComponent(rec.item.extension_id)}`,
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${res.status}`);
       }
-    } catch {
-      setDetailContent("(Failed to fetch content)");
+      const item = (await res.json()) as ExtensionItemSummary;
+      onOpenDetail(item);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoadingDetail(false);
+      setLoading(false);
     }
-  }, [fetchWithToken, rec.item.extension_id, detailContent]);
-
-  const handleInstall = useCallback(
-    async (content: string, targets: string[]) => {
-      const res = await fetchWithToken("/api/skills", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: rec.item.name, content, sync_to: targets }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setInstalled(true);
-      onInstalled?.();
-    },
-    [fetchWithToken, rec.item.name, onInstalled],
-  );
-
-  // Virtual Skill shape for ExtensionDetailPopup reuse
-  const virtualSkill: Skill = {
-    name: rec.item.name,
-    description: rec.item.description || "",
-    tags,
-    allowed_tools: [],
-    content_hash: "",
-    installed_in: [],
-  };
+  }, [fetchWithToken, rec.item.extension_id, onOpenDetail]);
 
   return (
-    <div className="border border-default rounded-xl bg-subtle overflow-hidden">
-      {/* Header: Name + Relevance + Action */}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
+      className={`border border-default rounded-xl bg-subtle overflow-hidden cursor-pointer hover:border-hover transition ${
+        loading ? "opacity-60" : ""
+      }`}
+    >
+      {/* Header: Name + Type + Relevance + Installed pill */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+            <TypeBadge itemType={rec.item.extension_type} />
             <span className="font-mono text-base font-bold text-primary">{rec.item.name}</span>
             {relevance > 0 && <ConfidenceBar confidence={relevance} accentColor="teal" />}
             {rec.item.stars > 0 && (
@@ -140,34 +124,18 @@ function RecommendationCard({
                 href={rec.item.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 className="text-dimmed hover:text-secondary transition"
               >
                 <ExternalLink className="w-3 h-3" />
               </a>
             )}
           </div>
-          <div className="flex items-center gap-2.5 shrink-0">
-            {installed ? (
-              <Tooltip text="Installed — click to update sync targets">
-                <button
-                  onClick={() => guardAction(handleOpenDetail)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent-emerald bg-accent-emerald-subtle hover:bg-emerald-100 dark:hover:bg-emerald-900/25 rounded-lg border border-accent-emerald-border transition"
-                >
-                  <Check className="w-3.5 h-3.5" /> Installed
-                </button>
-              </Tooltip>
-            ) : (
-              <Tooltip text="View details and install">
-                <button
-                  onClick={() => guardAction(handleOpenDetail)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-500 rounded-lg transition"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Preview &amp; Install
-                </button>
-              </Tooltip>
-            )}
-          </div>
+          {isInstalled && (
+            <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-accent-emerald bg-accent-emerald-subtle rounded-lg border border-accent-emerald-border">
+              <Check className="w-3.5 h-3.5" /> Installed
+            </span>
+          )}
         </div>
         {rec.item.description && (
           <CollapsibleText
@@ -178,12 +146,18 @@ function RecommendationCard({
         )}
         <p className="text-xs text-dimmed mt-1.5">{rec.item.repo_name}</p>
         {tags.length > 0 && <TagList tags={tags} />}
+        {error && (
+          <p className="text-xs text-accent-rose mt-2">Failed to load: {error}</p>
+        )}
       </div>
 
       {/* Why this helps */}
       <div className="px-5 py-3 border-t border-default">
         <button
-          onClick={() => setRationaleExpanded(!rationaleExpanded)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setRationaleExpanded(!rationaleExpanded);
+          }}
           className="flex items-center gap-1.5 text-xs hover:bg-control/40 rounded transition"
         >
           {rationaleExpanded
@@ -196,25 +170,6 @@ function RecommendationCard({
           <BulletText text={rec.rationale} className="text-sm text-secondary leading-relaxed mt-1.5" />
         )}
       </div>
-
-      {showDetail && (
-        <ExtensionDetailPopup
-          skill={virtualSkill}
-          syncTargets={syncTargets}
-          onClose={() => setShowDetail(false)}
-          fetchWithToken={fetchWithToken}
-          onRefresh={() => {}}
-          mode="install"
-          previewContent={detailContent ?? ""}
-          loadingContent={loadingDetail}
-          stars={rec.item.stars}
-          sourceUrl={rec.item.source_url}
-          onInstall={handleInstall}
-        />
-      )}
-      {showInstallDialog && (
-        <InstallLocallyDialog onClose={() => setShowInstallDialog(false)} />
-      )}
     </div>
   );
 }

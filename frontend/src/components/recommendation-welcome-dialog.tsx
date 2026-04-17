@@ -1,18 +1,37 @@
+import { useState } from "react";
 import { Search, Sparkles, X } from "lucide-react";
 import { Modal, ModalBody } from "./modal";
+
+const DISMISS_KEY = "vibelens-rec-welcome-dismissed";
 
 interface RecommendationWelcomeDialogProps {
   onTryNow: () => void;
   onDismiss: () => void;
 }
 
+export function shouldShowRecWelcome(): boolean {
+  return localStorage.getItem(DISMISS_KEY) !== "1";
+}
+
 export function RecommendationWelcomeDialog({ onTryNow, onDismiss }: RecommendationWelcomeDialogProps) {
+  const [dontShow, setDontShow] = useState(false);
+
+  const dismiss = () => {
+    if (dontShow) localStorage.setItem(DISMISS_KEY, "1");
+    onDismiss();
+  };
+
+  const tryNow = () => {
+    if (dontShow) localStorage.setItem(DISMISS_KEY, "1");
+    onTryNow();
+  };
+
   return (
-    <Modal onClose={onDismiss} maxWidth="max-w-md">
+    <Modal onClose={dismiss} maxWidth="max-w-md">
       <ModalBody>
         <div className="flex flex-col items-center text-center py-4 gap-5">
           <button
-            onClick={onDismiss}
+            onClick={dismiss}
             className="absolute top-3 right-3 p-1 text-muted hover:text-primary transition"
           >
             <X className="w-4 h-4" />
@@ -43,15 +62,25 @@ export function RecommendationWelcomeDialog({ onTryNow, onDismiss }: Recommendat
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
+          <label className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontShow}
+              onChange={(e) => setDontShow(e.target.checked)}
+              className="rounded border-border text-cyan-600 focus:ring-cyan-500/30"
+            />
+            Don't show this again
+          </label>
+
+          <div className="flex items-center gap-3">
             <button
-              onClick={onTryNow}
+              onClick={tryNow}
               className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 rounded-lg transition"
             >
               Try It Now
             </button>
             <button
-              onClick={onDismiss}
+              onClick={dismiss}
               className="px-4 py-2 text-sm text-muted hover:text-secondary transition"
             >
               Skip

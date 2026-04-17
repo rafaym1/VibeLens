@@ -21,23 +21,30 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from vibelens.config.settings import LoggingConfig
 
-# Format string for all log handlers
-LOG_FORMAT = "%(asctime)s | %(name)s:%(lineno)d | %(levelname)s | %(message)s"
+# Format string for all log handlers.
+# %(analysis_id)s is populated by _AnalysisIdFilter (empty string when unset).
+LOG_FORMAT = "%(asctime)s | %(name)s:%(lineno)d | %(levelname)s | %(analysis_id)s%(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 _analysis_id_var: ContextVar[str | None] = ContextVar("analysis_id", default=None)
 
 
 # Domain -> prefixes that route to logs/{domain}.log.
-# Order matters: more specific prefixes first.
 DOMAIN_PREFIXES: dict[str, tuple[str, ...]] = {
-    "parsers": ("vibelens.ingest.parsers.",),
     "ingest": ("vibelens.ingest.",),
-    "creation": ("vibelens.services.creation.", "vibelens.api.creation"),
-    "evolution": ("vibelens.services.evolution.", "vibelens.api.evolution"),
-    "recommendation": ("vibelens.services.recommendation.", "vibelens.api.recommendation"),
-    "personalization": ("vibelens.services.personalization.",),
-    "friction": ("vibelens.services.friction.", "vibelens.api.friction"),
+    "analysis": (
+        "vibelens.services.creation.",
+        "vibelens.services.evolution.",
+        "vibelens.services.recommendation.",
+        "vibelens.services.personalization.",
+        "vibelens.services.friction.",
+        "vibelens.services.inference_shared",
+        "vibelens.services.job_tracker",
+        "vibelens.api.creation",
+        "vibelens.api.evolution",
+        "vibelens.api.recommendation",
+        "vibelens.api.friction",
+    ),
     "donation": (
         "vibelens.services.donation.",
         "vibelens.api.donation",
@@ -79,13 +86,18 @@ _current_backup_count: int = 3
 
 
 class _AnalysisIdFormatter(logging.Formatter):
-    """Formatter that prepends ``[analysis_id] `` when an analysis is running."""
+    """Formatter that populates ``%(analysis_id)s`` from the context var.
+
+    Sets ``record.analysis_id`` once per record (guarded by ``hasattr``),
+    so multiple handlers sharing the same ``LogRecord`` never duplicate
+    the prefix -- unlike the old approach that mutated ``record.msg``.
+    """
 
     def format(self, record: logging.LogRecord) -> str:
-        """Inject the active analysis_id into the message before formatting."""
-        aid = _analysis_id_var.get(None)
-        if aid:
-            record.msg = f"[{aid}] {record.msg}"
+        """Set ``analysis_id`` attribute if not already present, then format."""
+        if not hasattr(record, "analysis_id"):
+            aid = _analysis_id_var.get(None)
+            record.analysis_id = f"[{aid}] " if aid else ""
         return super().format(record)
 
 

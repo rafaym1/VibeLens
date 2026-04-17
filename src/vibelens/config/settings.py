@@ -26,6 +26,7 @@ def _default_log_dir() -> Path:
     return Path(__file__).resolve().parents[3] / "logs"
 
 
+
 class ServerConfig(BaseModel):
     """HTTP server binding."""
 
@@ -46,7 +47,11 @@ class DemoConfig(BaseModel):
         """Parse comma-separated example session paths into a list."""
         if not self.example_sessions:
             return []
-        return [Path(p.strip()).expanduser() for p in self.example_sessions.split(",") if p.strip()]
+        return [
+            Path(p.strip()).expanduser()
+            for p in self.example_sessions.split(",")
+            if p.strip()
+        ]
 
 
 class StorageConfig(BaseModel):
@@ -103,7 +108,7 @@ class UploadConfig(BaseModel):
     max_extracted_bytes: int = Field(
         default=20 * 1024 * 1024 * 1024, description="Maximum total extracted size (20 GB)."
     )
-    max_file_count: int = Field(default=10_000, description="Maximum files in a zip archive.")
+    max_file_count: int = Field(default=10000, description="Maximum files in a zip archive.")
     stream_chunk_size: int = Field(
         default=64 * 1024, description="Chunk size in bytes for streaming uploads to disk."
     )
@@ -131,9 +136,9 @@ class InferenceConfig(BaseModel):
         default=None, description="Custom base URL. Auto-resolved from PROVIDER_BASE_URLS if None."
     )
     model: str = Field(default="anthropic/claude-haiku-4-5", description="Model in litellm format.")
-    timeout: int = Field(default=120, description="Inference timeout in seconds.")
-    max_input_tokens: int = Field(default=80_000, description="Max input tokens per request.")
-    max_output_tokens: int = Field(default=4096, description="Max output tokens per request.")
+    timeout: int = Field(default=300, description="Inference timeout in seconds.")
+    max_input_tokens: int = Field(default=80000, description="Max input tokens per request.")
+    max_output_tokens: int = Field(default=10000, description="Max output tokens per request.")
     max_sessions: int = Field(default=30, description="Maximum sessions per analysis request.")
 
     @field_validator("backend", mode="before")
@@ -179,9 +184,7 @@ class LoggingConfig(BaseModel):
         unknown = set(value) - set(DOMAIN_PREFIXES)
         if unknown:
             valid = ", ".join(sorted(DOMAIN_PREFIXES))
-            raise ValueError(
-                f"Unknown log domain(s): {sorted(unknown)}. Valid: {valid}."
-            )
+            raise ValueError(f"Unknown log domain(s): {sorted(unknown)}. Valid: {valid}.")
         return value
 
 

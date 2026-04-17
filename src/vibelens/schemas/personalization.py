@@ -8,6 +8,5 @@ class PersonalizationRequest(BaseModel):
 
     session_ids: list[str] = Field(description="Session IDs to analyze.")
     skill_names: list[str] | None = Field(
-        default=None,
-        description="Skill names to target for evolution. None means all installed skills.",
+        default=None, description="Skill names for evolution. None means all installed skills."
     )

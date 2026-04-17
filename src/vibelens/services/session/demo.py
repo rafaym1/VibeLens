@@ -23,17 +23,32 @@ logger = get_logger(__name__)
 
 _ALL_PARSERS: list[type[BaseParser]] = [*LOCAL_PARSER_CLASSES, DataclawParser]
 
+# Bump this when the parser changes in ways that affect cached data
+# (e.g. timestamp extraction, duration computation). Forces re-parse
+# of demo examples on next startup.
+_CACHE_VERSION = 1
+_CACHE_VERSION_FILE = ".cache_version"
+
 
 def _has_cached_examples(root: Path) -> bool:
-    """Check if previously cached example trajectories exist.
+    """Check if previously cached example trajectories exist and are current.
 
     Args:
         root: DiskStore root directory.
 
     Returns:
-        True if the JSONL index file exists.
+        True if the JSONL index file exists and cache version matches.
     """
-    return (root / INDEX_FILENAME).exists()
+    if not (root / INDEX_FILENAME).exists():
+        return False
+    version_file = root / _CACHE_VERSION_FILE
+    if not version_file.exists():
+        return False
+    try:
+        stored_version = int(version_file.read_text(encoding="utf-8").strip())
+    except (ValueError, OSError):
+        return False
+    return stored_version == _CACHE_VERSION
 
 
 def load_demo_examples(settings: Settings, store: DiskTrajectoryStore) -> int:
@@ -71,6 +86,9 @@ def load_demo_examples(settings: Settings, store: DiskTrajectoryStore) -> int:
                 loaded += _load_json_file(example_path, store)
         except (ValueError, OSError, json.JSONDecodeError) as exc:
             logger.warning("Failed to load example %s: %s", example_path.name, exc)
+
+    if loaded:
+        (store.root / _CACHE_VERSION_FILE).write_text(str(_CACHE_VERSION), encoding="utf-8")
     return loaded
 
 

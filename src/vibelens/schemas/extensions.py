@@ -2,8 +2,6 @@
 
 from pydantic import BaseModel, Field
 
-# --- Unified sync target ---
-
 
 class SyncTargetResponse(BaseModel):
     """Unified sync target for all extension types."""
@@ -11,9 +9,6 @@ class SyncTargetResponse(BaseModel):
     agent: str = Field(description="Agent identifier (e.g. 'claude').")
     count: int = Field(description="Number of extensions of this type in agent.")
     dir: str = Field(description="Agent directory or settings path.")
-
-
-# --- Unified CRUD schemas (skill, command, subagent share these) ---
 
 
 class ExtensionInstallRequest(BaseModel):
@@ -54,9 +49,6 @@ class ExtensionListResponse(BaseModel):
     page: int = Field(description="Current page.")
     page_size: int = Field(description="Items per page.")
     sync_targets: list[SyncTargetResponse] = Field(description="Agent platforms available.")
-
-
-# --- Catalog-specific schemas ---
 
 
 class CatalogListResponse(BaseModel):

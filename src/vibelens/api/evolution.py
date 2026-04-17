@@ -5,7 +5,7 @@ import secrets
 
 from fastapi import APIRouter, Header, HTTPException
 
-from vibelens.deps import get_personalization_store, is_demo_mode, is_test_mode
+from vibelens.deps import get_personalization_store
 from vibelens.models.personalization.results import (
     PersonalizationMeta,
     PersonalizationResult,
@@ -101,9 +101,6 @@ async def evolution_analysis(
     """
     if not body.session_ids:
         raise HTTPException(status_code=400, detail="session_ids must not be empty")
-
-    if is_test_mode() or is_demo_mode():
-        raise HTTPException(status_code=503, detail="Evolution analysis unavailable in demo mode")
 
     job_id = secrets.token_urlsafe(12)
     try:

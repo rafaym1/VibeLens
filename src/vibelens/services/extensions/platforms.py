@@ -57,6 +57,7 @@ PLATFORMS: dict[ExtensionSource, AgentPlatform] = {
         root=_home(".codex"),
         skills_dir=_home(".codex", "skills"),
         commands_dir=_home(".codex", "commands"),
+        subagents_dir=_home(".codex", "agents"),
         settings_path=_home(".codex", "settings.json"),
         install_key="codex",
     ),

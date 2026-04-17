@@ -18,9 +18,9 @@ import type {
 import { formatCost } from "../../utils";
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH } from "../../styles";
 import { SHOW_ANALYSIS_DETAIL_SECTIONS } from "../../constants";
+import { AnalysisLoadingScreen } from "../analysis-loading-screen";
 import { DemoBanner } from "../demo-banner";
 import { AnalysisWelcomePage, TutorialBanner } from "../analysis-welcome";
-import { LoadingSpinner, LoadingSpinnerRings } from "../loading-spinner";
 import { CostEstimateDialog } from "../cost-estimate-dialog";
 import { Tooltip } from "../tooltip";
 import { FrictionHistory } from "./friction-history";
@@ -274,48 +274,19 @@ export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: Fricti
   );
 
   if (loading || estimating) {
-    if (activeJobId) {
-      return (
-        <div className="h-full flex flex-col">
-          <div className="px-6 pt-5 pb-2">
-            <TutorialBanner tutorial={FRICTION_TUTORIAL} accentColor="cyan" />
-          </div>
-          <div className="flex items-center justify-center flex-1">
-          <div className="flex flex-col items-center gap-5 max-w-md">
-            <LoadingSpinnerRings color="amber" />
-            <div className="text-center space-y-1.5">
-              <p className="text-base font-semibold text-primary">
-                Analyzing {checkedIds.size} session{checkedIds.size !== 1 ? "s" : ""} for friction
-              </p>
-              <p className="text-sm text-secondary">Identifying patterns that slow you down</p>
-            </div>
-            <div className="flex flex-col items-center gap-3 mt-1">
-              <button
-                onClick={handleStopAnalysis}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 dark:text-rose-300 dark:hover:text-white dark:bg-rose-900/30 dark:hover:bg-rose-800/50 dark:border-rose-700/50 rounded-md transition"
-              >
-                Stop
-              </button>
-              <div className="text-center space-y-1">
-                <p className="text-sm text-muted">Usually takes 2-5 minutes</p>
-                <p className="text-sm text-muted">Running in background. You can switch tabs.</p>
-              </div>
-            </div>
-          </div>
-          </div>
-        </div>
-      );
-    }
     return (
-      <LoadingSpinner
-        label={
-          estimating
-            ? `Estimating cost for ${checkedIds.size} session${checkedIds.size !== 1 ? "s" : ""}`
-            : `Analyzing ${checkedIds.size} session${checkedIds.size !== 1 ? "s" : ""} for friction`
-        }
-        sublabel={estimating ? "Preparing batches..." : "This may take a moment"}
-        color="amber"
-      />
+      <div className="h-full flex flex-col">
+        <div className="px-6 pt-5 pb-2">
+          <TutorialBanner tutorial={FRICTION_TUTORIAL} accentColor="cyan" />
+        </div>
+        <AnalysisLoadingScreen
+          accent="amber"
+          title="Identifying patterns that slow you down"
+          sublabel={estimating ? "Estimating cost..." : "Usually takes 2-5 minutes"}
+          sessionCount={checkedIds.size}
+          onStop={activeJobId ? handleStopAnalysis : undefined}
+        />
+      </div>
     );
   }
 

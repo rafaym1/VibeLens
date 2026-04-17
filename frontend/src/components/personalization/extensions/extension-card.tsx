@@ -279,6 +279,7 @@ export function ExtensionCard({
             syncTargets={syncTargets}
             onInstall={handleDialogSubmit}
             onCancel={() => setShowTargetDialog(false)}
+            installedIn={installed ? undefined : []}
           />
         )}
       </>
@@ -377,6 +378,7 @@ export function ExtensionCard({
           syncTargets={syncTargets}
           onInstall={(targets) => doInstall(targets.length > 0 ? targets : ["claude_code"])}
           onCancel={() => setShowTargetDialog(false)}
+          installedIn={installed ? undefined : []}
         />
       )}
     </div>

@@ -19,8 +19,7 @@ DEFAULT_PAGE_SIZE = 50
 
 
 def build_typed_router(
-    service_getter: Callable[[], BaseExtensionService[Any]],
-    type_name: str,
+    service_getter: Callable[[], BaseExtensionService[Any]], type_name: str
 ) -> APIRouter:
     """Generate CRUD router for a file-based extension type.
 
@@ -68,9 +67,7 @@ def build_typed_router(
             item = service.get_item(name)
             content = service.get_item_content(name)
         except FileNotFoundError:
-            raise HTTPException(
-                status_code=404, detail=f"{label} {name!r} not found"
-            ) from None
+            raise HTTPException(status_code=404, detail=f"{label} {name!r} not found") from None
         return ExtensionDetailResponse(
             item=item.model_dump(), content=content, path=service.get_item_path(name)
         )
@@ -92,9 +89,7 @@ def build_typed_router(
         try:
             item = service.modify(name=name, content=req.content)
         except FileNotFoundError:
-            raise HTTPException(
-                status_code=404, detail=f"{label} {name!r} not found"
-            ) from None
+            raise HTTPException(status_code=404, detail=f"{label} {name!r} not found") from None
         return item.model_dump()
 
     @router.delete("/{name}")
@@ -103,9 +98,7 @@ def build_typed_router(
         try:
             removed_from = service.uninstall(name)
         except FileNotFoundError:
-            raise HTTPException(
-                status_code=404, detail=f"{label} {name!r} not found"
-            ) from None
+            raise HTTPException(status_code=404, detail=f"{label} {name!r} not found") from None
         return {"deleted": name, "removed_from": removed_from}
 
     @router.post("/{name}/agents")
@@ -114,9 +107,7 @@ def build_typed_router(
         try:
             results = service.sync_to_agents(name, req.agents)
         except FileNotFoundError:
-            raise HTTPException(
-                status_code=404, detail=f"{label} {name!r} not found"
-            ) from None
+            raise HTTPException(status_code=404, detail=f"{label} {name!r} not found") from None
         item = service.get_item(name)
         return {"name": name, "results": results, type_name: item.model_dump()}
 

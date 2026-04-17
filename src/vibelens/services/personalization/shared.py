@@ -8,7 +8,6 @@ import hashlib
 import json
 import re
 from enum import Enum
-from pathlib import Path
 from typing import TypeVar
 
 from cachetools import TTLCache
@@ -26,9 +25,6 @@ from vibelens.utils.log import get_logger
 logger = get_logger(__name__)
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
-
-# Directory for detailed request/response personalization logs
-PERSONALIZATION_LOG_DIR = Path("logs/personalization")
 
 # Shared TTL cache for personalization analysis results (keyed by session IDs + mode).
 # Consumed by creation and evolution services to avoid re-running identical analyses.
@@ -75,6 +71,52 @@ def personalization_cache_key(session_ids: list[str], mode: PersonalizationMode)
     sorted_ids = ",".join(sorted(session_ids))
     raw = f"personalization:{mode}:{sorted_ids}"
     return f"personalization:{hashlib.sha256(raw.encode()).hexdigest()[:16]}"
+
+
+def _canonical_session_id(raw_id: str) -> str:
+    """Strip the ``__partN`` suffix used when a session is split across digests."""
+    base, sep, _ = raw_id.partition("__")
+    return base if sep else raw_id
+
+
+def resolve_proposal_session_ids(
+    proposal_session_ids: list[str], loaded_session_ids: list[str]
+) -> list[str]:
+    """Map a proposal's cited UUIDs back to the loaded session set.
+
+    Canonicalizes ``uuid__partN`` suffixes on both sides, then intersects
+    with the loaded set to drop any hallucinated or unknown IDs. Falls
+    back to the full loaded set when the proposal cites none or every
+    cited ID is unknown.
+
+    Args:
+        proposal_session_ids: UUIDs cited by the proposal LLM.
+        loaded_session_ids: UUIDs successfully loaded for analysis.
+
+    Returns:
+        Deduplicated list of canonical UUIDs that exist in the loaded set.
+    """
+    if not proposal_session_ids:
+        return list(loaded_session_ids)
+
+    loaded_canonical = {_canonical_session_id(sid) for sid in loaded_session_ids}
+    seen: set[str] = set()
+    relevant: list[str] = []
+    for raw_id in proposal_session_ids:
+        canonical = _canonical_session_id(raw_id)
+        if canonical in seen or canonical not in loaded_canonical:
+            continue
+        seen.add(canonical)
+        relevant.append(canonical)
+
+    if not relevant:
+        logger.warning(
+            "Proposal session_ids %s do not match any loaded session; "
+            "falling back to all loaded sessions.",
+            proposal_session_ids,
+        )
+        return list(loaded_session_ids)
+    return relevant
 
 
 def gather_installed_skills(
@@ -133,8 +175,7 @@ def validate_patterns(
 
 
 def merge_batch_refs(
-    synthesis_patterns: list[WorkflowPattern],
-    batch_patterns_list: list[list[WorkflowPattern]],
+    synthesis_patterns: list[WorkflowPattern], batch_patterns_list: list[list[WorkflowPattern]]
 ) -> None:
     """Recover example_refs the synthesis LLM dropped.
 
@@ -221,9 +262,7 @@ def parse_llm_output(
     if field_fallbacks and isinstance(data, dict):
         for key, fallback in field_fallbacks.items():
             if key not in data:
-                logger.warning(
-                    "LLM omitted %s in %s output; filling with fallback", key, label
-                )
+                logger.warning("LLM omitted %s in %s output; filling with fallback", key, label)
                 data[key] = fallback
 
     try:

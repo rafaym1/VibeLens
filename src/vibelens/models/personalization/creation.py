@@ -47,8 +47,8 @@ class CreationProposal(BaseModel):
             "Include trigger phrases. Max 30 words."
         )
     )
-    session_indices: list[int] = Field(
-        default_factory=list, description="0-indexed session indices pointing to relevant sessions."
+    session_ids: list[str] = Field(
+        default_factory=list, description="Session UUIDs where this pattern was observed."
     )
     addressed_patterns: list[str] = Field(
         default_factory=list, description="Titles of workflow patterns this proposal addresses."

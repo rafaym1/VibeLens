@@ -7,6 +7,7 @@ You will receive proposals and workflow patterns from multiple batches that anal
 
 - Merge similar proposals: if two batches propose skills for the same workflow, keep the better version or merge their rationales.
 - Deduplicate patterns: combine patterns with the same title. Merge `example_refs`, keep the best description.
+- When merging proposals, UNION their `session_ids` lists and deduplicate — preserve every UUID that supported the proposal in any batch.
 - Rank by frequency: proposals addressing patterns that appear across more batches rank higher.
 - Cap at 5 workflow patterns and 5 proposals.
 - Write a self-explanatory `title` (max 10 words).

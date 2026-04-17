@@ -1,7 +1,6 @@
 """Personalization services — shared infrastructure for analysis persistence."""
 
 from vibelens.services.personalization.shared import (
-    PERSONALIZATION_LOG_DIR,
     SkillDetailLevel,
     gather_installed_skills,
     merge_batch_refs,
@@ -12,7 +11,6 @@ from vibelens.services.personalization.shared import (
 from vibelens.services.personalization.store import PersonalizationStore
 
 __all__ = [
-    "PERSONALIZATION_LOG_DIR",
     "PersonalizationStore",
     "SkillDetailLevel",
     "gather_installed_skills",

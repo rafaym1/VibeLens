@@ -63,7 +63,7 @@ def client():
 
 def test_list_extensions(client):
     """GET /api/extensions returns paginated items."""
-    resp = client.get("/api/extensions")
+    resp = client.get("/api/extensions/catalog")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 2
@@ -73,7 +73,7 @@ def test_list_extensions(client):
 
 def test_list_extensions_search(client):
     """GET /api/extensions?search=mcp filters by keyword."""
-    resp = client.get("/api/extensions?search=mcp")
+    resp = client.get("/api/extensions/catalog?search=mcp")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
@@ -83,7 +83,7 @@ def test_list_extensions_search(client):
 
 def test_list_extensions_type_filter(client):
     """GET /api/extensions?extension_type=skill filters by type."""
-    resp = client.get("/api/extensions?extension_type=skill")
+    resp = client.get("/api/extensions/catalog?extension_type=skill")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
@@ -93,7 +93,7 @@ def test_list_extensions_type_filter(client):
 
 def test_get_extension_item(client):
     """GET /api/extensions/{item_id} returns full item."""
-    resp = client.get("/api/extensions/bwc:skill:test-skill")
+    resp = client.get("/api/extensions/catalog/bwc:skill:test-skill")
     assert resp.status_code == 200
     data = resp.json()
     assert data["extension_id"] == "bwc:skill:test-skill"
@@ -103,14 +103,14 @@ def test_get_extension_item(client):
 
 def test_get_extension_item_not_found(client):
     """GET /api/extensions/nonexistent returns 404."""
-    resp = client.get("/api/extensions/nonexistent")
+    resp = client.get("/api/extensions/catalog/nonexistent")
     assert resp.status_code == 404
     print("404 for nonexistent item")
 
 
 def test_get_extension_content_with_install_content(client):
     """Content endpoint returns install_content for file-based items."""
-    resp = client.get("/api/extensions/bwc:skill:test-skill/content")
+    resp = client.get("/api/extensions/catalog/bwc:skill:test-skill/content")
     assert resp.status_code == 200
     data = resp.json()
     assert data["content_type"] == "install_content"
@@ -121,7 +121,7 @@ def test_get_extension_content_with_install_content(client):
 def test_get_extension_content_null_for_empty_item(client):
     """Content endpoint returns null content for item without install_content or repo."""
     # bwc:mcp:test-mcp has install_content (MCP JSON config), so it should return it
-    resp = client.get("/api/extensions/bwc:mcp:test-mcp/content")
+    resp = client.get("/api/extensions/catalog/bwc:mcp:test-mcp/content")
     assert resp.status_code == 200
     data = resp.json()
     assert data["content"] is not None
@@ -130,5 +130,5 @@ def test_get_extension_content_null_for_empty_item(client):
 
 def test_get_extension_content_not_found(client):
     """Content endpoint returns 404 for unknown item."""
-    resp = client.get("/api/extensions/test:skill:nonexistent/content")
+    resp = client.get("/api/extensions/catalog/test:skill:nonexistent/content")
     assert resp.status_code == 404

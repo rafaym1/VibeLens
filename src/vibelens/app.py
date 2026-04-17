@@ -11,12 +11,14 @@ from fastapi.staticfiles import StaticFiles
 
 from vibelens import __version__
 from vibelens.api import build_router
+from vibelens.api.demo_guard import DemoGuardMiddleware
 from vibelens.deps import (
     get_example_store,
     get_inference_config,
     get_settings,
     get_skill_service,
     get_trajectory_store,
+    is_demo_mode,
     reconstruct_upload_registry,
 )
 from vibelens.models.enums import AppMode
@@ -176,6 +178,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    if is_demo_mode():
+        app.add_middleware(DemoGuardMiddleware)
+
     app.include_router(build_router(), prefix="/api")
 
     if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):

@@ -1,0 +1,29 @@
+## SKILL.md Format
+
+### Frontmatter
+
+Emit exactly two keys:
+
+- `name` — kebab-case. Max 64 chars. Lowercase letters, digits, hyphens. No `anthropic` or `claude`.
+- `description` — 1-3 sentences, third person, max 1024 chars. State what the skill does and the concrete triggers that invoke it. Never use "I" or "you". This is the only signal Claude sees at discovery time.
+
+### Body
+
+- Open with an H1 matching the skill's subject (e.g. `# PDF Processing Guide`), not the raw `name`.
+- Start with `## Overview` — one paragraph on scope and when to engage.
+- Then 2-6 sections scaled to real complexity (Quick Start, Core Workflow, decision points, Troubleshooting, etc.). No invented sections.
+- Length follows content: ~80 lines for light skills, up to 500 for technical ones. No padding.
+
+### Style
+
+- Imperative mood ("Run X"), not "You should run X".
+- Explain WHY only when non-obvious.
+- Fenced code blocks with language tags for every snippet.
+- One term per concept, reused consistently.
+- No time-stamped phrases ("as of 2025").
+
+### Service constraints
+
+- Emit ONE self-contained SKILL.md. Do NOT reference `references/`, `scripts/`, `assets/`, or any sibling file.
+- Body under 500 lines.
+- Ground every step in the provided session evidence. No invented tools or paths.

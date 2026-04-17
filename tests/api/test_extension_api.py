@@ -44,7 +44,7 @@ def client():
 
 def test_install_requires_target_platforms(client):
     """POST with empty body returns 422, not 500 TypeError."""
-    resp = client.post("/api/extensions/bwc:skill:test-skill/install", json={})
+    resp = client.post("/api/extensions/catalog/bwc:skill:test-skill/install", json={})
     assert resp.status_code == 422
     body = resp.json()
     assert "target_platforms" in str(body)
@@ -54,7 +54,7 @@ def test_install_requires_target_platforms(client):
 def test_install_rejects_empty_target_platforms(client):
     """POST with empty target_platforms list returns 422."""
     resp = client.post(
-        "/api/extensions/bwc:skill:test-skill/install",
+        "/api/extensions/catalog/bwc:skill:test-skill/install",
         json={"target_platforms": []},
     )
     assert resp.status_code == 422
@@ -69,7 +69,7 @@ def test_install_happy_path(client, tmp_path):
         return_value=("test-skill", fake_path),
     ):
         resp = client.post(
-            "/api/extensions/bwc:skill:test-skill/install",
+            "/api/extensions/catalog/bwc:skill:test-skill/install",
             json={"target_platforms": ["claude_code"]},
         )
     assert resp.status_code == 200

@@ -1,20 +1,17 @@
-import { Check, ChevronDown, Compass, LayoutGrid, List, Package, RefreshCw, Search, SlidersHorizontal, Tag } from "lucide-react";
+import { Check, ChevronDown, Compass, LayoutGrid, List, Package, RefreshCw, Search, SlidersHorizontal, Sparkles, Tag, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../../app";
 import { TOGGLE_ACTIVE, TOGGLE_BUTTON_BASE, TOGGLE_CONTAINER, TOGGLE_INACTIVE } from "../../../styles";
-import type { ExtensionItemSummary, ExtensionListResponse, ExtensionMetaResponse, ExtensionSyncTarget } from "../../../types";
+import type { ExtensionItemSummary, ExtensionListResponse, ExtensionMetaResponse } from "../../../types";
 import { EmptyState } from "../../empty-state";
 import { ErrorBanner } from "../../error-banner";
 import { LoadingState } from "../../loading-state";
 import { ExtensionCard } from "./extension-card";
 import { EXTENSION_PAGE_SIZE, ITEM_TYPE_LABELS, SORT_OPTIONS, type ExtensionViewMode } from "./extension-constants";
 import { ExtensionDetailView } from "./extension-detail-view";
-import { extensionEndpoint, normalizeSyncTargets } from "./extension-endpoints";
 import { ExtensionPagination } from "./extension-pagination";
+import { useSyncTargetsByType } from "./use-sync-targets";
 import { NoResultsState } from "../shared";
-
-/** Extension types with typed list endpoints that expose sync_targets. */
-const SYNC_TARGET_TYPES = ["skill", "subagent", "command", "hook"] as const;
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -79,9 +76,10 @@ function FilterDropdown({ value, options, onChange, icon, placeholder }: FilterD
 
 interface ExtensionExploreTabProps {
   resetKey?: number;
+  onSwitchToRecommend?: () => void;
 }
 
-export function ExtensionExploreTab({ resetKey = 0 }: ExtensionExploreTabProps) {
+export function ExtensionExploreTab({ resetKey = 0, onSwitchToRecommend }: ExtensionExploreTabProps) {
   const { fetchWithToken } = useAppContext();
 
   const [items, setItems] = useState<ExtensionItemSummary[]>([]);
@@ -101,14 +99,14 @@ export function ExtensionExploreTab({ resetKey = 0 }: ExtensionExploreTabProps) 
 
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
   const [detailItem, setDetailItem] = useState<ExtensionItemSummary | null>(null);
-  const [syncTargetsByType, setSyncTargetsByType] = useState<Record<string, ExtensionSyncTarget[]>>({});
+  const syncTargetsByType = useSyncTargetsByType(fetchWithToken);
 
   // Reset to list view when the explore tab is re-clicked
   useEffect(() => {
     if (resetKey > 0) setDetailItem(null);
   }, [resetKey]);
 
-  // Load catalog metadata and agent sources once on mount
+  // Load catalog metadata once on mount
   useEffect(() => {
     fetchWithToken("/api/extensions/meta")
       .then((res) => res.json())
@@ -117,25 +115,6 @@ export function ExtensionExploreTab({ resetKey = 0 }: ExtensionExploreTabProps) 
         setHasProfile(data.has_profile);
       })
       .catch(() => {});
-    // Fetch sync targets for each typed extension in parallel. Each typed list
-    // endpoint (/api/skills, /api/subagents, /api/commands, /api/hooks) exposes
-    // sync_targets; normalize them to the shared ExtensionSyncTarget shape.
-    Promise.all(
-      SYNC_TARGET_TYPES.map(async (type) => {
-        const endpoint = extensionEndpoint(type);
-        if (!endpoint) return [type, [] as ExtensionSyncTarget[]] as const;
-        try {
-          const res = await fetchWithToken(`${endpoint}?page_size=1`);
-          if (!res.ok) return [type, [] as ExtensionSyncTarget[]] as const;
-          const data = await res.json();
-          return [type, normalizeSyncTargets(type, data)] as const;
-        } catch {
-          return [type, [] as ExtensionSyncTarget[]] as const;
-        }
-      }),
-    ).then((entries) => {
-      setSyncTargetsByType(Object.fromEntries(entries));
-    });
   }, [fetchWithToken]);
 
   // Debounce search query
@@ -297,6 +276,30 @@ export function ExtensionExploreTab({ resetKey = 0 }: ExtensionExploreTabProps) 
           </div>
         </div>
       </div>
+
+      {/* Recommend tutorial banner */}
+      {onSwitchToRecommend && (
+        <div className="mb-4 px-4 py-3.5 rounded-lg border border-teal-300 dark:border-tutorial-teal-border bg-teal-50 dark:bg-tutorial-teal-bg">
+          <div className="flex items-center gap-3">
+            <div className="shrink-0 p-2 rounded-lg bg-teal-100 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/20">
+              <Zap className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-primary">Not sure which skills to add?</p>
+              <p className="text-sm text-secondary mt-0.5">
+                Switch to the <span className="font-semibold">Recommend</span> tab. It analyzes your sessions and recommends skills tailored to your workflow.
+              </p>
+            </div>
+            <button
+              onClick={onSwitchToRecommend}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-md transition"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Recommend
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* States */}
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
