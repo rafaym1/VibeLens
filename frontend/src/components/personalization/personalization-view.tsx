@@ -109,6 +109,8 @@ export function AnalysisResultView({
           recommendations={result.recommendations}
           installedIds={installedIds}
           onOpenDetail={setDetailItem}
+          syncTargetsByType={syncTargetsByType}
+          onInstalled={handleInstalled}
         />
       )}
 

@@ -1,5 +1,4 @@
 import {
-  Check,
   ChevronDown,
   ChevronRight,
   ExternalLink,
@@ -10,6 +9,7 @@ import {
 import { useCallback, useState } from "react";
 import type {
   ExtensionItemSummary,
+  ExtensionSyncTarget,
   RankedRecommendationItem,
 } from "../../types";
 import { useExtensionsClient } from "../../app";
@@ -17,19 +17,21 @@ import { BulletText } from "../bullet-text";
 import { CollapsibleText } from "../collapsible-text";
 import { Tooltip } from "../tooltip";
 import { TagList } from "./badges";
-import { TypeBadge } from "./extensions/extension-card";
+import { CatalogInstallButton, TypeBadge } from "./extensions/extension-card";
 import { ConfidenceBar, SectionHeader } from "./shared";
 
 export function RecommendationSection({
   recommendations,
   installedIds,
   onOpenDetail,
+  syncTargetsByType = {},
+  onInstalled,
 }: {
   recommendations: RankedRecommendationItem[];
   installedIds: Set<string>;
-  /** @deprecated No longer used — kept for backward compatibility */
-  fetchWithToken?: (url: string, init?: RequestInit) => Promise<Response>;
   onOpenDetail: (item: ExtensionItemSummary) => void;
+  syncTargetsByType?: Record<string, ExtensionSyncTarget[]>;
+  onInstalled?: (itemId: string) => void;
 }) {
   return (
     <section>
@@ -45,6 +47,8 @@ export function RecommendationSection({
             rec={rec}
             isInstalled={installedIds.has(rec.item.extension_id)}
             onOpenDetail={onOpenDetail}
+            syncTargets={syncTargetsByType[rec.item.extension_type] ?? []}
+            onInstalled={onInstalled}
           />
         ))}
       </div>
@@ -56,18 +60,34 @@ function RecommendationCard({
   rec,
   isInstalled,
   onOpenDetail,
+  syncTargets = [],
+  onInstalled,
 }: {
   rec: RankedRecommendationItem;
   isInstalled: boolean;
   onOpenDetail: (item: ExtensionItemSummary) => void;
+  syncTargets?: ExtensionSyncTarget[];
+  onInstalled?: (itemId: string) => void;
 }) {
   const client = useExtensionsClient();
   const [rationaleExpanded, setRationaleExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [installed, setInstalled] = useState(isInstalled);
 
   const relevance = rec.scores.relevance ?? 0;
   const tags = rec.item.tags ?? [];
+
+  const handleInstallStateChange = useCallback(
+    (itemId: string, success: boolean, installError: string | null) => {
+      if (success) {
+        setInstalled(true);
+        onInstalled?.(itemId);
+      }
+      if (installError) setError(installError);
+    },
+    [onInstalled],
+  );
 
   const handleClick = useCallback(async () => {
     setLoading(true);
@@ -123,11 +143,15 @@ function RecommendationCard({
               </a>
             )}
           </div>
-          {isInstalled && (
-            <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-accent-emerald bg-accent-emerald-subtle rounded-lg border border-accent-emerald-border">
-              <Check className="w-3.5 h-3.5" /> Installed
-            </span>
-          )}
+          <div className="shrink-0">
+            <CatalogInstallButton
+              item={rec.item}
+              installed={installed}
+              onStateChange={handleInstallStateChange}
+              syncTargets={syncTargets}
+              size="md"
+            />
+          </div>
         </div>
         {rec.item.description && (
           <CollapsibleText

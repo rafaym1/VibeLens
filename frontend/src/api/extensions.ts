@@ -273,7 +273,16 @@ export function createExtensionsClient(
         const e = await res.json().catch(() => ({}));
         throw new Error(e.detail || "Install failed");
       }
-      return res.json();
+      const data = await res.json();
+      if (!data.success) {
+        const results = (data.results ?? {}) as Record<string, { success: boolean; message?: string }>;
+        const msgs = Object.entries(results)
+          .filter(([, r]) => !r.success)
+          .map(([k, r]) => `${k}: ${r.message || "failed"}`)
+          .join("; ");
+        throw new Error(msgs || data.message || "Install failed");
+      }
+      return data;
     },
   };
 

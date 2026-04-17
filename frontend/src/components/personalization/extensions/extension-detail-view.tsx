@@ -129,7 +129,7 @@ export function ExtensionDetailView({ item, isInstalled, onBack, onInstalled, sy
             await typeApi.unsyncFromAgent(item.name, agent);
           }
         }
-        setInstalled(true);
+        setInstalled(toAdd.length > 0 || (installed && toRemove.length === 0));
         onInstalled(item.extension_id);
         setShowTargetDialog(false);
       } catch (err) {
@@ -200,23 +200,24 @@ export function ExtensionDetailView({ item, isInstalled, onBack, onInstalled, sy
               </div>
             </div>
 
-            {/* Install button */}
+            {/* Install / Manage button */}
             <div className="shrink-0">
-              {item.is_file_based && !installed && (
+              {item.is_file_based && (
                 <button
                   onClick={handleInstall}
                   disabled={installing}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-lg transition disabled:opacity-50"
+                  className={installed
+                    ? "flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent-emerald bg-accent-emerald-subtle hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-accent-emerald-border rounded-lg transition disabled:opacity-50"
+                    : "flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-lg transition disabled:opacity-50"
+                  }
                 >
-                  {installing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  Install
+                  {installing
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : installed
+                      ? <Check className="w-4 h-4" />
+                      : <Download className="w-4 h-4" />}
+                  {installed ? "Manage" : "Install"}
                 </button>
-              )}
-              {installed && (
-                <span className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent-emerald bg-accent-emerald-subtle border border-accent-emerald-border rounded-lg">
-                  <Check className="w-4 h-4" />
-                  Installed
-                </span>
               )}
             </div>
           </div>
@@ -347,7 +348,6 @@ export function ExtensionDetailView({ item, isInstalled, onBack, onInstalled, sy
           syncTargets={syncTargets}
           onInstall={handleDialogSubmit}
           onCancel={() => setShowTargetDialog(false)}
-          installedIn={installed ? undefined : []}
         />
       )}
     </div>

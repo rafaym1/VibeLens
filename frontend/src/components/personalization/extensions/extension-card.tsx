@@ -100,6 +100,106 @@ function QualityBar({ score }: { score: number }) {
   );
 }
 
+/** Minimal item shape needed by CatalogInstallButton. */
+interface InstallableItem {
+  extension_id: string;
+  extension_type: string;
+  name: string;
+  is_file_based?: boolean;
+}
+
+/**
+ * Reusable install button + dialog for catalog extensions.
+ * Used by ExtensionCard and RecommendationCard.
+ */
+export function CatalogInstallButton({
+  item,
+  installed,
+  onStateChange,
+  syncTargets = [],
+  size = "sm",
+}: {
+  item: InstallableItem;
+  installed: boolean;
+  onStateChange: (itemId: string, installed: boolean, error: string | null) => void;
+  syncTargets?: ExtensionSyncTarget[];
+  size?: "sm" | "md";
+}) {
+  const client = useExtensionsClient();
+  const [installing, setInstalling] = useState(false);
+  const [showTargetDialog, setShowTargetDialog] = useState(false);
+
+  const handleDialogSubmit = useCallback(
+    async (toAdd: string[], toRemove: string[]) => {
+      setInstalling(true);
+      try {
+        if (toAdd.length > 0) {
+          await client.catalog.install(item.extension_id, toAdd, true);
+        }
+        const typePlural = TYPE_PLURAL[item.extension_type];
+        if (toRemove.length > 0 && typePlural) {
+          const typeApi = client[typePlural as keyof typeof client] as {
+            unsyncFromAgent: (name: string, agent: string) => Promise<unknown>;
+          };
+          for (const agent of toRemove) {
+            await typeApi.unsyncFromAgent(item.name, agent);
+          }
+        }
+        onStateChange(item.extension_id, toAdd.length > 0, null);
+        setShowTargetDialog(false);
+      } catch (err) {
+        onStateChange(item.extension_id, false, err instanceof Error ? err.message : String(err));
+      } finally {
+        setInstalling(false);
+      }
+    },
+    [client, item.extension_id, item.extension_type, item.name, onStateChange],
+  );
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setShowTargetDialog(true);
+    },
+    [],
+  );
+
+  // is_file_based defaults to true for RecommendationItem (which lacks this field)
+  if (item.is_file_based === false) return null;
+
+  const iconSize = size === "md" ? "w-3.5 h-3.5" : "w-3 h-3";
+  const btnClass = installed
+    ? size === "md"
+      ? "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-emerald bg-accent-emerald-subtle hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-accent-emerald-border rounded-md transition disabled:opacity-50"
+      : "flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-accent-emerald bg-accent-emerald-subtle hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-accent-emerald-border rounded-md transition disabled:opacity-50"
+    : size === "md"
+      ? "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-md transition disabled:opacity-50"
+      : "flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-md transition disabled:opacity-50";
+
+  const label = installed ? "Manage" : "Install";
+  const ButtonIcon = installing ? Loader2 : installed ? Check : Download;
+
+  return (
+    <>
+      <Tooltip text={installed ? "Manage install targets" : `Install ${ITEM_TYPE_LABELS[item.extension_type] || item.extension_type}`}>
+        <button onClick={handleClick} disabled={installing} className={btnClass}>
+          <ButtonIcon className={`${iconSize} ${installing ? "animate-spin" : ""}`} />
+          {label}
+        </button>
+      </Tooltip>
+      {showTargetDialog && (
+        <InstallTargetDialog
+          extensionName={item.name}
+          typeKey={item.extension_type}
+          syncTargets={syncTargets}
+          onInstall={handleDialogSubmit}
+          onCancel={() => setShowTargetDialog(false)}
+        />
+      )}
+    </>
+  );
+}
+
 interface ExtensionCardProps {
   item: ExtensionItemSummary;
   isInstalled: boolean;
@@ -123,24 +223,6 @@ export function ExtensionCard({
   const [error, setError] = useState<string | null>(null);
   const [showTargetDialog, setShowTargetDialog] = useState(false);
 
-  const doInstall = useCallback(
-    async (platforms: string[]) => {
-      setInstalling(true);
-      setError(null);
-      try {
-        await client.catalog.install(item.extension_id, platforms, true);
-        setInstalled(true);
-        onInstalled(item.extension_id);
-        setShowTargetDialog(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setInstalling(false);
-      }
-    },
-    [client, item.extension_id, onInstalled],
-  );
-
   const handleDialogSubmit = useCallback(
     async (toAdd: string[], toRemove: string[]) => {
       setInstalling(true);
@@ -158,7 +240,7 @@ export function ExtensionCard({
             await typeApi.unsyncFromAgent(item.name, agent);
           }
         }
-        setInstalled(true);
+        setInstalled(toAdd.length > 0 || (installed && toRemove.length === 0));
         onInstalled(item.extension_id);
         setShowTargetDialog(false);
       } catch (err) {
@@ -173,13 +255,9 @@ export function ExtensionCard({
   const handleInstall = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (syncTargets.length > 0) {
-        setShowTargetDialog(true);
-      } else {
-        doInstall(["claude"]);
-      }
+      setShowTargetDialog(true);
     },
-    [syncTargets.length, doInstall],
+    [],
   );
 
   const borderClass = installed
@@ -234,20 +312,22 @@ export function ExtensionCard({
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
-                {item.is_file_based && !installed && (
+                {item.is_file_based && (
                   <button
                     onClick={handleInstall}
                     disabled={installing}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-md transition disabled:opacity-50"
+                    className={installed
+                      ? "flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-accent-emerald bg-accent-emerald-subtle hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-accent-emerald-border rounded-md transition disabled:opacity-50"
+                      : "flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-md transition disabled:opacity-50"
+                    }
                   >
-                    {installing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                    Install
+                    {installing
+                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                      : installed
+                        ? <Check className="w-3 h-3" />
+                        : <Download className="w-3 h-3" />}
+                    {installed ? "Manage" : "Install"}
                   </button>
-                )}
-                {installed && (
-                  <span className="flex items-center gap-1 text-[10px] font-medium text-accent-emerald">
-                    <Check className="w-3 h-3" />
-                  </span>
                 )}
               </div>
             </div>
@@ -260,7 +340,6 @@ export function ExtensionCard({
             syncTargets={syncTargets}
             onInstall={handleDialogSubmit}
             onCancel={() => setShowTargetDialog(false)}
-            installedIn={installed ? undefined : []}
           />
         )}
       </>
@@ -332,22 +411,24 @@ export function ExtensionCard({
               </a>
             </Tooltip>
           )}
-          {item.is_file_based && !installed && (
-            <Tooltip text={`Install ${ITEM_TYPE_LABELS[item.extension_type] || item.extension_type}`}>
+          {item.is_file_based && (
+            <Tooltip text={installed ? "Manage install targets" : `Install ${ITEM_TYPE_LABELS[item.extension_type] || item.extension_type}`}>
               <button
                 onClick={handleInstall}
                 disabled={installing}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-md transition disabled:opacity-50"
+                className={installed
+                  ? "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-emerald bg-accent-emerald-subtle hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-accent-emerald-border rounded-md transition disabled:opacity-50"
+                  : "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-500 rounded-md transition disabled:opacity-50"
+                }
               >
-                {installing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                Install
+                {installing
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : installed
+                    ? <Check className="w-3.5 h-3.5" />
+                    : <Download className="w-3.5 h-3.5" />}
+                {installed ? "Manage" : "Install"}
               </button>
             </Tooltip>
-          )}
-          {installed && (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-emerald bg-accent-emerald-subtle rounded-md border border-accent-emerald-border">
-              <Check className="w-3.5 h-3.5" /> Installed
-            </span>
           )}
         </div>
       </div>
@@ -356,9 +437,8 @@ export function ExtensionCard({
           extensionName={item.name}
           typeKey={item.extension_type}
           syncTargets={syncTargets}
-          onInstall={(targets) => doInstall(targets.length > 0 ? targets : ["claude_code"])}
+          onInstall={handleDialogSubmit}
           onCancel={() => setShowTargetDialog(false)}
-          installedIn={installed ? undefined : []}
         />
       )}
     </div>

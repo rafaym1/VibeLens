@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useExtensionsClient } from "../../app";
 import type { ExtensionSyncTarget } from "../../types";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "../modal";
-import { SOURCE_LABELS } from "./constants";
+import { normalizeSourceType, SOURCE_LABELS } from "./constants";
 
 const TYPE_PLURAL: Record<string, string> = {
   skill: "skills",
@@ -99,23 +99,31 @@ export function InstallTargetDialog({
   }, []);
 
   // Desired state = installed XOR toggled. Diff against current.
+  // Keys are normalized to plain lowercase (e.g. "claude") so the backend
+  // receives valid platform install keys, not raw enum strings.
   const { toAdd, toRemove } = useMemo(() => {
     const add: string[] = [];
     const remove: string[] = [];
     for (const key of toggled) {
-      if (installedSet.has(key)) remove.push(key);
-      else add.push(key);
+      const normalized = normalizeSourceType(key);
+      if (installedSet.has(key)) remove.push(normalized);
+      else add.push(normalized);
     }
     return { toAdd: add, toRemove: remove };
   }, [toggled, installedSet]);
 
+  const centralOnly = syncTargets.length === 0;
+
   const handleInstall = useCallback(async () => {
     setInstalling(true);
-    await onInstall(toAdd, toRemove);
-  }, [onInstall, toAdd, toRemove]);
+    // Central-only: no sync targets exist, install to default platform
+    const effectiveAdd = centralOnly && toAdd.length === 0 ? ["claude"] : toAdd;
+    await onInstall(effectiveAdd, toRemove);
+  }, [onInstall, toAdd, toRemove, centralOnly]);
 
   const totalChanges = toAdd.length + toRemove.length;
   const buttonLabel = (() => {
+    if (centralOnly) return "Install to Central Store";
     if (totalChanges === 0) return "No changes";
     if (toAdd.length > 0 && toRemove.length === 0) {
       return `Install & Sync to ${toAdd.length} interface${toAdd.length !== 1 ? "s" : ""}`;
@@ -208,7 +216,7 @@ export function InstallTargetDialog({
                   <Monitor className={`w-4 h-4 shrink-0 ${iconColor}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-secondary flex items-center gap-2 flex-wrap">
-                      {SOURCE_LABELS[target.agent] || target.agent}
+                      {SOURCE_LABELS[normalizeSourceType(target.agent)] || target.agent}
                       {badge && (
                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${badge.cls}`}>
                           {badge.label}
@@ -242,7 +250,7 @@ export function InstallTargetDialog({
         </button>
         <button
           onClick={handleInstall}
-          disabled={installing || totalChanges === 0}
+          disabled={installing || (!centralOnly && totalChanges === 0)}
           className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {installing
