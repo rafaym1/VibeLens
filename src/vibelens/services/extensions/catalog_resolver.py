@@ -39,12 +39,12 @@ def _resolve_platform(target_platform: str) -> AgentPlatform:
 
 
 def install_catalog_item(
-    item: ExtensionItem, target_platform: str = "claude_code", overwrite: bool = False
+    item: ExtensionItem, target_platform: str, overwrite: bool = False
 ) -> Path:
     """Install a catalog item to the target agent platform.
 
     Routes to the correct installer based on extension type:
-    - SKILL → writes {name}.md to commands dir (legacy single-file path)
+    - SKILL → SkillService.install (central + agent sync)
     - SUBAGENT → SubagentService.install (central + agent sync)
     - COMMAND → CommandService.install (central + agent sync)
     - HOOK → HookService.install (central + tagged merge into settings.json)
@@ -83,9 +83,14 @@ def install_catalog_item(
             overwrite=overwrite,
         )
     elif item.extension_type == AgentExtensionType.SKILL:
-        if not platform.commands_dir:
-            raise ValueError(f"Platform {target_platform} has no commands directory")
-        return _install_file(item=item, target_dir=platform.commands_dir, overwrite=overwrite)
+        if not platform.skills_dir:
+            raise ValueError(f"Platform {target_platform} has no skills directory")
+        return _install_skill(
+            item=item,
+            target_platform=target_platform,
+            agent_dir=platform.skills_dir,
+            overwrite=overwrite,
+        )
     elif item.extension_type == AgentExtensionType.HOOK:
         if not platform.settings_path:
             raise ValueError(f"Platform {target_platform} has no settings file")
@@ -129,6 +134,13 @@ def install_from_source_url(
     if not item.source_url or not GITHUB_TREE_RE.match(item.source_url):
         raise ValueError(f"Item {item.extension_id} has no installable content or valid source URL")
 
+    logger.debug(
+        "Downloading %s from %s to %s",
+        item.extension_id,
+        item.source_url,
+        platform.skills_dir / item.name,
+    )
+
     target_dir = platform.skills_dir / item.name
     if target_dir.exists() and not overwrite:
         raise FileExistsError(
@@ -139,12 +151,13 @@ def install_from_source_url(
     if not success:
         raise ValueError(f"Failed to download skill from {item.source_url}")
 
-    logger.info("Installed %s from source URL to %s", item.extension_id, target_dir)
+    logger.debug("Installed %s from source URL to %s", item.extension_id, target_dir)
 
     if item.extension_type == AgentExtensionType.SKILL:
         try:
             service = get_skill_service()
             central_dir = Path(service.get_item_path(item.name)).parent
+            logger.debug("Copying %s to central at %s", item.name, central_dir)
             if central_dir.exists():
                 shutil.rmtree(central_dir)
             shutil.copytree(target_dir, central_dir)
@@ -218,8 +231,44 @@ def _install_file(item: ExtensionItem, target_dir: Path, overwrite: bool) -> Pat
         raise FileExistsError(f"File already exists: {target}. Use overwrite=true to replace.")
 
     target.write_text(item.install_content or "", encoding="utf-8")
-    logger.info("Installed %s to %s", item.extension_id, target)
+    logger.debug("Installed %s to %s", item.extension_id, target)
     return target
+
+
+def _install_skill(
+    item: ExtensionItem, target_platform: str, agent_dir: Path, overwrite: bool
+) -> Path:
+    """Install a SKILL via SkillService; populate central + agent dir.
+
+    Args:
+        item: ExtensionItem with install_content.
+        target_platform: Platform install key used as the service agent key.
+        agent_dir: Platform's skills directory (used for the return path).
+        overwrite: If True, overwrite existing central content.
+
+    Returns:
+        Path to the agent-side skill directory.
+    """
+    service = get_skill_service()
+    content = item.install_content or ""
+    logger.debug(
+        "Installing skill %s via SkillService (content_len=%d, target=%s)",
+        item.name,
+        len(content),
+        target_platform,
+    )
+    try:
+        service.install(name=item.name, content=content, sync_to=[target_platform])
+    except FileExistsError:
+        if not overwrite:
+            raise
+        logger.debug("Skill %s exists in central, modifying + re-syncing", item.name)
+        service.modify(name=item.name, content=content)
+        service.sync_to_agents(name=item.name, agents=[target_platform])
+
+    installed = agent_dir / item.name
+    logger.debug("Installed skill %s to %s", item.extension_id, installed)
+    return installed
 
 
 def _install_subagent(
@@ -246,7 +295,7 @@ def _install_subagent(
         service.sync_to_agents(name=item.name, agents=[target_platform])
 
     installed = agent_dir / f"{item.name}.md"
-    logger.info("Installed subagent %s to %s", item.extension_id, installed)
+    logger.debug("Installed subagent %s to %s", item.extension_id, installed)
     return installed
 
 
@@ -274,7 +323,7 @@ def _install_command(
         service.sync_to_agents(name=item.name, agents=[target_platform])
 
     installed = agent_dir / f"{item.name}.md"
-    logger.info("Installed command %s to %s", item.extension_id, installed)
+    logger.debug("Installed command %s to %s", item.extension_id, installed)
     return installed
 
 
@@ -311,7 +360,7 @@ def _install_hook_via_service(
             service.modify(name=item.name, hook_config=hook_config)
         service.sync_to_agents(name=item.name, agents=[target_platform])
 
-    logger.info("Installed hook %s to %s", item.extension_id, settings_path)
+    logger.debug("Installed hook %s to %s", item.extension_id, settings_path)
     return settings_path
 
 
@@ -333,7 +382,7 @@ def _install_mcp(item: ExtensionItem, settings_path: Path) -> Path:
     existing_servers.update(servers)
 
     _write_settings(settings_path=settings_path, settings=settings)
-    logger.info("Installed MCP %s to %s", item.extension_id, settings_path)
+    logger.debug("Installed MCP %s to %s", item.extension_id, settings_path)
     return settings_path
 
 

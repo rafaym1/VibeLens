@@ -16,6 +16,9 @@ from vibelens.services.extensions.catalog import (
     list_extensions,
     resolve_extension_content,
 )
+from vibelens.utils.log import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(tags=["catalog"])
 
@@ -73,6 +76,10 @@ async def install_extension_endpoint(
 ) -> CatalogInstallResponse:
     """Install an extension item to one or more agent platforms."""
     platforms = body.target_platforms
+    logger.info(
+        "Install request: item=%s, platforms=%s, overwrite=%s",
+        item_id, platforms, body.overwrite,
+    )
     results: dict[str, CatalogInstallResult] = {}
     first_path = ""
 
@@ -100,11 +107,16 @@ async def install_extension_endpoint(
                 if not first_path:
                     first_path = str(path)
             except Exception as inner_exc:
+                logger.error("Install retry failed for %s on %s: %s", item_id, platform, inner_exc)
                 results[platform] = CatalogInstallResult(success=False, message=str(inner_exc))
-        except ValueError as exc:
+        except (ValueError, OSError) as exc:
+            logger.error("Install failed for %s on %s: %s", item_id, platform, exc)
             results[platform] = CatalogInstallResult(success=False, message=str(exc))
 
     all_ok = all(r.success for r in results.values())
+    if not all_ok:
+        failed = {k: v.message for k, v in results.items() if not v.success}
+        logger.error("Install incomplete for %s: %s", item_id, failed)
     return CatalogInstallResponse(
         success=all_ok,
         installed_path=first_path,

@@ -146,7 +146,9 @@ def install_extension(item_id: str, target_platform: str, overwrite: bool) -> tu
     if not item:
         raise KeyError(f"Item {item_id} not found")
 
-    if item.install_content:
+    has_content = bool(item.install_content)
+
+    if has_content:
         installed_path = install_catalog_item(
             item=item, target_platform=target_platform, overwrite=overwrite
         )
@@ -159,6 +161,7 @@ def install_extension(item_id: str, target_platform: str, overwrite: bool) -> tu
             item=item, target_platform=target_platform, overwrite=overwrite
         )
 
+    logger.info("Installed %s to %s", item_id, installed_path)
     return item.name, installed_path
 
 

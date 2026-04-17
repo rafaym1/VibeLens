@@ -173,14 +173,19 @@ def _make_brand_guidelines_item() -> ExtensionItem:
 
 
 def test_install_skill_creates_file(tmp_path: Path):
-    """Installing a skill writes {name}.md to commands directory."""
+    """Installing a skill goes through SkillService to central + agent."""
     platforms = _make_platforms(tmp_path=tmp_path)
-    with patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms):
+    central = SkillStore(root=tmp_path / "central-skills", create=True)
+    agent_store = SkillStore(root=platforms["claude_code"].skills_dir, create=True)
+    service = SkillService(central=central, agents={"claude_code": agent_store})
+    with (
+        patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms),
+        patch(f"{INSTALL_MODULE}.get_skill_service", return_value=service),
+    ):
         item = _make_skill_item()
         installed = install_catalog_item(item=item, target_platform="claude_code")
-        assert installed.is_file()
-        assert installed.read_text() == DEFAULT_SKILL_CONTENT
-        assert installed == tmp_path / ".claude" / "commands" / "test-skill.md"
+        assert installed == tmp_path / ".claude" / "skills" / "test-skill"
+        assert central.exists("test-skill")
     print(f"Installed skill at: {installed}")
 
 
@@ -206,10 +211,14 @@ def test_install_subagent_routes_to_agents_dir(tmp_path: Path):
 def test_install_skill_rejects_overwrite(tmp_path: Path):
     """Installing a skill to existing path raises FileExistsError."""
     platforms = _make_platforms(tmp_path=tmp_path)
-    commands_dir = tmp_path / ".claude" / "commands"
-    commands_dir.mkdir(parents=True)
-    (commands_dir / "test-skill.md").write_text("existing")
-    with patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms):
+    central = SkillStore(root=tmp_path / "central-skills", create=True)
+    central.write("test-skill", "existing")
+    agent_store = SkillStore(root=platforms["claude_code"].skills_dir, create=True)
+    service = SkillService(central=central, agents={"claude_code": agent_store})
+    with (
+        patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms),
+        patch(f"{INSTALL_MODULE}.get_skill_service", return_value=service),
+    ):
         item = _make_skill_item()
         try:
             install_catalog_item(item=item, target_platform="claude_code", overwrite=False)
@@ -220,15 +229,21 @@ def test_install_skill_rejects_overwrite(tmp_path: Path):
 
 
 def test_install_skill_allows_overwrite(tmp_path: Path):
-    """Installing with overwrite=True replaces existing file."""
+    """Installing with overwrite=True replaces existing content."""
     platforms = _make_platforms(tmp_path=tmp_path)
-    commands_dir = tmp_path / ".claude" / "commands"
-    commands_dir.mkdir(parents=True)
-    (commands_dir / "test-skill.md").write_text("old content")
-    with patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms):
+    central = SkillStore(root=tmp_path / "central-skills", create=True)
+    central.write("test-skill", "old content")
+    agent_store = SkillStore(root=platforms["claude_code"].skills_dir, create=True)
+    service = SkillService(central=central, agents={"claude_code": agent_store})
+    with (
+        patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms),
+        patch(f"{INSTALL_MODULE}.get_skill_service", return_value=service),
+    ):
         item = _make_skill_item()
         installed = install_catalog_item(item=item, target_platform="claude_code", overwrite=True)
-        assert installed.read_text() == DEFAULT_SKILL_CONTENT
+        assert installed == tmp_path / ".claude" / "skills" / "test-skill"
+        content = central.read_raw("test-skill")
+        assert DEFAULT_SKILL_CONTENT in content
     print("Overwrite succeeded")
 
 
