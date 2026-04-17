@@ -1,19 +1,43 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.0] - 2026-04-17
 
 ### Added
-- **One-liner install scripts**: New `install.sh` (macOS/Linux) and `install.ps1` (Windows) at the repo root bootstrap [uv](https://docs.astral.sh/uv/) and run `uvx vibelens serve` with zero prerequisites.
-- **Install guide**: New `docs/INSTALL.md` with per-platform walkthrough, comparison of install methods, troubleshooting matrix, and uninstall steps.
-- **Donation UI redesign**: New `DonateResultDialog` with rose Heart header, a copy button that flashes emerald on success and rose on failure, and a direct link to the withdrawal Google Form.
-- **Donation history**: Per-browser donation log at `~/.vibelens/donations/sent.jsonl` (sender-side, separate from the receiver's `index.jsonl`). New `GET /api/sessions/donations/history` endpoint filters rows by `sha256(X-Session-Token)` so each browser only sees its own donations. New `DonationHistoryDialog` reachable from the consent dialog's "View history" button.
-- **Withdraw form**: Consent dialog now links to a pre-fillable Google Form; result and history dialogs deep-link with the Donation ID pre-populated.
+- **Unified extensions system**: `BaseExtensionService[T]` generic base with Skill, Command, Subagent, and Hook services. Central + per-agent store architecture with install/sync/unsync lifecycle.
+- **Extensions API package**: Consolidated 5 standalone routers into a single `api/extensions/` package with typed factory and per-type endpoints.
+- **Typed frontend extensions client**: `ExtensionsClient` with context provider, replacing raw fetch calls across all extension components.
+- **Catalog install via services**: Skills, commands, subagents, and hooks route through their respective services for central + agent sync instead of direct file writes.
+- **CatalogInstallButton component**: Reusable install/manage button for catalog and recommendation cards with sync target dialog.
+- **Install target dialog**: Diff-based dialog showing add/remove changes per platform, with central-only fallback.
+- **GitHub auth for downloads**: `GITHUB_TOKEN`/`GH_TOKEN` env var support raises API rate limit from 60 to 5000 req/hr.
+- **Domain-based logging**: Routing table maps logger prefixes to 8 domains with per-domain log files and configurable levels.
+- **Donation UI**: Donation history, withdraw form links, and redesigned consent/result dialogs.
+- **One-liner install scripts**: `install.sh` (macOS/Linux) and `install.ps1` (Windows) bootstrap uv and run `uvx vibelens serve`.
+- **Recommendation pipeline**: L1-L4 engine with TF-IDF retrieval, multi-signal scoring, LLM profiling, and frontend view.
+- **Light mode**: Full light/dark/system theme with CSS custom property tokens and semantic color migration.
+- **Catalog explorer**: Browse, search, filter, and install from 1499 catalog items with GitHub metadata enrichment.
+- **Context extraction framework**: Pluggable `ContextExtractor` ABC with metadata, summary, and detail extractors.
+- **LLM config UI**: Redesigned form with CLI badges, LiteLLM presets, and expanded pricing.
+- **Font selector**: Atkinson Hyperlegible and other font families with live preview.
 
 ### Changed
-- **README Quick Start**: Leads with the curl one-liner, adds a decision table, a "what happens on first run" block, inline troubleshooting, and a collapsible "open a terminal" micro-guide. Features table annotates rows that need a language-model key.
-- **npm wrapper error copy**: `printNoPythonError` and `printNotInstalledError` in `npm/bin/vibelens.js` now recommend uv first and `pipx install vibelens` as a fallback for `externally-managed-environment`.
-- **Consent dialog footer**: Added "View history" button and a footnote linking to the withdrawal form for users who donated previously.
-- **Donation service constants**: Hoisted `INDEX_FILENAME` to `services/donation/__init__.py` and added `SENDER_INDEX_FILENAME` for the new sender-side log.
+- **Extensions refactor**: Renamed `catalog_install` to `catalog_resolver`. Migrated all services to `BaseExtensionService` with string agent keys. Unified extension schemas.
+- **Frontend restructure**: Renamed `conversation/` to `session/`, `analysis/` to `dashboard/`, extracted shared components, split large files.
+- **Backend model reorganization**: New `models/recommendation/`, `models/creation/`, `models/evolution/`, `models/friction/`, `models/session/` packages.
+- **Inference config persistence**: Only saves fields that differ from defaults so users pick up new defaults on upgrade.
+- **Demo guard routes**: Updated blocked routes for `/extensions` prefix.
+- **GitHub downloads**: Reuse single `httpx.Client` across recursive directory fetches instead of one per request.
+- **Installable platform stores**: Created eagerly (with `create=True`) so catalog installs succeed even if the directory doesn't exist yet.
+
+### Fixed
+- **ExtensionSource StrEnum**: Use plain string values instead of `AgentType.XXX` references, which stored repr strings on some Python versions.
+- **Installed extension management**: "Installed" badge replaced with actionable "Manage" button to change sync targets.
+- **Partial install error reporting**: Frontend throws with per-platform failure messages instead of silently succeeding.
+- **Python 3.10 compatibility**: `datetime.UTC` to `timezone.utc`, `StrEnum` shim, minimum Python raised to 3.10.
+- **Personalization prompt hardening**: Guard against LLM hallucinations in recommendation/creation parsers.
+
+### Removed
+- **Legacy modules**: Deleted `retrieval.py`, old `storage/conversation/`, `catalog/` module, `services/catalog/`, analysis shared code.
 
 ## [0.9.31] - 2026-04-12
 

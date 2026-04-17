@@ -56,8 +56,14 @@ def test_resolve_domain_unmatched_returns_none():
 
 def test_domain_prefixes_has_all_expected_domains():
     expected = {
-        "ingest", "analysis", "donation", "upload", "extensions",
-        "dashboard", "session", "llm",
+        "ingest",
+        "analysis",
+        "donation",
+        "upload",
+        "extensions",
+        "dashboard",
+        "session",
+        "llm",
     }
     assert set(DOMAIN_PREFIXES) == expected
 
