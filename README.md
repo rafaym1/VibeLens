@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="figures/icon.png" alt="VibeLens" width="120">
+  <img src="figures/logo.png" alt="VibeLens" width="120">
 </p>
 
 <h1 align="center">VibeLens</h1>
@@ -128,16 +128,6 @@ irm https://raw.githubusercontent.com/CHATS-lab/VibeLens/main/install.ps1 | iex
 ```
 
 VibeLens starts on **http://localhost:12001** and your browser opens automatically. Change it with `--port` (for example, `vibelens serve --port 8080`).
-
-<details>
-<summary><b>New to the terminal? Click to open one.</b></summary>
-
-- **macOS**: press `Cmd+Space`, type `Terminal`, press Enter.
-- **Windows**: press the Windows key, type `PowerShell`, press Enter.
-- **Linux** (GNOME/Ubuntu): press `Ctrl+Alt+T`.
-
-Then paste the one-liner above and press Enter.
-</details>
 
 ### Pick your path
 
