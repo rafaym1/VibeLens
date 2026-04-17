@@ -1,4 +1,4 @@
-"""Extension browsing and install endpoints."""
+"""Extension catalog browsing and install endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -17,7 +17,7 @@ from vibelens.services.extensions.catalog import (
     resolve_extension_content,
 )
 
-router = APIRouter(prefix="/extensions", tags=["extensions"])
+router = APIRouter(tags=["catalog"])
 
 
 @router.get("")

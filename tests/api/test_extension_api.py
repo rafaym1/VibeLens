@@ -65,7 +65,7 @@ def test_install_happy_path(client, tmp_path):
     """POST with valid target_platforms installs successfully."""
     fake_path = tmp_path / "installed-skill.md"
     with patch(
-        "vibelens.api.extensions.install_extension",
+        "vibelens.api.extensions.catalog.install_extension",
         return_value=("test-skill", fake_path),
     ):
         resp = client.post(
