@@ -77,7 +77,7 @@ class TestGetSkill:
         res = client.get("/api/skills/my-skill")
         assert res.status_code == 200
         data = res.json()
-        assert data["skill"]["name"] == "my-skill"
+        assert data["item"]["name"] == "my-skill"
         assert "Test skill" in data["content"]
         assert "path" in data
 

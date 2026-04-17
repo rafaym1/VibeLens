@@ -3,13 +3,12 @@
 from fastapi import APIRouter, HTTPException
 
 from vibelens.deps import get_hook_service
+from vibelens.schemas.extensions import ExtensionSyncRequest, SyncTargetResponse
 from vibelens.schemas.hooks import (
     HookDetailResponse,
     HookInstallRequest,
     HookListResponse,
     HookModifyRequest,
-    HookSyncRequest,
-    HookSyncTargetResponse,
 )
 from vibelens.utils.log import get_logger
 
@@ -64,10 +63,10 @@ def list_hooks(
         page=page,
         page_size=page_size,
         sync_targets=[
-            HookSyncTargetResponse(
+            SyncTargetResponse(
                 agent=str(t.agent),
-                hook_count=t.hook_count,
-                settings_path=t.settings_path,
+                count=t.hook_count,
+                dir=t.settings_path,
             )
             for t in targets
         ],
@@ -137,7 +136,7 @@ def uninstall_hook(name: str) -> dict:
 
 
 @router.post("/{name}/agents")
-def sync_hook(name: str, req: HookSyncRequest) -> dict:
+def sync_hook(name: str, req: ExtensionSyncRequest) -> dict:
     """Sync a hook to specified agent platforms."""
     service = get_hook_service()
     try:

@@ -3,13 +3,13 @@
 from fastapi import APIRouter, HTTPException
 
 from vibelens.deps import get_command_service
-from vibelens.schemas.commands import (
-    CommandDetailResponse,
-    CommandInstallRequest,
-    CommandListResponse,
-    CommandModifyRequest,
-    CommandSyncRequest,
-    CommandSyncTargetResponse,
+from vibelens.schemas.extensions import (
+    ExtensionDetailResponse,
+    ExtensionInstallRequest,
+    ExtensionListResponse,
+    ExtensionModifyRequest,
+    ExtensionSyncRequest,
+    SyncTargetResponse,
 )
 from vibelens.utils.log import get_logger
 
@@ -37,21 +37,21 @@ def list_commands(
     page_size: int = DEFAULT_PAGE_SIZE,
     search: str | None = None,
     refresh: bool = False,
-) -> CommandListResponse:
+) -> ExtensionListResponse:
     """List commands with pagination, optional search, and sync targets."""
     service = get_command_service()
     if refresh:
         service.invalidate()
     commands, total = service.list_commands(page=page, page_size=page_size, search=search)
     targets = service.list_sync_targets()
-    return CommandListResponse(
-        items=commands,
+    return ExtensionListResponse(
+        items=[c.model_dump() for c in commands],
         total=total,
         page=page,
         page_size=page_size,
         sync_targets=[
-            CommandSyncTargetResponse(
-                agent=t.agent, command_count=t.command_count, commands_dir=t.commands_dir
+            SyncTargetResponse(
+                agent=str(t.agent), count=t.command_count, dir=t.commands_dir
             )
             for t in targets
         ],
@@ -59,7 +59,7 @@ def list_commands(
 
 
 @router.get("/{name}")
-def get_command(name: str) -> CommandDetailResponse:
+def get_command(name: str) -> ExtensionDetailResponse:
     """Get full command detail with content."""
     service = get_command_service()
     try:
@@ -67,13 +67,13 @@ def get_command(name: str) -> CommandDetailResponse:
         content = service.get_command_content(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Command {name!r} not found") from None
-    return CommandDetailResponse(
-        command=command, content=content, path=service.get_item_path(name)
+    return ExtensionDetailResponse(
+        item=command.model_dump(), content=content, path=service.get_item_path(name)
     )
 
 
 @router.post("")
-def install_command(req: CommandInstallRequest) -> dict:
+def install_command(req: ExtensionInstallRequest) -> dict:
     """Install a new command."""
     service = get_command_service()
     try:
@@ -86,7 +86,7 @@ def install_command(req: CommandInstallRequest) -> dict:
 
 
 @router.put("/{name}")
-def modify_command(name: str, req: CommandModifyRequest) -> dict:
+def modify_command(name: str, req: ExtensionModifyRequest) -> dict:
     """Update an existing command's content."""
     service = get_command_service()
     try:
@@ -108,7 +108,7 @@ def uninstall_command(name: str) -> dict:
 
 
 @router.post("/{name}/agents")
-def sync_command(name: str, req: CommandSyncRequest) -> dict:
+def sync_command(name: str, req: ExtensionSyncRequest) -> dict:
     """Sync a command to specified agent platforms."""
     service = get_command_service()
     try:

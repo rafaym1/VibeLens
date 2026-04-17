@@ -1,10 +1,66 @@
-"""Extension browsing API request/response schemas."""
+"""Extension API schemas — unified for all types + catalog-specific."""
 
 from pydantic import BaseModel, Field
 
+# --- Unified sync target ---
+
+
+class SyncTargetResponse(BaseModel):
+    """Unified sync target for all extension types."""
+
+    agent: str = Field(description="Agent identifier (e.g. 'claude').")
+    count: int = Field(description="Number of extensions of this type in agent.")
+    dir: str = Field(description="Agent directory or settings path.")
+
+
+# --- Unified CRUD schemas (skill, command, subagent share these) ---
+
+
+class ExtensionInstallRequest(BaseModel):
+    """Install a new file-based extension."""
+
+    name: str = Field(description="Kebab-case extension name.")
+    content: str = Field(description="Full file content.")
+    sync_to: list[str] = Field(
+        default_factory=list, description="Agent keys to sync to after install."
+    )
+
+
+class ExtensionModifyRequest(BaseModel):
+    """Update extension content."""
+
+    content: str = Field(description="New file content.")
+
+
+class ExtensionSyncRequest(BaseModel):
+    """Sync extension to specific agents."""
+
+    agents: list[str] = Field(description="Agent keys to sync to.")
+
+
+class ExtensionDetailResponse(BaseModel):
+    """Full extension detail including content."""
+
+    item: dict = Field(description="Extension metadata (Skill/Command/Subagent/Hook).")
+    content: str = Field(description="Raw file text.")
+    path: str = Field(description="Central store path.")
+
 
 class ExtensionListResponse(BaseModel):
-    """Paginated extension listing response."""
+    """Paginated extension listing with sync targets. Used by all types."""
+
+    items: list[dict] = Field(description="Page of extensions.")
+    total: int = Field(description="Total matching.")
+    page: int = Field(description="Current page.")
+    page_size: int = Field(description="Items per page.")
+    sync_targets: list[SyncTargetResponse] = Field(description="Agent platforms available.")
+
+
+# --- Catalog-specific schemas ---
+
+
+class CatalogListResponse(BaseModel):
+    """Paginated catalog listing response."""
 
     items: list[dict] = Field(description="Extension items (without install_content).")
     total: int = Field(description="Total matching items.")
@@ -12,8 +68,8 @@ class ExtensionListResponse(BaseModel):
     per_page: int = Field(description="Items per page.")
 
 
-class ExtensionInstallRequest(BaseModel):
-    """Request body for installing an extension item."""
+class CatalogInstallRequest(BaseModel):
+    """Request body for installing from catalog."""
 
     target_platforms: list[str] = Field(
         min_length=1, description="Target agent platforms for installation."
@@ -23,27 +79,27 @@ class ExtensionInstallRequest(BaseModel):
     )
 
 
-class ExtensionInstallResult(BaseModel):
+class CatalogInstallResult(BaseModel):
     """Result of installing to a single platform."""
 
     success: bool = Field(description="Whether installation succeeded.")
-    installed_path: str = Field(default="", description="Path where the item was installed.")
-    message: str = Field(default="", description="Additional status message.")
+    installed_path: str = Field(default="", description="Path where installed.")
+    message: str = Field(default="", description="Status message.")
 
 
-class ExtensionInstallResponse(BaseModel):
-    """Response after installing an extension item."""
+class CatalogInstallResponse(BaseModel):
+    """Response after installing from catalog."""
 
     success: bool = Field(description="Whether all installations succeeded.")
     installed_path: str = Field(default="", description="Path of first successful install.")
-    message: str = Field(default="", description="Additional status message.")
-    results: dict[str, ExtensionInstallResult] = Field(
-        default_factory=dict, description="Per-platform install results."
+    message: str = Field(default="", description="Status message.")
+    results: dict[str, CatalogInstallResult] = Field(
+        default_factory=dict, description="Per-platform results."
     )
 
 
 class ExtensionMetaResponse(BaseModel):
-    """Extension catalog metadata for frontend filter/sort options."""
+    """Catalog metadata for frontend filter/sort options."""
 
     categories: list[str] = Field(description="Unique category values from catalog.")
     has_profile: bool = Field(description="Whether a user profile exists for relevance sorting.")

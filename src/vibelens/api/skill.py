@@ -3,13 +3,13 @@
 from fastapi import APIRouter, HTTPException
 
 from vibelens.deps import get_skill_service
-from vibelens.schemas.skills import (
-    SkillDetailResponse,
-    SkillInstallRequest,
-    SkillListResponse,
-    SkillModifyRequest,
-    SkillSyncRequest,
-    SkillSyncTargetResponse,
+from vibelens.schemas.extensions import (
+    ExtensionDetailResponse,
+    ExtensionInstallRequest,
+    ExtensionListResponse,
+    ExtensionModifyRequest,
+    ExtensionSyncRequest,
+    SyncTargetResponse,
 )
 from vibelens.utils.log import get_logger
 
@@ -37,21 +37,21 @@ def list_skills(
     page_size: int = DEFAULT_PAGE_SIZE,
     search: str | None = None,
     refresh: bool = False,
-) -> SkillListResponse:
+) -> ExtensionListResponse:
     """List skills with pagination, optional search, and sync targets."""
     service = get_skill_service()
     if refresh:
         service.invalidate()
     skills, total = service.list_skills(page=page, page_size=page_size, search=search)
     targets = service.list_sync_targets()
-    return SkillListResponse(
-        items=skills,
+    return ExtensionListResponse(
+        items=[s.model_dump() for s in skills],
         total=total,
         page=page,
         page_size=page_size,
         sync_targets=[
-            SkillSyncTargetResponse(
-                agent=t.agent, skill_count=t.skill_count, skills_dir=t.skills_dir
+            SyncTargetResponse(
+                agent=str(t.agent), count=t.skill_count, dir=t.skills_dir
             )
             for t in targets
         ],
@@ -59,7 +59,7 @@ def list_skills(
 
 
 @router.get("/{name}")
-def get_skill(name: str) -> SkillDetailResponse:
+def get_skill(name: str) -> ExtensionDetailResponse:
     """Get full skill detail with content."""
     service = get_skill_service()
     try:
@@ -67,11 +67,13 @@ def get_skill(name: str) -> SkillDetailResponse:
         content = service.get_skill_content(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Skill {name!r} not found") from None
-    return SkillDetailResponse(skill=skill, content=content, path=service.get_item_path(name))
+    return ExtensionDetailResponse(
+        item=skill.model_dump(), content=content, path=service.get_item_path(name)
+    )
 
 
 @router.post("")
-def install_skill(req: SkillInstallRequest) -> dict:
+def install_skill(req: ExtensionInstallRequest) -> dict:
     """Install a new skill."""
     service = get_skill_service()
     try:
@@ -84,7 +86,7 @@ def install_skill(req: SkillInstallRequest) -> dict:
 
 
 @router.put("/{name}")
-def modify_skill(name: str, req: SkillModifyRequest) -> dict:
+def modify_skill(name: str, req: ExtensionModifyRequest) -> dict:
     """Update an existing skill's content."""
     service = get_skill_service()
     try:
@@ -106,7 +108,7 @@ def uninstall_skill(name: str) -> dict:
 
 
 @router.post("/{name}/agents")
-def sync_skill(name: str, req: SkillSyncRequest) -> dict:
+def sync_skill(name: str, req: ExtensionSyncRequest) -> dict:
     """Sync a skill to specified agent platforms."""
     service = get_skill_service()
     try:

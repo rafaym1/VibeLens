@@ -76,7 +76,7 @@ class TestGetSubagent:
         res = client.get("/api/subagents/my-subagent")
         assert res.status_code == 200
         data = res.json()
-        assert data["subagent"]["name"] == "my-subagent"
+        assert data["item"]["name"] == "my-subagent"
         assert "Test subagent" in data["content"]
         assert "path" in data
 

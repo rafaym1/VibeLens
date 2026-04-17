@@ -3,10 +3,10 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from vibelens.schemas.extensions import (
-    ExtensionInstallRequest,
-    ExtensionInstallResponse,
-    ExtensionInstallResult,
-    ExtensionListResponse,
+    CatalogInstallRequest,
+    CatalogInstallResponse,
+    CatalogInstallResult,
+    CatalogListResponse,
     ExtensionMetaResponse,
 )
 from vibelens.services.extensions.catalog import (
@@ -31,7 +31,7 @@ async def list_extensions_endpoint(
     ),
     page: int = Query(default=1, ge=1, description="Page number"),
     per_page: int = Query(default=50, ge=1, le=200, description="Items per page"),
-) -> ExtensionListResponse:
+) -> CatalogListResponse:
     """List extension catalog items with search, filters, and pagination."""
     try:
         items, total = list_extensions(
@@ -45,7 +45,7 @@ async def list_extensions_endpoint(
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return ExtensionListResponse(items=items, total=total, page=page, per_page=per_page)
+    return CatalogListResponse(items=items, total=total, page=page, per_page=per_page)
 
 
 @router.get("/meta")
@@ -69,11 +69,11 @@ async def get_extension_content(item_id: str) -> dict:
 
 @router.post("/{item_id:path}/install")
 async def install_extension_endpoint(
-    item_id: str, body: ExtensionInstallRequest
-) -> ExtensionInstallResponse:
+    item_id: str, body: CatalogInstallRequest
+) -> CatalogInstallResponse:
     """Install an extension item to one or more agent platforms."""
     platforms = body.target_platforms
-    results: dict[str, ExtensionInstallResult] = {}
+    results: dict[str, CatalogInstallResult] = {}
     first_path = ""
 
     for platform in platforms:
@@ -81,7 +81,7 @@ async def install_extension_endpoint(
             name, path = install_extension(
                 item_id=item_id, target_platform=platform, overwrite=body.overwrite
             )
-            results[platform] = ExtensionInstallResult(
+            results[platform] = CatalogInstallResult(
                 success=True, installed_path=str(path), message=f"Installed {name} to {path}"
             )
             if not first_path:
@@ -94,18 +94,18 @@ async def install_extension_endpoint(
                 name, path = install_extension(
                     item_id=item_id, target_platform=platform, overwrite=True
                 )
-                results[platform] = ExtensionInstallResult(
+                results[platform] = CatalogInstallResult(
                     success=True, installed_path=str(path), message=f"Overwrote {name} at {path}"
                 )
                 if not first_path:
                     first_path = str(path)
             except Exception as inner_exc:
-                results[platform] = ExtensionInstallResult(success=False, message=str(inner_exc))
+                results[platform] = CatalogInstallResult(success=False, message=str(inner_exc))
         except ValueError as exc:
-            results[platform] = ExtensionInstallResult(success=False, message=str(exc))
+            results[platform] = CatalogInstallResult(success=False, message=str(exc))
 
     all_ok = all(r.success for r in results.values())
-    return ExtensionInstallResponse(
+    return CatalogInstallResponse(
         success=all_ok,
         installed_path=first_path,
         message=f"Installed to {sum(r.success for r in results.values())}"

@@ -3,13 +3,13 @@
 from fastapi import APIRouter, HTTPException
 
 from vibelens.deps import get_subagent_service
-from vibelens.schemas.subagents import (
-    SubagentDetailResponse,
-    SubagentInstallRequest,
-    SubagentListResponse,
-    SubagentModifyRequest,
-    SubagentSyncRequest,
-    SubagentSyncTargetResponse,
+from vibelens.schemas.extensions import (
+    ExtensionDetailResponse,
+    ExtensionInstallRequest,
+    ExtensionListResponse,
+    ExtensionModifyRequest,
+    ExtensionSyncRequest,
+    SyncTargetResponse,
 )
 from vibelens.utils.log import get_logger
 
@@ -37,21 +37,21 @@ def list_subagents(
     page_size: int = DEFAULT_PAGE_SIZE,
     search: str | None = None,
     refresh: bool = False,
-) -> SubagentListResponse:
+) -> ExtensionListResponse:
     """List subagents with pagination, optional search, and sync targets."""
     service = get_subagent_service()
     if refresh:
         service.invalidate()
     subagents, total = service.list_subagents(page=page, page_size=page_size, search=search)
     targets = service.list_sync_targets()
-    return SubagentListResponse(
-        items=subagents,
+    return ExtensionListResponse(
+        items=[s.model_dump() for s in subagents],
         total=total,
         page=page,
         page_size=page_size,
         sync_targets=[
-            SubagentSyncTargetResponse(
-                agent=t.agent, subagent_count=t.subagent_count, subagents_dir=t.subagents_dir
+            SyncTargetResponse(
+                agent=str(t.agent), count=t.subagent_count, dir=t.subagents_dir
             )
             for t in targets
         ],
@@ -59,7 +59,7 @@ def list_subagents(
 
 
 @router.get("/{name}")
-def get_subagent(name: str) -> SubagentDetailResponse:
+def get_subagent(name: str) -> ExtensionDetailResponse:
     """Get full subagent detail with content."""
     service = get_subagent_service()
     try:
@@ -67,13 +67,13 @@ def get_subagent(name: str) -> SubagentDetailResponse:
         content = service.get_subagent_content(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Subagent {name!r} not found") from None
-    return SubagentDetailResponse(
-        subagent=subagent, content=content, path=service.get_item_path(name)
+    return ExtensionDetailResponse(
+        item=subagent.model_dump(), content=content, path=service.get_item_path(name)
     )
 
 
 @router.post("")
-def install_subagent(req: SubagentInstallRequest) -> dict:
+def install_subagent(req: ExtensionInstallRequest) -> dict:
     """Install a new subagent."""
     service = get_subagent_service()
     try:
@@ -86,7 +86,7 @@ def install_subagent(req: SubagentInstallRequest) -> dict:
 
 
 @router.put("/{name}")
-def modify_subagent(name: str, req: SubagentModifyRequest) -> dict:
+def modify_subagent(name: str, req: ExtensionModifyRequest) -> dict:
     """Update an existing subagent's content."""
     service = get_subagent_service()
     try:
@@ -108,7 +108,7 @@ def uninstall_subagent(name: str) -> dict:
 
 
 @router.post("/{name}/agents")
-def sync_subagent(name: str, req: SubagentSyncRequest) -> dict:
+def sync_subagent(name: str, req: ExtensionSyncRequest) -> dict:
     """Sync a subagent to specified agent platforms."""
     service = get_subagent_service()
     try:

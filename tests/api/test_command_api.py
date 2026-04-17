@@ -77,7 +77,7 @@ class TestGetCommand:
         res = client.get("/api/commands/my-command")
         assert res.status_code == 200
         data = res.json()
-        assert data["command"]["name"] == "my-command"
+        assert data["item"]["name"] == "my-command"
         assert "Test command" in data["content"]
         assert "path" in data
 
