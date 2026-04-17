@@ -8,7 +8,6 @@ from vibelens.models.extension.item import (
     FILE_BASED_TYPES,
     ExtensionItem,
 )
-from vibelens.models.extension.retrieval import SkillRecommendation, SkillRetrievalOutput
 from vibelens.models.extension.skill import Skill
 from vibelens.models.extension.subagent import Subagent
 
@@ -20,7 +19,5 @@ __all__ = [
     "FILE_BASED_TYPES",
     "Hook",
     "Skill",
-    "SkillRecommendation",
-    "SkillRetrievalOutput",
     "Subagent",
 ]

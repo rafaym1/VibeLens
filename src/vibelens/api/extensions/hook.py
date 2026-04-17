@@ -62,14 +62,7 @@ def list_hooks(
         total=total,
         page=page,
         page_size=page_size,
-        sync_targets=[
-            SyncTargetResponse(
-                agent=t.agent,
-                count=t.count,
-                dir=t.dir,
-            )
-            for t in targets
-        ],
+        sync_targets=[SyncTargetResponse(agent=t.agent, count=t.count, dir=t.dir) for t in targets],
     )
 
 
