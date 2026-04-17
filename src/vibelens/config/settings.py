@@ -26,7 +26,6 @@ def _default_log_dir() -> Path:
     return Path(__file__).resolve().parents[3] / "logs"
 
 
-
 class ServerConfig(BaseModel):
     """HTTP server binding."""
 
@@ -47,11 +46,7 @@ class DemoConfig(BaseModel):
         """Parse comma-separated example session paths into a list."""
         if not self.example_sessions:
             return []
-        return [
-            Path(p.strip()).expanduser()
-            for p in self.example_sessions.split(",")
-            if p.strip()
-        ]
+        return [Path(p.strip()).expanduser() for p in self.example_sessions.split(",") if p.strip()]
 
 
 class StorageConfig(BaseModel):
@@ -308,16 +303,24 @@ def save_inference_config(config: InferenceConfig) -> None:
         except (json.JSONDecodeError, OSError):
             existing = {}
 
-    existing["inference"] = {
+    # Only persist fields that differ from InferenceConfig defaults,
+    # so users pick up new defaults automatically on upgrade.
+    defaults = InferenceConfig()
+    section: dict = {
         "backend": config.backend.value,
         "model": config.model,
         "api_key": config.api_key,
         "base_url": config.base_url,
-        "timeout": config.timeout,
-        "max_output_tokens": config.max_output_tokens,
-        "max_input_tokens": config.max_input_tokens,
-        "max_sessions": config.max_sessions,
     }
+    if config.timeout != defaults.timeout:
+        section["timeout"] = config.timeout
+    if config.max_output_tokens != defaults.max_output_tokens:
+        section["max_output_tokens"] = config.max_output_tokens
+    if config.max_input_tokens != defaults.max_input_tokens:
+        section["max_input_tokens"] = config.max_input_tokens
+    if config.max_sessions != defaults.max_sessions:
+        section["max_sessions"] = config.max_sessions
+    existing["inference"] = section
     # Remove legacy "llm" key if present
     existing.pop("llm", None)
 
