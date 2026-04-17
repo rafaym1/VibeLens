@@ -240,7 +240,7 @@ def test_install_hook_appends_to_settings(tmp_path: Path):
     settings_path = claude_dir / "settings.json"
     settings_path.write_text(json.dumps({"hooks": {}}))
     central = HookStore(root=tmp_path / "central-hooks", create=True)
-    service = HookService(central=central, agent_settings={"claude_code": settings_path})
+    service = HookService(central=central, agents={"claude_code": settings_path})
     with (
         patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms),
         patch(f"{INSTALL_MODULE}.get_hook_service", return_value=service),

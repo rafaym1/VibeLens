@@ -42,7 +42,7 @@ def list_subagents(
     service = get_subagent_service()
     if refresh:
         service.invalidate()
-    subagents, total = service.list_subagents(page=page, page_size=page_size, search=search)
+    subagents, total = service.list_items(page=page, page_size=page_size, search=search)
     targets = service.list_sync_targets()
     return ExtensionListResponse(
         items=[s.model_dump() for s in subagents],
@@ -50,9 +50,7 @@ def list_subagents(
         page=page,
         page_size=page_size,
         sync_targets=[
-            SyncTargetResponse(
-                agent=str(t.agent), count=t.subagent_count, dir=t.subagents_dir
-            )
+            SyncTargetResponse(agent=t.agent, count=t.count, dir=t.dir)
             for t in targets
         ],
     )
@@ -63,8 +61,8 @@ def get_subagent(name: str) -> ExtensionDetailResponse:
     """Get full subagent detail with content."""
     service = get_subagent_service()
     try:
-        subagent = service.get_subagent(name)
-        content = service.get_subagent_content(name)
+        subagent = service.get_item(name)
+        content = service.get_item_content(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Subagent {name!r} not found") from None
     return ExtensionDetailResponse(
@@ -115,7 +113,7 @@ def sync_subagent(name: str, req: ExtensionSyncRequest) -> dict:
         results = service.sync_to_agents(name, req.agents)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Subagent {name!r} not found") from None
-    subagent = service.get_subagent(name)
+    subagent = service.get_item(name)
     return {"name": name, "results": results, "subagent": subagent.model_dump()}
 
 
@@ -131,5 +129,5 @@ def unsync_subagent(name: str, agent: str) -> dict:
         raise HTTPException(
             status_code=404, detail=f"Subagent {name!r} not in agent {agent!r}"
         ) from None
-    subagent = service.get_subagent(name)
+    subagent = service.get_item(name)
     return {"name": name, "agent": agent, "subagent": subagent.model_dump()}

@@ -4,11 +4,10 @@ import json
 
 import pytest
 
-from vibelens.models.enums import AgentType
+from vibelens.services.extensions.base_service import SyncTarget
 from vibelens.services.extensions.hook_service import (
     VIBELENS_MARKER_KEY,
     HookService,
-    HookSyncTarget,
 )
 from vibelens.storage.extension.hook_store import HookStore
 
@@ -49,7 +48,7 @@ def codex_settings(tmp_path):
 def service(central, claude_settings, codex_settings):
     return HookService(
         central=central,
-        agent_settings={AgentType.CLAUDE: claude_settings, AgentType.CODEX: codex_settings},
+        agents={"claude": claude_settings, "codex": codex_settings},
     )
 
 
@@ -241,42 +240,42 @@ class TestQuery:
             hook_config=SAMPLE_CONFIG,
             sync_to=["claude", "codex"],
         )
-        installed = service.find_installed_agents("my-hook")
+        installed = service._find_installed_agents("my-hook")
         print(f"installed in: {installed}")
         assert sorted(str(a) for a in installed) == ["claude", "codex"]
 
     def test_list_hooks(self, service):
         service.install(name="alpha", description="", tags=[], hook_config=SAMPLE_CONFIG)
         service.install(name="beta", description="", tags=[], hook_config=SAMPLE_CONFIG)
-        hooks, total = service.list_hooks()
+        hooks, total = service.list_items()
         assert total == 2
         assert {h.name for h in hooks} == {"alpha", "beta"}
 
     def test_list_hooks_search(self, service):
         service.install(name="alpha", description="", tags=[], hook_config=SAMPLE_CONFIG)
         service.install(name="beta", description="", tags=[], hook_config=SAMPLE_CONFIG)
-        hooks, total = service.list_hooks(search="alpha")
+        hooks, total = service.list_items(search="alpha")
         assert total == 1
         assert hooks[0].name == "alpha"
 
     def test_get_hook(self, service):
         service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
-        hook = service.get_hook("my-hook")
+        hook = service.get_item("my-hook")
         assert hook.name == "my-hook"
 
     def test_get_hook_not_found(self, service):
         with pytest.raises(FileNotFoundError):
-            service.get_hook("nonexistent")
+            service.get_item("nonexistent")
 
     def test_get_hook_content(self, service):
         service.install(name="my-hook", description="sample", tags=[], hook_config=SAMPLE_CONFIG)
-        content = service.get_hook_content("my-hook")
+        content = service.get_item_content("my-hook")
         assert "sample" in content
 
     def test_list_sync_targets(self, service):
         targets = service.list_sync_targets()
         assert len(targets) == 2
-        assert all(isinstance(t, HookSyncTarget) for t in targets)
+        assert all(isinstance(t, SyncTarget) for t in targets)
 
 
 class TestImportFromAgent:
@@ -346,6 +345,6 @@ class TestImportFromAgent:
 class TestCache:
     def test_invalidate_clears_cache(self, service):
         service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
-        service.list_hooks()
+        service.list_items()
         service.invalidate()
         assert service._cache is None

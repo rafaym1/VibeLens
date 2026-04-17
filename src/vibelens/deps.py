@@ -98,15 +98,14 @@ def get_skill_service():
 
 def _build_agent_skill_stores() -> dict:
     """Build agent SkillStore instances from platform registry."""
-    from vibelens.models.enums import AgentType
     from vibelens.services.extensions.platforms import PLATFORMS
     from vibelens.storage.extension.skill_store import SkillStore
 
-    stores: dict[AgentType, SkillStore] = {}
+    stores: dict[str, SkillStore] = {}
     for source, platform in PLATFORMS.items():
         resolved = platform.skills_dir.expanduser().resolve()
         if resolved.is_dir():
-            stores[AgentType[source.name]] = SkillStore(resolved)
+            stores[source.value] = SkillStore(resolved)
     return stores
 
 
@@ -127,17 +126,16 @@ def get_command_service():
 
 def _build_agent_command_stores() -> dict:
     """Build agent CommandStore instances from platform registry."""
-    from vibelens.models.enums import AgentType
     from vibelens.services.extensions.platforms import PLATFORMS
     from vibelens.storage.extension.command_store import CommandStore
 
-    stores: dict[AgentType, CommandStore] = {}
+    stores: dict[str, CommandStore] = {}
     for source, platform in PLATFORMS.items():
         if platform.commands_dir is None:
             continue
         resolved = platform.commands_dir.expanduser().resolve()
         if resolved.is_dir():
-            stores[AgentType[source.name]] = CommandStore(resolved)
+            stores[source.value] = CommandStore(resolved)
     return stores
 
 
@@ -162,17 +160,15 @@ def _build_agent_subagent_stores() -> dict:
     Subagents live in their own directory (``platform.subagents_dir``), not
     shared with commands.
     """
-    from vibelens.models.enums import AgentType
     from vibelens.services.extensions.platforms import PLATFORMS
     from vibelens.storage.extension.subagent_store import SubagentStore
 
-    stores: dict[AgentType, SubagentStore] = {}
+    stores: dict[str, SubagentStore] = {}
     for source, platform in PLATFORMS.items():
         if platform.subagents_dir is None:
             continue
         resolved = platform.subagents_dir.expanduser().resolve()
-        if resolved.is_dir():
-            stores[AgentType[source.name]] = SubagentStore(resolved)
+        stores[source.value] = SubagentStore(resolved)
     return stores
 
 
@@ -186,26 +182,25 @@ def get_hook_service():
         settings = get_settings()
         central = HookStore(settings.storage.managed_hooks_dir, create=True)
         agent_settings = _build_agent_settings_paths()
-        return HookService(central=central, agent_settings=agent_settings)
+        return HookService(central=central, agents=agent_settings)
 
     return _get_or_create("hook_service", _create)
 
 
 def _build_agent_settings_paths() -> dict:
-    """Build mapping of AgentType to each platform's settings.json path.
+    """Build mapping of string agent key to each platform's settings.json path.
 
     Only platforms with a non-None ``settings_path`` (CLAUDE, CODEX) are included.
     The file does not need to exist yet — it will be created on first sync.
     """
-    from vibelens.models.enums import AgentType
     from vibelens.services.extensions.platforms import PLATFORMS
 
-    paths: dict[AgentType, Path] = {}
+    paths: dict[str, Path] = {}
     for source, platform in PLATFORMS.items():
         if platform.settings_path is None:
             continue
         resolved = platform.settings_path.expanduser().resolve()
-        paths[AgentType[source.name]] = resolved
+        paths[source.value] = resolved
     return paths
 
 

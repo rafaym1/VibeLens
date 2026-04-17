@@ -42,7 +42,7 @@ def list_skills(
     service = get_skill_service()
     if refresh:
         service.invalidate()
-    skills, total = service.list_skills(page=page, page_size=page_size, search=search)
+    skills, total = service.list_items(page=page, page_size=page_size, search=search)
     targets = service.list_sync_targets()
     return ExtensionListResponse(
         items=[s.model_dump() for s in skills],
@@ -50,9 +50,7 @@ def list_skills(
         page=page,
         page_size=page_size,
         sync_targets=[
-            SyncTargetResponse(
-                agent=str(t.agent), count=t.skill_count, dir=t.skills_dir
-            )
+            SyncTargetResponse(agent=t.agent, count=t.count, dir=t.dir)
             for t in targets
         ],
     )
@@ -63,8 +61,8 @@ def get_skill(name: str) -> ExtensionDetailResponse:
     """Get full skill detail with content."""
     service = get_skill_service()
     try:
-        skill = service.get_skill(name)
-        content = service.get_skill_content(name)
+        skill = service.get_item(name)
+        content = service.get_item_content(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Skill {name!r} not found") from None
     return ExtensionDetailResponse(
@@ -115,7 +113,7 @@ def sync_skill(name: str, req: ExtensionSyncRequest) -> dict:
         results = service.sync_to_agents(name, req.agents)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Skill {name!r} not found") from None
-    skill = service.get_skill(name)
+    skill = service.get_item(name)
     return {"name": name, "results": results, "skill": skill.model_dump()}
 
 
@@ -131,5 +129,5 @@ def unsync_skill(name: str, agent: str) -> dict:
         raise HTTPException(
             status_code=404, detail=f"Skill {name!r} not in agent {agent!r}"
         ) from None
-    skill = service.get_skill(name)
+    skill = service.get_item(name)
     return {"name": name, "agent": agent, "skill": skill.model_dump()}

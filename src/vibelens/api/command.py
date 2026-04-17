@@ -42,7 +42,7 @@ def list_commands(
     service = get_command_service()
     if refresh:
         service.invalidate()
-    commands, total = service.list_commands(page=page, page_size=page_size, search=search)
+    commands, total = service.list_items(page=page, page_size=page_size, search=search)
     targets = service.list_sync_targets()
     return ExtensionListResponse(
         items=[c.model_dump() for c in commands],
@@ -50,9 +50,7 @@ def list_commands(
         page=page,
         page_size=page_size,
         sync_targets=[
-            SyncTargetResponse(
-                agent=str(t.agent), count=t.command_count, dir=t.commands_dir
-            )
+            SyncTargetResponse(agent=t.agent, count=t.count, dir=t.dir)
             for t in targets
         ],
     )
@@ -63,8 +61,8 @@ def get_command(name: str) -> ExtensionDetailResponse:
     """Get full command detail with content."""
     service = get_command_service()
     try:
-        command = service.get_command(name)
-        content = service.get_command_content(name)
+        command = service.get_item(name)
+        content = service.get_item_content(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Command {name!r} not found") from None
     return ExtensionDetailResponse(
@@ -115,7 +113,7 @@ def sync_command(name: str, req: ExtensionSyncRequest) -> dict:
         results = service.sync_to_agents(name, req.agents)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Command {name!r} not found") from None
-    command = service.get_command(name)
+    command = service.get_item(name)
     return {"name": name, "results": results, "command": command.model_dump()}
 
 
@@ -131,5 +129,5 @@ def unsync_command(name: str, agent: str) -> dict:
         raise HTTPException(
             status_code=404, detail=f"Command {name!r} not in agent {agent!r}"
         ) from None
-    command = service.get_command(name)
+    command = service.get_item(name)
     return {"name": name, "agent": agent, "command": command.model_dump()}

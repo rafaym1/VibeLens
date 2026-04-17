@@ -1,4 +1,4 @@
-"""Hook management service — orchestrates central store + agent settings.json files.
+"""Hook management service — extends BaseExtensionService with JSON merge sync.
 
 Unlike commands/subagents (where agent-side storage is a directory of .md files),
 hooks live inside each agent's ``settings.json`` under the top-level ``hooks`` key.
@@ -9,61 +9,48 @@ can be located for later unsync/modify operations without touching unmanaged ent
 
 import copy
 import json
-import time
-from dataclasses import dataclass
 from pathlib import Path
 
-from vibelens.models.enums import AgentType
 from vibelens.models.extension.hook import Hook
+from vibelens.services.extensions.base_service import BaseExtensionService, SyncTarget
 from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 from vibelens.storage.extension.hook_store import HookStore, serialize_hook
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
 
-CACHE_TTL_SECONDS = 300
 VIBELENS_MARKER_KEY = "_vibelens_managed"
 HOOKS_ROOT_KEY = "hooks"
 JSON_INDENT = 2
 
 
-@dataclass
-class HookSyncTarget:
-    """An agent platform available for hook sync."""
-
-    agent: AgentType
-    hook_count: int
-    settings_path: str
-
-
-class HookService:
-    """Orchestrates hook CRUD across central store and agent settings.json files."""
+class HookService(BaseExtensionService[Hook]):
+    """Hook-specific service. Overrides sync for JSON merge into settings.json."""
 
     def __init__(
         self,
         central: HookStore,
-        agent_settings: dict[AgentType, Path],
+        agents: dict[str, Path],
     ) -> None:
         """Create a HookService.
 
         Args:
             central: Central HookStore under ``~/.vibelens/hooks/``.
-            agent_settings: Map of AgentType to each agent's ``settings.json`` path.
+            agents: Map of agent key (string) to each agent's ``settings.json`` path.
         """
-        self._central = central
-        self._agent_settings = agent_settings
-        self._cache: list[Hook] | None = None
-        self._cache_at: float = 0.0
+        super().__init__(central_store=central, agent_stores={})
+        self._settings_paths: dict[str, Path] = {str(k): v for k, v in agents.items()}
 
     def install(
         self,
         name: str,
-        description: str,
-        tags: list[str],
-        hook_config: dict[str, list[dict]],
+        description: str = "",
+        tags: list[str] | None = None,
+        hook_config: dict[str, list[dict]] | None = None,
         sync_to: list[str] | None = None,
+        content: str | None = None,
     ) -> Hook:
-        """Write hook JSON to central store and optionally sync to agents.
+        """Install a hook. Accepts structured fields or raw JSON content.
 
         Args:
             name: Kebab-case hook name.
@@ -71,6 +58,7 @@ class HookService:
             tags: Tags for discovery.
             hook_config: Event-name to list-of-hook-groups mapping.
             sync_to: Agent keys to sync to after install.
+            content: Raw JSON content (overrides structured fields if provided).
 
         Returns:
             Installed Hook with installed_in populated.
@@ -84,14 +72,20 @@ class HookService:
         if self._central.exists(name):
             raise FileExistsError(f"Hook {name!r} already exists. Use modify() to update.")
 
-        hook = Hook(
-            name=name, description=description, tags=tags, hook_config=hook_config
-        )
-        self._central.write(name, serialize_hook(hook))
+        if content is None:
+            hook = Hook(
+                name=name,
+                description=description,
+                tags=tags or [],
+                hook_config=hook_config or {},
+            )
+            content = serialize_hook(hook)
+
+        self._central.write(name, content)
+        self._invalidate_cache()
         if sync_to:
             self.sync_to_agents(name, sync_to)
-        self.invalidate()
-        return self._read_with_agents(name)
+        return self.get_item(name)
 
     def modify(
         self,
@@ -99,14 +93,16 @@ class HookService:
         description: str | None = None,
         tags: list[str] | None = None,
         hook_config: dict[str, list[dict]] | None = None,
+        content: str | None = None,
     ) -> Hook:
-        """Update hook content. Auto-syncs to agents where already installed.
+        """Partial update. None fields are left unchanged.
 
         Args:
             name: Hook name.
             description: New description, or None to keep current.
             tags: New tags, or None to keep current.
             hook_config: New hook_config, or None to keep current.
+            content: Raw JSON content (overrides structured fields if provided).
 
         Returns:
             Updated Hook.
@@ -114,23 +110,26 @@ class HookService:
         Raises:
             FileNotFoundError: If hook not in central.
         """
-        current = self._central.read(name)
-        if current is None:
+        existing = self._central.read(name)
+        if existing is None:
             raise FileNotFoundError(f"Hook {name!r} not found in central store")
 
-        updated = Hook(
-            name=name,
-            description=current.description if description is None else description,
-            tags=current.tags if tags is None else tags,
-            hook_config=current.hook_config if hook_config is None else hook_config,
-        )
-        self._central.write(name, serialize_hook(updated))
+        if content is None:
+            hook = Hook(
+                name=name,
+                description=description if description is not None else existing.description,
+                tags=tags if tags is not None else existing.tags,
+                hook_config=hook_config if hook_config is not None else existing.hook_config,
+            )
+            content = serialize_hook(hook)
 
-        for agent_key in self.find_installed_agents(name):
-            self._central_to_agent(name, agent_key)
+        self._central.write(name, content)
+        self._invalidate_cache()
 
-        self.invalidate()
-        return self._read_with_agents(name)
+        for agent_key in self._find_installed_agents(name):
+            self._sync_to_agent_by_key(name, agent_key)
+
+        return self.get_item(name)
 
     def uninstall(self, name: str) -> list[str]:
         """Delete from central and remove from every agent settings.json.
@@ -147,12 +146,12 @@ class HookService:
         if not self._central.exists(name):
             raise FileNotFoundError(f"Hook {name!r} not found in central store")
 
-        removed_from = self.find_installed_agents(name)
+        removed_from = self._find_installed_agents(name)
         for agent_key in removed_from:
             self._remove_marker_from_settings(name, agent_key)
 
         self._central.delete(name)
-        self.invalidate()
+        self._invalidate_cache()
         return removed_from
 
     def uninstall_from_agent(self, name: str, agent: str) -> None:
@@ -170,7 +169,7 @@ class HookService:
         if not self._agent_has_marker(name, agent_key):
             raise FileNotFoundError(f"Hook {name!r} not in agent {agent!r}")
         self._remove_marker_from_settings(name, agent_key)
-        self.invalidate()
+        self._invalidate_cache()
 
     def sync_to_agents(self, name: str, agents: list[str]) -> dict[str, bool]:
         """Merge central hook into each listed agent's settings.json.
@@ -190,13 +189,24 @@ class HookService:
 
         results: dict[str, bool] = {}
         for agent_key_raw in agents:
-            results[agent_key_raw] = self._central_to_agent(name, agent_key_raw)
+            try:
+                agent_key = self._resolve_agent_key(agent_key_raw)
+            except KeyError:
+                logger.warning("Unknown agent %r, skipping sync", agent_key_raw)
+                results[agent_key_raw] = False
+                continue
+            self._sync_to_agent_by_key(name, agent_key)
+            results[agent_key_raw] = True
 
-        self.invalidate()
+        self._invalidate_cache()
         return results
 
     def import_from_agent(
-        self, agent: str, name: str, event_name: str, matcher: str
+        self,
+        agent: str,
+        name: str,
+        event_name: str | None = None,
+        matcher: str | None = None,
     ) -> Hook:
         """Extract a hook group from an agent's settings.json into central.
 
@@ -221,7 +231,7 @@ class HookService:
             raise FileExistsError(f"Hook {name!r} already exists in central store")
 
         agent_key = self._resolve_agent_key(agent)
-        settings = self._read_settings(self._agent_settings[agent_key])
+        settings = self._read_settings(self._settings_paths[agent_key])
         groups = settings.get(HOOKS_ROOT_KEY, {}).get(event_name, [])
         matching = [g for g in groups if g.get("matcher") == matcher]
         if not matching:
@@ -232,132 +242,31 @@ class HookService:
         stripped = [_strip_marker(g) for g in matching]
         hook = Hook(name=name, hook_config={event_name: stripped})
         self._central.write(name, serialize_hook(hook))
-        self.invalidate()
-        return self._read_with_agents(name)
+        self._invalidate_cache()
+        return self.get_item(name)
 
-    def list_hooks(
-        self, page: int = 1, page_size: int = 50, search: str | None = None
-    ) -> tuple[list[Hook], int]:
-        """List hooks with pagination and optional search.
-
-        Args:
-            page: 1-based page number.
-            page_size: Items per page.
-            search: Case-insensitive substring match on name/description.
-
-        Returns:
-            Tuple of (page items, total matching count).
-        """
-        all_hooks = self._get_cached()
-        if search:
-            query = search.lower()
-            all_hooks = [
-                h for h in all_hooks
-                if query in h.name.lower() or query in h.description.lower()
-            ]
-        total = len(all_hooks)
-        start = (max(page, 1) - 1) * page_size
-        return all_hooks[start : start + page_size], total
-
-    def get_hook(self, name: str) -> Hook:
-        """Get a single hook with installed_in populated.
-
-        Args:
-            name: Hook name.
-
-        Returns:
-            Hook with installed_in set.
-
-        Raises:
-            FileNotFoundError: If not found.
-        """
-        return self._read_with_agents(name)
-
-    def get_hook_content(self, name: str) -> str:
-        """Return raw JSON text of the central hook.
-
-        Args:
-            name: Hook name.
-
-        Returns:
-            Raw JSON content.
-
-        Raises:
-            FileNotFoundError: If not found.
-        """
-        raw = self._central.read_raw(name)
-        if raw is None:
-            raise FileNotFoundError(f"Hook {name!r} not found")
-        return raw
-
-    def find_installed_agents(self, name: str) -> list[str]:
-        """Return agent keys whose settings.json has any group marked with this hook."""
-        return [key for key in self._agent_settings if self._agent_has_marker(name, key)]
-
-    def get_item_path(self, name: str) -> str:
-        """Return the central-store file path for a hook."""
-        return str(self._central.path_for(name))
-
-    def list_sync_targets(self) -> list[HookSyncTarget]:
-        """List available agent platforms with counts of managed hooks."""
-        targets: list[HookSyncTarget] = []
-        for agent_key, path in self._agent_settings.items():
-            targets.append(
-                HookSyncTarget(
-                    agent=agent_key,
-                    hook_count=self._count_managed_hooks(path),
-                    settings_path=str(path),
-                )
+    def list_sync_targets(self) -> list[SyncTarget]:
+        """Return sync targets with settings_path as dir."""
+        return [
+            SyncTarget(
+                agent=agent_key,
+                count=self._count_managed_hooks(path),
+                dir=str(path),
             )
-        return targets
+            for agent_key, path in self._settings_paths.items()
+        ]
 
-    def invalidate(self) -> None:
-        """Clear cached hook list."""
-        self._cache = None
-        self._cache_at = 0.0
+    def _find_installed_agents(self, name: str) -> list[str]:
+        """Return agent keys whose settings.json has any group marked with this hook."""
+        return [key for key in self._settings_paths if self._agent_has_marker(name, key)]
 
-    def _get_cached(self) -> list[Hook]:
-        """Return cached hook list, refreshing if stale."""
-        now = time.monotonic()
-        if self._cache is None or (now - self._cache_at) > CACHE_TTL_SECONDS:
-            hooks: list[Hook] = []
-            for name in self._central.list_names():
-                hook = self._central.read(name)
-                if hook:
-                    hook.installed_in = self.find_installed_agents(name)
-                    hooks.append(hook)
-            self._cache = hooks
-            self._cache_at = now
-        return self._cache
-
-    def _read_with_agents(self, name: str) -> Hook:
-        """Read a hook from central and populate installed_in."""
+    def _sync_to_agent_by_key(self, name: str, agent_key: str) -> None:
+        """Merge central hook into one agent's settings.json."""
         hook = self._central.read(name)
         if hook is None:
-            raise FileNotFoundError(f"Hook {name!r} not found")
-        hook.installed_in = self.find_installed_agents(name)
-        return hook
+            return
 
-    def _resolve_agent_key(self, agent: str) -> AgentType:
-        """Look up an AgentType from a string key."""
-        for key in self._agent_settings:
-            if str(key) == agent:
-                return key
-        raise KeyError(f"Unknown agent: {agent!r}")
-
-    def _central_to_agent(self, name: str, agent_key_raw: str) -> bool:
-        """Merge central hook into one agent's settings.json. False if unknown agent."""
-        try:
-            agent_key = self._resolve_agent_key(agent_key_raw)
-        except KeyError:
-            logger.warning("Unknown agent %r, skipping sync", agent_key_raw)
-            return False
-
-        hook = self._central.read(name)
-        if hook is None:
-            return False
-
-        path = self._agent_settings[agent_key]
+        path = self._settings_paths[agent_key]
         settings = self._read_settings(path)
         hooks_root = settings.setdefault(HOOKS_ROOT_KEY, {})
 
@@ -370,11 +279,10 @@ class HookService:
             hooks_root[event_name] = cleaned
 
         self._write_settings(path, settings)
-        return True
 
-    def _remove_marker_from_settings(self, name: str, agent_key: AgentType) -> None:
+    def _remove_marker_from_settings(self, name: str, agent_key: str) -> None:
         """Remove every hook group tagged with ``name`` from this agent's settings."""
-        path = self._agent_settings[agent_key]
+        path = self._settings_paths[agent_key]
         settings = self._read_settings(path)
         hooks_root = settings.get(HOOKS_ROOT_KEY, {})
         if not hooks_root:
@@ -392,9 +300,9 @@ class HookService:
             settings.pop(HOOKS_ROOT_KEY, None)
         self._write_settings(path, settings)
 
-    def _agent_has_marker(self, name: str, agent_key: AgentType) -> bool:
+    def _agent_has_marker(self, name: str, agent_key: str) -> bool:
         """Return True if the agent's settings.json contains any group marked with this hook."""
-        path = self._agent_settings[agent_key]
+        path = self._settings_paths[agent_key]
         settings = self._read_settings(path)
         hooks_root = settings.get(HOOKS_ROOT_KEY, {})
         for groups in hooks_root.values():
@@ -413,6 +321,13 @@ class HookService:
                 if isinstance(marker, str):
                     names.add(marker)
         return len(names)
+
+    def _resolve_agent_key(self, agent: str) -> str:
+        """Look up an agent key from the settings paths dict."""
+        key = str(agent)
+        if key not in self._settings_paths:
+            raise KeyError(f"Unknown agent: {agent!r}")
+        return key
 
     def _read_settings(self, path: Path) -> dict:
         """Read settings.json. Returns empty dict if missing or invalid."""

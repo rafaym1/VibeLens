@@ -2,8 +2,8 @@
 
 import pytest
 
-from vibelens.models.enums import AgentType
-from vibelens.services.extensions.skill_service import SkillService, SkillSyncTarget
+from vibelens.services.extensions.base_service import SyncTarget
+from vibelens.services.extensions.skill_service import SkillService
 from vibelens.storage.extension.skill_store import SkillStore
 
 SAMPLE_SKILL_MD = """\
@@ -38,7 +38,7 @@ def central(tmp_path):
 def agents(tmp_path):
     claude = SkillStore(root=tmp_path / "claude", create=True)
     codex = SkillStore(root=tmp_path / "codex", create=True)
-    return {AgentType.CLAUDE: claude, AgentType.CODEX: codex}
+    return {"claude": claude, "codex": codex}
 
 
 @pytest.fixture
@@ -105,58 +105,58 @@ class TestQuery:
     def test_list_skills(self, service):
         service.install(name="alpha", content=SAMPLE_SKILL_MD)
         service.install(name="beta", content=SAMPLE_SKILL_MD)
-        skills, total = service.list_skills()
+        skills, total = service.list_items()
         assert total == 2
         assert len(skills) == 2
 
     def test_list_skills_pagination(self, service):
         for i in range(5):
             service.install(name=f"skill-{i:02d}", content=SAMPLE_SKILL_MD)
-        skills, total = service.list_skills(page=2, page_size=2)
+        skills, total = service.list_items(page=2, page_size=2)
         assert total == 5
         assert len(skills) == 2
 
     def test_list_skills_search(self, service):
         service.install(name="alpha", content=SAMPLE_SKILL_MD)
         service.install(name="beta", content=SAMPLE_SKILL_MD)
-        skills, total = service.list_skills(search="alpha")
+        skills, total = service.list_items(search="alpha")
         assert total == 1
         assert skills[0].name == "alpha"
 
     def test_list_skills_populates_installed_in(self, service):
         service.install(name="my-skill", content=SAMPLE_SKILL_MD, sync_to=["claude"])
-        skills, _ = service.list_skills()
+        skills, _ = service.list_items()
         assert "claude" in skills[0].installed_in
 
     def test_get_skill(self, service):
         service.install(name="my-skill", content=SAMPLE_SKILL_MD)
-        skill = service.get_skill("my-skill")
+        skill = service.get_item("my-skill")
         assert skill.name == "my-skill"
 
     def test_get_skill_not_found_raises(self, service):
         with pytest.raises(FileNotFoundError):
-            service.get_skill("nonexistent")
+            service.get_item("nonexistent")
 
     def test_get_skill_content(self, service):
         service.install(name="my-skill", content=SAMPLE_SKILL_MD)
-        content = service.get_skill_content("my-skill")
+        content = service.get_item_content("my-skill")
         assert "A sample skill" in content
 
     def test_get_skill_content_not_found_raises(self, service):
         with pytest.raises(FileNotFoundError):
-            service.get_skill_content("nonexistent")
+            service.get_item_content("nonexistent")
 
     def test_find_installed_agents(self, service):
         service.install(name="my-skill", content=SAMPLE_SKILL_MD, sync_to=["claude", "codex"])
-        agents = service.find_installed_agents("my-skill")
+        agents = service._find_installed_agents("my-skill")
         assert sorted(agents) == ["claude", "codex"]
 
     def test_list_sync_targets(self, service):
         targets = service.list_sync_targets()
         assert len(targets) == 2
-        assert all(isinstance(t, SkillSyncTarget) for t in targets)
-        agents = [t.agent for t in targets]
-        assert AgentType.CLAUDE in agents
+        assert all(isinstance(t, SyncTarget) for t in targets)
+        agent_keys = [t.agent for t in targets]
+        assert "claude" in agent_keys
 
 
 class TestModify:
@@ -224,18 +224,17 @@ class TestImport:
     def test_import_all_agents(self, service):
         service._agents["claude"].write("claude-skill", SAMPLE_SKILL_MD)
         service._agents["codex"].write("codex-skill", SAMPLE_SKILL_MD)
-        total = service.import_all_agents()
-        assert total == 2
+        service.import_all_agents()
         assert service._central.exists("claude-skill")
         assert service._central.exists("codex-skill")
 
     def test_import_all_agents_empty(self, service):
-        assert service.import_all_agents() == 0
+        service.import_all_agents()
 
 
 class TestCache:
     def test_invalidate_clears_cache(self, service):
         service.install(name="my-skill", content=SAMPLE_SKILL_MD)
-        service.list_skills()
+        service.list_items()
         service.invalidate()
         assert service._cache is None

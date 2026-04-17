@@ -98,22 +98,28 @@ class BaseExtensionService(Generic[T]):
             raise KeyError(f"Unknown agent: {agent!r}")
         if not store.exists(name):
             raise FileNotFoundError(f"Extension {name!r} not in agent {agent!r}")
-        content = store.read_raw(name)
-        self._central.write(name, content)
+        self._central.copy_from(store, name)
         self._invalidate_cache()
         return self.get_item(name)
 
-    def import_all_from_agent(self, agent: str) -> list[str]:
-        """Import all extensions from an agent store. Returns names imported."""
+    def import_all_from_agent(self, agent: str, overwrite: bool = False) -> list[str]:
+        """Import all extensions from an agent store. Returns names imported.
+
+        Args:
+            agent: Agent key.
+            overwrite: If True, overwrite existing central extensions.
+        """
         store = self._agents.get(agent)
         if store is None:
             raise KeyError(f"Unknown agent: {agent!r}")
         imported: list[str] = []
         for name in store.list_names():
-            content = store.read_raw(name)
-            self._central.write(name, content)
+            if not overwrite and self._central.exists(name):
+                continue
+            self._central.copy_from(store, name)
             imported.append(name)
-        self._invalidate_cache()
+        if imported:
+            self._invalidate_cache()
         return imported
 
     def import_all_agents(self) -> None:
@@ -185,8 +191,7 @@ class BaseExtensionService(Generic[T]):
 
     def _sync_to_agent(self, name: str, agent_store: BaseExtensionStore[T]) -> None:
         """Copy extension from central to agent store. Override for hooks."""
-        content = self._central.read_raw(name)
-        agent_store.write(name, content)
+        agent_store.copy_from(self._central, name)
 
     def _unsync_from_agent(self, name: str, agent_store: BaseExtensionStore[T]) -> None:
         """Remove extension from agent store. Override for hooks."""

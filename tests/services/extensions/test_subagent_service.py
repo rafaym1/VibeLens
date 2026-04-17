@@ -2,11 +2,8 @@
 
 import pytest
 
-from vibelens.models.enums import AgentType
-from vibelens.services.extensions.subagent_service import (
-    SubagentService,
-    SubagentSyncTarget,
-)
+from vibelens.services.extensions.base_service import SyncTarget
+from vibelens.services.extensions.subagent_service import SubagentService
 from vibelens.storage.extension.subagent_store import SubagentStore
 
 SAMPLE_SUBAGENT_MD = """\
@@ -43,7 +40,7 @@ def central(tmp_path):
 def agents(tmp_path):
     claude = SubagentStore(root=tmp_path / "claude", create=True)
     codex = SubagentStore(root=tmp_path / "codex", create=True)
-    return {AgentType.CLAUDE: claude, AgentType.CODEX: codex}
+    return {"claude": claude, "codex": codex}
 
 
 @pytest.fixture
@@ -82,7 +79,7 @@ class TestInstall:
         plain = """---\ndescription: plain\n---\nBody."""
         service.install(name="auto-fork", content=plain)
         # Since fork is injected at write-time, it should be readable.
-        subagent = service.get_subagent("auto-fork")
+        subagent = service.get_item("auto-fork")
         assert subagent.name == "auto-fork"
 
 
@@ -120,58 +117,58 @@ class TestQuery:
     def test_list_subagents(self, service):
         service.install(name="alpha", content=SAMPLE_SUBAGENT_MD)
         service.install(name="beta", content=SAMPLE_SUBAGENT_MD)
-        subagents, total = service.list_subagents()
+        subagents, total = service.list_items()
         assert total == 2
         assert len(subagents) == 2
 
     def test_list_subagents_pagination(self, service):
         for i in range(5):
             service.install(name=f"sub-{i:02d}", content=SAMPLE_SUBAGENT_MD)
-        subagents, total = service.list_subagents(page=2, page_size=2)
+        subagents, total = service.list_items(page=2, page_size=2)
         assert total == 5
         assert len(subagents) == 2
 
     def test_list_subagents_search(self, service):
         service.install(name="alpha", content=SAMPLE_SUBAGENT_MD)
         service.install(name="beta", content=SAMPLE_SUBAGENT_MD)
-        subagents, total = service.list_subagents(search="alpha")
+        subagents, total = service.list_items(search="alpha")
         assert total == 1
         assert subagents[0].name == "alpha"
 
     def test_list_subagents_populates_installed_in(self, service):
         service.install(name="my-subagent", content=SAMPLE_SUBAGENT_MD, sync_to=["claude"])
-        subagents, _ = service.list_subagents()
+        subagents, _ = service.list_items()
         assert "claude" in subagents[0].installed_in
 
     def test_get_subagent(self, service):
         service.install(name="my-subagent", content=SAMPLE_SUBAGENT_MD)
-        subagent = service.get_subagent("my-subagent")
+        subagent = service.get_item("my-subagent")
         assert subagent.name == "my-subagent"
 
     def test_get_subagent_not_found_raises(self, service):
         with pytest.raises(FileNotFoundError):
-            service.get_subagent("nonexistent")
+            service.get_item("nonexistent")
 
     def test_get_subagent_content(self, service):
         service.install(name="my-subagent", content=SAMPLE_SUBAGENT_MD)
-        content = service.get_subagent_content("my-subagent")
+        content = service.get_item_content("my-subagent")
         assert "A sample subagent" in content
 
     def test_get_subagent_content_not_found_raises(self, service):
         with pytest.raises(FileNotFoundError):
-            service.get_subagent_content("nonexistent")
+            service.get_item_content("nonexistent")
 
     def test_find_installed_agents(self, service):
         service.install(name="my-subagent", content=SAMPLE_SUBAGENT_MD, sync_to=["claude", "codex"])
-        agents = service.find_installed_agents("my-subagent")
+        agents = service._find_installed_agents("my-subagent")
         assert sorted(agents) == ["claude", "codex"]
 
     def test_list_sync_targets(self, service):
         targets = service.list_sync_targets()
         assert len(targets) == 2
-        assert all(isinstance(t, SubagentSyncTarget) for t in targets)
-        agents = [t.agent for t in targets]
-        assert AgentType.CLAUDE in agents
+        assert all(isinstance(t, SyncTarget) for t in targets)
+        agent_keys = [t.agent for t in targets]
+        assert "claude" in agent_keys
 
 
 class TestModify:
@@ -240,6 +237,6 @@ class TestImport:
 class TestCache:
     def test_invalidate_clears_cache(self, service):
         service.install(name="my-subagent", content=SAMPLE_SUBAGENT_MD)
-        service.list_subagents()
+        service.list_items()
         service.invalidate()
         assert service._cache is None

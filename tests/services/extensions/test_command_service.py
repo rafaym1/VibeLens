@@ -2,11 +2,8 @@
 
 import pytest
 
-from vibelens.models.enums import AgentType
-from vibelens.services.extensions.command_service import (
-    CommandService,
-    CommandSyncTarget,
-)
+from vibelens.services.extensions.base_service import SyncTarget
+from vibelens.services.extensions.command_service import CommandService
 from vibelens.storage.extension.command_store import CommandStore
 
 SAMPLE_COMMAND_MD = """\
@@ -41,7 +38,7 @@ def central(tmp_path):
 def agents(tmp_path):
     claude = CommandStore(root=tmp_path / "claude", create=True)
     codex = CommandStore(root=tmp_path / "codex", create=True)
-    return {AgentType.CLAUDE: claude, AgentType.CODEX: codex}
+    return {"claude": claude, "codex": codex}
 
 
 @pytest.fixture
@@ -108,58 +105,58 @@ class TestQuery:
     def test_list_commands(self, service):
         service.install(name="alpha", content=SAMPLE_COMMAND_MD)
         service.install(name="beta", content=SAMPLE_COMMAND_MD)
-        commands, total = service.list_commands()
+        commands, total = service.list_items()
         assert total == 2
         assert len(commands) == 2
 
     def test_list_commands_pagination(self, service):
         for i in range(5):
             service.install(name=f"cmd-{i:02d}", content=SAMPLE_COMMAND_MD)
-        commands, total = service.list_commands(page=2, page_size=2)
+        commands, total = service.list_items(page=2, page_size=2)
         assert total == 5
         assert len(commands) == 2
 
     def test_list_commands_search(self, service):
         service.install(name="alpha", content=SAMPLE_COMMAND_MD)
         service.install(name="beta", content=SAMPLE_COMMAND_MD)
-        commands, total = service.list_commands(search="alpha")
+        commands, total = service.list_items(search="alpha")
         assert total == 1
         assert commands[0].name == "alpha"
 
     def test_list_commands_populates_installed_in(self, service):
         service.install(name="my-command", content=SAMPLE_COMMAND_MD, sync_to=["claude"])
-        commands, _ = service.list_commands()
+        commands, _ = service.list_items()
         assert "claude" in commands[0].installed_in
 
     def test_get_command(self, service):
         service.install(name="my-command", content=SAMPLE_COMMAND_MD)
-        command = service.get_command("my-command")
+        command = service.get_item("my-command")
         assert command.name == "my-command"
 
     def test_get_command_not_found_raises(self, service):
         with pytest.raises(FileNotFoundError):
-            service.get_command("nonexistent")
+            service.get_item("nonexistent")
 
     def test_get_command_content(self, service):
         service.install(name="my-command", content=SAMPLE_COMMAND_MD)
-        content = service.get_command_content("my-command")
+        content = service.get_item_content("my-command")
         assert "A sample command" in content
 
     def test_get_command_content_not_found_raises(self, service):
         with pytest.raises(FileNotFoundError):
-            service.get_command_content("nonexistent")
+            service.get_item_content("nonexistent")
 
     def test_find_installed_agents(self, service):
         service.install(name="my-command", content=SAMPLE_COMMAND_MD, sync_to=["claude", "codex"])
-        agents = service.find_installed_agents("my-command")
+        agents = service._find_installed_agents("my-command")
         assert sorted(agents) == ["claude", "codex"]
 
     def test_list_sync_targets(self, service):
         targets = service.list_sync_targets()
         assert len(targets) == 2
-        assert all(isinstance(t, CommandSyncTarget) for t in targets)
-        agents = [t.agent for t in targets]
-        assert AgentType.CLAUDE in agents
+        assert all(isinstance(t, SyncTarget) for t in targets)
+        agent_keys = [t.agent for t in targets]
+        assert "claude" in agent_keys
 
 
 class TestModify:
@@ -228,6 +225,6 @@ class TestImport:
 class TestCache:
     def test_invalidate_clears_cache(self, service):
         service.install(name="my-command", content=SAMPLE_COMMAND_MD)
-        service.list_commands()
+        service.list_items()
         service.invalidate()
         assert service._cache is None

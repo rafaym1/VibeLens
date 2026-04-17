@@ -7,7 +7,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from vibelens.api.hook import router
-from vibelens.models.enums import AgentType
 from vibelens.services.extensions.hook_service import HookService
 from vibelens.storage.extension.hook_store import HookStore
 
@@ -24,10 +23,10 @@ SAMPLE_CONFIG = {
 @pytest.fixture
 def hook_service(tmp_path):
     central = HookStore(root=tmp_path / "central", create=True)
-    agent_settings = {
-        AgentType.CLAUDE: tmp_path / "claude" / "settings.json",
+    agents = {
+        "claude": tmp_path / "claude" / "settings.json",
     }
-    return HookService(central=central, agent_settings=agent_settings)
+    return HookService(central=central, agents=agents)
 
 
 @pytest.fixture

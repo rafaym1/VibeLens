@@ -55,7 +55,7 @@ def list_hooks(
     service = get_hook_service()
     if refresh:
         service.invalidate()
-    hooks, total = service.list_hooks(page=page, page_size=page_size, search=search)
+    hooks, total = service.list_items(page=page, page_size=page_size, search=search)
     targets = service.list_sync_targets()
     return HookListResponse(
         items=hooks,
@@ -64,9 +64,9 @@ def list_hooks(
         page_size=page_size,
         sync_targets=[
             SyncTargetResponse(
-                agent=str(t.agent),
-                count=t.hook_count,
-                dir=t.settings_path,
+                agent=t.agent,
+                count=t.count,
+                dir=t.dir,
             )
             for t in targets
         ],
@@ -78,8 +78,8 @@ def get_hook(name: str) -> HookDetailResponse:
     """Get full hook detail including raw JSON content."""
     service = get_hook_service()
     try:
-        hook = service.get_hook(name)
-        content = service.get_hook_content(name)
+        hook = service.get_item(name)
+        content = service.get_item_content(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Hook {name!r} not found") from None
     return HookDetailResponse(
@@ -143,7 +143,7 @@ def sync_hook(name: str, req: ExtensionSyncRequest) -> dict:
         results = service.sync_to_agents(name, req.agents)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Hook {name!r} not found") from None
-    hook = service.get_hook(name)
+    hook = service.get_item(name)
     return {"name": name, "results": results, "hook": hook.model_dump()}
 
 
@@ -159,5 +159,5 @@ def unsync_hook(name: str, agent: str) -> dict:
         raise HTTPException(
             status_code=404, detail=f"Hook {name!r} not in agent {agent!r}"
         ) from None
-    hook = service.get_hook(name)
+    hook = service.get_item(name)
     return {"name": name, "agent": agent, "hook": hook.model_dump()}

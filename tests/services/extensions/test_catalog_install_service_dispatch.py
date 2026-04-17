@@ -84,8 +84,8 @@ def _subagent_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> Su
     """Build a SubagentService whose agents map matches the test platforms."""
     central = SubagentStore(root=tmp_path / "central-subagents", create=True)
     agents = {
-        AgentType.CLAUDE: SubagentStore(root=platforms[CLAUDE_KEY].subagents_dir, create=True),
-        AgentType.CODEX: SubagentStore(root=platforms[CODEX_KEY].subagents_dir, create=True),
+        CLAUDE_KEY: SubagentStore(root=platforms[CLAUDE_KEY].subagents_dir, create=True),
+        CODEX_KEY: SubagentStore(root=platforms[CODEX_KEY].subagents_dir, create=True),
     }
     return SubagentService(central=central, agents=agents)
 
@@ -93,8 +93,8 @@ def _subagent_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> Su
 def _command_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> CommandService:
     central = CommandStore(root=tmp_path / "central-commands", create=True)
     agents = {
-        AgentType.CLAUDE: CommandStore(root=platforms[CLAUDE_KEY].commands_dir, create=True),
-        AgentType.CODEX: CommandStore(root=platforms[CODEX_KEY].commands_dir, create=True),
+        CLAUDE_KEY: CommandStore(root=platforms[CLAUDE_KEY].commands_dir, create=True),
+        CODEX_KEY: CommandStore(root=platforms[CODEX_KEY].commands_dir, create=True),
     }
     return CommandService(central=central, agents=agents)
 
@@ -102,10 +102,10 @@ def _command_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> Com
 def _hook_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> HookService:
     central = HookStore(root=tmp_path / "central-hooks", create=True)
     agent_settings = {
-        AgentType.CLAUDE: platforms[CLAUDE_KEY].settings_path,
-        AgentType.CODEX: platforms[CODEX_KEY].settings_path,
+        CLAUDE_KEY: platforms[CLAUDE_KEY].settings_path,
+        CODEX_KEY: platforms[CODEX_KEY].settings_path,
     }
-    return HookService(central=central, agent_settings=agent_settings)
+    return HookService(central=central, agents=agent_settings)
 
 
 def _patch_all(
