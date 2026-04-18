@@ -39,10 +39,10 @@ from vibelens.services.inference_shared import (
     CACHE_MAXSIZE,
     CACHE_TTL_SECONDS,
     aggregate_final_metrics,
-    build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
     metrics_from_result,
+    render_system_for,
     require_backend,
     save_inference_log,
     truncate_digest_to_fit,
@@ -109,12 +109,17 @@ def estimate_recommendation(
         raise ValueError("No catalog available for recommendations.")
 
     digest = format_context_batch(context_set)
-    profile_system = RECOMMENDATION_PROFILE_PROMPT.render_system()
+    profile_system = render_system_for(RECOMMENDATION_PROFILE_PROMPT, backend)
     digest_tokens = count_tokens(digest)
 
     # L2 profile call: system + user (digest)
     # L4 rationale call: estimated as extra_call
-    rationale_system = RECOMMENDATION_RATIONALE_PROMPT.render_system()
+    rationale_system = render_system_for(
+        RECOMMENDATION_RATIONALE_PROMPT,
+        backend,
+        max_results=RATIONALE_MAX_RESULTS,
+        min_relevance=RATIONALE_MIN_RELEVANCE,
+    )
     rationale_input_estimate = count_tokens(rationale_system) + 2000  # profile + candidates
 
     return estimate_analysis_cost(
@@ -291,8 +296,7 @@ async def _generate_profile(
     Returns:
         Tuple of (parsed UserProfile, step metrics).
     """
-    system_kwargs = build_system_kwargs(RECOMMENDATION_PROFILE_PROMPT, backend)
-    system_prompt = RECOMMENDATION_PROFILE_PROMPT.render_system(**system_kwargs)
+    system_prompt = render_system_for(RECOMMENDATION_PROFILE_PROMPT, backend)
 
     non_digest_overhead = RECOMMENDATION_PROFILE_PROMPT.render_user(
         session_count=len(session_ids), session_digest=""
@@ -384,10 +388,12 @@ async def _generate_rationales(
         for item, _ in scored_candidates
     ]
 
-    system_kwargs = build_system_kwargs(RECOMMENDATION_RATIONALE_PROMPT, backend)
-    system_kwargs["max_results"] = top_n
-    system_kwargs["min_relevance"] = RATIONALE_MIN_RELEVANCE
-    system_prompt = RECOMMENDATION_RATIONALE_PROMPT.render_system(**system_kwargs)
+    system_prompt = render_system_for(
+        RECOMMENDATION_RATIONALE_PROMPT,
+        backend,
+        max_results=top_n,
+        min_relevance=RATIONALE_MIN_RELEVANCE,
+    )
     user_prompt = RECOMMENDATION_RATIONALE_PROMPT.render_user(
         user_profile=profile.model_dump(), candidates=candidates_for_template
     )

@@ -34,13 +34,14 @@ from vibelens.services.inference_shared import (
     CACHE_MAXSIZE,
     CACHE_TTL_SECONDS,
     aggregate_final_metrics,
-    build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
     log_inference_summary,
     metrics_from_result,
+    render_system_for,
     require_backend,
     run_batches_concurrent,
+    run_synthesis,
     save_inference_log,
     truncate_digest_to_fit,
 )
@@ -54,7 +55,7 @@ FRICTION_OUTPUT_TOKENS = 8192
 # Timeout per friction batch LLM call (seconds)
 FRICTION_TIMEOUT_SECONDS = 300
 # Synthesis needs more tokens because it merges multiple batch outputs
-SYNTHESIS_OUTPUT_TOKENS = 20000
+SYNTHESIS_OUTPUT_TOKENS = 8192
 # Timeout for the synthesis LLM call (seconds)
 SYNTHESIS_TIMEOUT_SECONDS = 120
 # Directory for detailed request/response analysis logs
@@ -81,12 +82,12 @@ def estimate_friction(session_ids: list[str], session_token: str | None = None) 
         session_ids=session_ids, session_token=session_token, extractor=DetailExtractor()
     )
 
-    if not context_set:
+    if not context_set.contexts:
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
 
     max_input = get_settings().inference.max_input_tokens
     batches = build_batches(context_set.contexts, max_batch_tokens=max_input)
-    system_prompt = FRICTION_PROMPT.render_system()
+    system_prompt = render_system_for(FRICTION_PROMPT, backend)
 
     batch_token_counts = [count_tokens(format_context_batch(batch)) for batch in batches]
 
@@ -127,7 +128,7 @@ async def analyze_friction(
     backend = require_backend()
     context_set = extract_all_contexts(session_ids, session_token, extractor=DetailExtractor())
 
-    if not context_set:
+    if not context_set.contexts:
         clear_analysis_id()
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
 
@@ -205,8 +206,7 @@ async def _infer_friction_analysis_batch(
     digest = format_context_batch(batch)
     session_count = len(batch.contexts)
 
-    system_kwargs = build_system_kwargs(FRICTION_PROMPT, backend)
-    system_prompt = FRICTION_PROMPT.render_system(**system_kwargs)
+    system_prompt = render_system_for(FRICTION_PROMPT, backend)
 
     non_digest_overhead = FRICTION_PROMPT.render_user(session_count=session_count, batch_digest="")
     digest = truncate_digest_to_fit(digest, system_prompt, non_digest_overhead)
@@ -287,29 +287,18 @@ async def _synthesize_friction_analysis(
         for output, _ in batch_results
     ]
 
-    system_kwargs = build_system_kwargs(FRICTION_SYNTHESIS_PROMPT, backend)
-    system_prompt = FRICTION_SYNTHESIS_PROMPT.render_system(**system_kwargs)
-    user_prompt = FRICTION_SYNTHESIS_PROMPT.render_user(
-        batch_count=len(batch_results), session_count=session_count, batch_results=batch_data
+    synthesis, synth_metrics = await run_synthesis(
+        backend=backend,
+        prompt=FRICTION_SYNTHESIS_PROMPT,
+        output_model=FrictionAnalysisOutput,
+        batch_data=batch_data,
+        session_count=session_count,
+        log_dir=log_dir,
+        max_output_tokens=SYNTHESIS_OUTPUT_TOKENS,
+        timeout_seconds=SYNTHESIS_TIMEOUT_SECONDS,
     )
-
-    request = InferenceRequest(
-        system=system_prompt,
-        user=user_prompt,
-        max_tokens=SYNTHESIS_OUTPUT_TOKENS,
-        timeout=SYNTHESIS_TIMEOUT_SECONDS,
-        json_schema=FRICTION_SYNTHESIS_PROMPT.output_json_schema(),
-    )
-
-    save_inference_log(log_dir, "friction_synthesis_system.txt", system_prompt)
-    save_inference_log(log_dir, "friction_synthesis_user.txt", user_prompt)
-
-    result = await backend.generate(request)
-    save_inference_log(log_dir, "friction_synthesis_output.txt", result.text)
-
-    synthesis = parse_llm_output(result.text, FrictionAnalysisOutput, "friction synthesis")
     logger.info("Synthesis complete: title=%r", synthesis.title)
-    return synthesis, metrics_from_result(result)
+    return synthesis, synth_metrics
 
 
 def _merge_friction_refs(

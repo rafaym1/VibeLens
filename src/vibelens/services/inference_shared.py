@@ -15,13 +15,14 @@ from enum import Enum
 from pathlib import Path
 
 from cachetools import TTLCache
+from pydantic import BaseModel
 
 from vibelens.context import ContextExtractor
 from vibelens.deps import get_inference_backend
 from vibelens.llm.backend import InferenceBackend, InferenceError
 from vibelens.llm.tokenizer import count_tokens
 from vibelens.models.context import SessionContext, SessionContextBatch
-from vibelens.models.llm.inference import BackendType, InferenceResult
+from vibelens.models.llm.inference import BackendType, InferenceRequest, InferenceResult
 from vibelens.models.llm.prompts import TEMPLATES_DIR, AnalysisPrompt
 from vibelens.models.trajectories.final_metrics import FinalMetrics
 from vibelens.models.trajectories.metrics import Metrics
@@ -146,16 +147,18 @@ async def run_batches_concurrent(
 
     successes: list[tuple] = []
     warnings: list[str] = []
+    last_error: BaseException | None = None
     for idx, result in enumerate(raw_results):
         if isinstance(result, BaseException):
             warnings.append(f"Batch {idx + 1}/{len(raw_results)} failed: {result}")
             logger.warning("%s batch %d failed: %s", label.capitalize(), idx, result)
+            last_error = result
         else:
             successes.append(result)
 
     if not successes:
         raise InferenceError(
-            f"All {len(raw_results)} {label} batch(es) failed. Last error: {raw_results[-1]}"
+            f"All {len(raw_results)} {label} batch(es) failed. Last error: {last_error}"
         )
 
     return successes, warnings
@@ -344,6 +347,96 @@ def build_system_kwargs(prompt: AnalysisPrompt, backend: InferenceBackend) -> di
     else:
         kwargs["backend_rules"] = ""
     return kwargs
+
+
+async def run_synthesis(
+    backend: InferenceBackend,
+    prompt: AnalysisPrompt,
+    output_model: type[BaseModel],
+    batch_data: list[dict],
+    session_count: int,
+    log_dir: Path,
+    max_output_tokens: int,
+    timeout_seconds: int,
+    extra_user_kwargs: dict[str, object] | None = None,
+) -> tuple[BaseModel, Metrics]:
+    """Run a synthesis LLM call that merges multi-batch outputs.
+
+    Unifies friction/creation/evolution synthesis: each service serializes its
+    per-batch outputs into ``batch_data`` dicts, then calls this helper to
+    render prompts, invoke the backend, save logs, and parse the response.
+
+    Log filenames and parse labels are derived from ``prompt.task_id`` so
+    each prompt identifies its own artifacts.
+
+    Args:
+        backend: Configured inference backend.
+        prompt: AnalysisPrompt whose user template accepts ``batch_count``,
+            ``session_count``, ``batch_results`` and any ``extra_user_kwargs``.
+        output_model: Pydantic model to validate the LLM response against.
+        batch_data: Per-batch serialized outputs the LLM will merge.
+        session_count: Total sessions covered by all batches.
+        log_dir: Directory for system/user/output log files.
+        max_output_tokens: max_tokens on the inference request.
+        timeout_seconds: per-request timeout.
+        extra_user_kwargs: Optional extra variables for the user template
+            (e.g. ``installed_skills`` for evolution synthesis).
+
+    Returns:
+        Tuple of (parsed output_model instance, per-call Metrics).
+    """
+    # Lazy import avoids circular module load between inference_shared and
+    # personalization.shared (which depends on CACHE_* constants here).
+    from vibelens.services.personalization.shared import parse_llm_output
+
+    system_prompt = render_system_for(prompt, backend)
+    user_template_kwargs: dict[str, object] = {
+        "batch_count": len(batch_data),
+        "session_count": session_count,
+        "batch_results": batch_data,
+    }
+    if extra_user_kwargs:
+        user_template_kwargs.update(extra_user_kwargs)
+    user_prompt = prompt.render_user(**user_template_kwargs)
+
+    request = InferenceRequest(
+        system=system_prompt,
+        user=user_prompt,
+        max_tokens=max_output_tokens,
+        timeout=timeout_seconds,
+        json_schema=prompt.output_json_schema(),
+    )
+
+    save_inference_log(log_dir, f"{prompt.task_id}_system.txt", system_prompt)
+    save_inference_log(log_dir, f"{prompt.task_id}_user.txt", user_prompt)
+
+    result = await backend.generate(request)
+    save_inference_log(log_dir, f"{prompt.task_id}_output.txt", result.text)
+
+    parsed = parse_llm_output(result.text, output_model, prompt.task_id)
+    return parsed, metrics_from_result(result)
+
+
+def render_system_for(prompt: AnalysisPrompt, backend: InferenceBackend, **extras: object) -> str:
+    """Render a prompt's system template with envelope kwargs merged in.
+
+    Every system template includes ``_output_envelope.j2`` which requires
+    ``output_schema`` and ``backend_rules``. Callers forget; Jinja's
+    StrictUndefined then raises at render time. This helper collapses the
+    ``kwargs = build_system_kwargs(...); kwargs.update(...); render_system(**kwargs)``
+    pattern into one call and removes that footgun.
+
+    Args:
+        prompt: AnalysisPrompt to render.
+        backend: Active inference backend (selects CLI vs LITELLM rules).
+        **extras: Template-specific variables (e.g. max_results, min_relevance).
+
+    Returns:
+        Rendered system prompt string.
+    """
+    kwargs = build_system_kwargs(prompt, backend)
+    kwargs.update(extras)
+    return prompt.render_system(**kwargs)
 
 
 def truncate_digest_to_fit(

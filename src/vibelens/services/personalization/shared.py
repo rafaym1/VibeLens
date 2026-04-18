@@ -7,6 +7,7 @@ output parsing used by creation and evolvement modules.
 import hashlib
 import json
 import re
+from collections.abc import Awaitable, Callable
 from enum import Enum
 from typing import TypeVar
 
@@ -18,6 +19,7 @@ from vibelens.llm.backend import InferenceError
 from vibelens.models.context import SessionContextBatch
 from vibelens.models.personalization.enums import PersonalizationMode
 from vibelens.models.session.patterns import WorkflowPattern
+from vibelens.models.trajectories.metrics import Metrics
 from vibelens.services.inference_shared import CACHE_MAXSIZE, CACHE_TTL_SECONDS
 from vibelens.utils.json import extract_json_from_llm_output
 from vibelens.utils.log import get_logger
@@ -172,6 +174,40 @@ def validate_patterns(
         pattern.example_refs = resolved_refs
         validated.append(pattern)
     return validated
+
+
+async def reduce_batch_results(
+    batch_results: list[tuple[ModelT, Metrics]],
+    synthesize: Callable[[list[tuple[ModelT, Metrics]]], Awaitable[tuple[ModelT, Metrics]]],
+) -> tuple[ModelT, list[Metrics]]:
+    """Collapse per-batch outputs into one: return single directly, else synthesize.
+
+    Shared post-inference reducer for creation/evolution proposal flows.
+    When batches > 1 the synthesis call is delegated to the caller so each
+    service can pass its own prompt, output model, and any extra context
+    (e.g. installed_skills). After synthesis, ``merge_batch_refs`` is applied
+    to recover ``example_refs`` the synthesis LLM typically drops.
+
+    Args:
+        batch_results: Per-batch outputs and metrics. Must be non-empty.
+        synthesize: Async callable that merges multi-batch outputs. Invoked
+            only when more than one batch succeeded.
+
+    Returns:
+        Tuple of (final output, cumulative metrics list). The list contains
+        one entry per batch, plus the synthesis metrics when synthesized.
+    """
+    all_metrics: list[Metrics] = [m for _, m in batch_results]
+    if len(batch_results) == 1:
+        return batch_results[0][0], all_metrics
+
+    merged_output, syn_metrics = await synthesize(batch_results)
+    all_metrics.append(syn_metrics)
+    merge_batch_refs(
+        merged_output.workflow_patterns,
+        [output.workflow_patterns for output, _ in batch_results],
+    )
+    return merged_output, all_metrics
 
 
 def merge_batch_refs(

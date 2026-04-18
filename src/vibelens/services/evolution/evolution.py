@@ -36,13 +36,14 @@ from vibelens.prompts.evolution import (
 from vibelens.services.analysis_store import generate_analysis_id
 from vibelens.services.inference_shared import (
     aggregate_final_metrics,
-    build_system_kwargs,
     extract_all_contexts,
     format_context_batch,
     log_inference_summary,
     metrics_from_result,
+    render_system_for,
     require_backend,
     run_batches_concurrent,
+    run_synthesis,
     save_inference_log,
     truncate_digest_to_fit,
 )
@@ -50,9 +51,9 @@ from vibelens.services.personalization.shared import (
     SkillDetailLevel,
     _cache,
     gather_installed_skills,
-    merge_batch_refs,
     parse_llm_output,
     personalization_cache_key,
+    reduce_batch_results,
     resolve_proposal_session_ids,
     validate_patterns,
 )
@@ -116,7 +117,7 @@ def estimate_skill_evolution(
     context_set = extract_all_contexts(
         session_ids=session_ids, session_token=session_token, extractor=SummaryExtractor()
     )
-    if not context_set:
+    if not context_set.contexts:
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
 
     installed_skills = _filter_skills(gather_installed_skills(), skill_names)
@@ -127,14 +128,11 @@ def estimate_skill_evolution(
     batches = build_batches(context_set.contexts, max_batch_tokens=max_input)
 
     # Proposal phase tokens
-    proposal_system = EVOLUTION_PROPOSAL_PROMPT.render_system(
-        **build_system_kwargs(EVOLUTION_PROPOSAL_PROMPT, backend)
-    )
+    proposal_system = render_system_for(EVOLUTION_PROPOSAL_PROMPT, backend)
     batch_token_counts = [count_tokens(format_context_batch(batch)) for batch in batches]
 
     # Evolution phase tokens (estimated per-call)
-    evolution_kwargs = build_system_kwargs(EVOLUTION_PROMPT, backend)
-    evolution_system = EVOLUTION_PROMPT.render_system(**evolution_kwargs)
+    evolution_system = render_system_for(EVOLUTION_PROMPT, backend)
     digest = format_context_batch(context_set)
     deep_input_tokens = count_tokens(evolution_system) + count_tokens(digest)
     extra_calls = [
@@ -301,7 +299,7 @@ async def _infer_evolution_proposals(
         session_ids=session_ids, session_token=session_token, extractor=SummaryExtractor()
     )
 
-    if not context_set:
+    if not context_set.contexts:
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
 
     installed_skills = _filter_skills(gather_installed_skills(), skill_names)
@@ -323,21 +321,18 @@ async def _infer_evolution_proposals(
     ]
     batch_results, batch_warnings = await run_batches_concurrent(tasks, "evolution_proposal")
 
-    all_metrics: list[Metrics] = [m for _, m in batch_results]
+    session_count = len(context_set.session_ids)
 
-    # Single batch: use directly; multiple batches: synthesize
-    if len(batch_results) == 1:
-        proposal_output = batch_results[0][0]
-    else:
-        proposal_output, syn_metrics = await _synthesize_evolution_proposals(
-            backend, batch_results, len(context_set.session_ids), installed_skills, log_dir
+    async def _synthesize(
+        results: list[tuple[EvolutionProposalBatch, Metrics]],
+    ) -> tuple[EvolutionProposalBatch, Metrics]:
+        return await _synthesize_evolution_proposals(
+            backend, results, session_count, installed_skills, log_dir
         )
-        all_metrics.append(syn_metrics)
-        # Synthesis LLM drops example_refs; recover from batch outputs
-        merge_batch_refs(
-            proposal_output.workflow_patterns,
-            [output.workflow_patterns for output, _ in batch_results],
-        )
+
+    proposal_output, all_metrics = await reduce_batch_results(
+        batch_results, synthesize=_synthesize
+    )
 
     validated_patterns = validate_patterns(proposal_output.workflow_patterns, context_set)
 
@@ -391,7 +386,7 @@ async def _infer_evolution(
         session_ids=session_ids, session_token=session_token, extractor=DetailExtractor()
     )
 
-    if not context_set:
+    if not context_set.contexts:
         raise ValueError(f"No sessions could be loaded from: {session_ids}")
 
     # Load full SKILL.md content for the target skill
@@ -402,8 +397,7 @@ async def _infer_evolution(
 
     digest = format_context_batch(context_set)
 
-    system_kwargs = build_system_kwargs(EVOLUTION_PROMPT, backend)
-    system_prompt = EVOLUTION_PROMPT.render_system(**system_kwargs)
+    system_prompt = render_system_for(EVOLUTION_PROMPT, backend)
 
     # Truncate digest to fit context budget
     non_digest_overhead = EVOLUTION_PROMPT.render_user(
@@ -475,8 +469,7 @@ async def _infer_evolution_proposal_batch(
     session_count = len(batch.contexts)
 
     prompt = EVOLUTION_PROPOSAL_PROMPT
-    system_kwargs = build_system_kwargs(prompt, backend)
-    system_prompt = prompt.render_system(**system_kwargs)
+    system_prompt = render_system_for(prompt, backend)
 
     # Truncate digest to fit context budget
     non_digest_overhead = prompt.render_user(
@@ -555,31 +548,14 @@ async def _synthesize_evolution_proposals(
         for output, _ in batch_results
     ]
 
-    prompt = EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT
-    system_kwargs = build_system_kwargs(prompt, backend)
-    system_prompt = prompt.render_system(**system_kwargs)
-    user_prompt = prompt.render_user(
-        batch_count=len(batch_results),
+    return await run_synthesis(
+        backend=backend,
+        prompt=EVOLUTION_PROPOSAL_SYNTHESIS_PROMPT,
+        output_model=EvolutionProposalBatch,
+        batch_data=batch_data,
         session_count=session_count,
-        batch_results=batch_data,
-        installed_skills=installed_skills,
+        log_dir=log_dir,
+        max_output_tokens=EVOLUTION_SYNTHESIS_OUTPUT_TOKENS,
+        timeout_seconds=EVOLUTION_SYNTHESIS_TIMEOUT_SECONDS,
+        extra_user_kwargs={"installed_skills": installed_skills},
     )
-
-    request = InferenceRequest(
-        system=system_prompt,
-        user=user_prompt,
-        max_tokens=EVOLUTION_SYNTHESIS_OUTPUT_TOKENS,
-        timeout=EVOLUTION_SYNTHESIS_TIMEOUT_SECONDS,
-        json_schema=prompt.output_json_schema(),
-    )
-
-    save_inference_log(log_dir, "skill_evolution_proposal_synthesis_system.txt", system_prompt)
-    save_inference_log(log_dir, "skill_evolution_proposal_synthesis_user.txt", user_prompt)
-
-    result = await backend.generate(request)
-    save_inference_log(log_dir, "skill_evolution_proposal_synthesis_output.txt", result.text)
-
-    synthesis_output = parse_llm_output(
-        result.text, EvolutionProposalBatch, "evolution proposal synthesis"
-    )
-    return synthesis_output, metrics_from_result(result)
