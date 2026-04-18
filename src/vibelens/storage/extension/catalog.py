@@ -1,10 +1,13 @@
-"""Runtime catalog loader and manager.
+"""Runtime catalog loader for the bundled agent-tool-hub catalog.
 
-Loads catalog.json from the bundled path or user cache, picks the newer
-version, and supports background update checks.
+Reads ``src/vibelens/data/catalog/`` produced by ``scripts/build_catalog.py``
+and exposes a :class:`CatalogSnapshot` with summary items in memory and
+byte-offset hydration for full records.
 """
 
 import json
+import shutil
+from importlib.resources import files
 from pathlib import Path
 
 from pydantic import BaseModel, Field, PrivateAttr
@@ -14,122 +17,186 @@ from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
 
-_cached_catalog: "CatalogSnapshot | None" = None
-_cache_checked = False
-
-# Bundled catalog shipped with VibeLens releases (inside package data)
-# parent chain: extension/ → storage/ → vibelens/
-_VIBELENS_PACKAGE_DIR = Path(__file__).resolve().parent.parent.parent
-# Path to the bundled catalog.json file within the package data
-BUNDLED_CATALOG_PATH = _VIBELENS_PACKAGE_DIR / "data" / "catalog.json"
-# User-cached catalog downloaded from update URL
 USER_CATALOG_DIR = Path.home() / ".vibelens" / "catalog"
+
+_cached_catalog: "CatalogSnapshot | None" = None
+_cache_checked: bool = False
+
+
+class CatalogManifest(BaseModel):
+    """Top-level metadata emitted by ``scripts/build_catalog.py``."""
+
+    generated_on: str = Field(description="YYYY-MM-DD source date from the hub.")
+    hub_source: str = Field(description="Source directory name, e.g. full-20260418-122745.")
+    total: int = Field(description="Number of summary items.")
+    item_counts: dict[str, int] = Field(description="Items per type.")
+    file_sizes: dict[str, int] = Field(description="Byte size of each agent-*.json file.")
 
 
 class CatalogSnapshot(BaseModel):
-    """In-memory snapshot of the loaded catalog."""
+    """In-memory catalog snapshot with on-demand detail hydration."""
 
-    version: str = Field(description="Catalog version date string (e.g. 2026-04-10).")
-    schema_version: int = Field(default=1, description="Catalog schema version.")
-    items: list[AgentExtensionItem] = Field(default_factory=list, description="All catalog items.")
+    manifest: CatalogManifest
+    items: list[AgentExtensionItem] = Field(
+        default_factory=list, description="Summary-projected items."
+    )
+    data_dir: Path = Field(description="Directory containing agent-*.json for detail reads.")
+    offsets: dict[str, tuple[str, int, int]] = Field(
+        default_factory=dict,
+        description="Byte offsets per extension_id; empty when sanity check fails.",
+    )
+
     _index: dict[str, AgentExtensionItem] = PrivateAttr(default_factory=dict)
+    _hydrated: set[str] = PrivateAttr(default_factory=set)
 
     def model_post_init(self, __context: object) -> None:
-        """Build item lookup index after loading."""
         self._index = {item.extension_id: item for item in self.items}
 
-    def get_item(self, item_id: str) -> AgentExtensionItem | None:
-        """Look up a catalog item by ID.
+    def get_item(self, extension_id: str) -> AgentExtensionItem | None:
+        """Return the summary or hydrated record for ``extension_id``."""
+        return self._index.get(extension_id)
 
-        Args:
-            item_id: Unique item identifier.
+    def get_full(self, extension_id: str) -> AgentExtensionItem | None:
+        """Hydrate and return the full record for ``extension_id``.
 
-        Returns:
-            ExtensionItem or None if not found.
+        Returns ``None`` if the id is unknown, offsets are degraded, or the
+        byte slice fails to parse.
         """
-        return self._index.get(item_id)
+        if extension_id in self._hydrated:
+            return self._index.get(extension_id)
+
+        offset_entry = self.offsets.get(extension_id)
+        if offset_entry is None:
+            return None
+
+        type_value, byte_offset, byte_length = offset_entry
+        path = self.data_dir / f"agent-{type_value}.json"
+        try:
+            with path.open("rb") as f:
+                f.seek(byte_offset)
+                buf = f.read(byte_length)
+            full = AgentExtensionItem.model_validate_json(buf)
+        except (OSError, ValueError) as exc:
+            logger.warning(
+                "failed to hydrate %s from %s (offset=%d length=%d): %s",
+                extension_id,
+                path,
+                byte_offset,
+                byte_length,
+                exc,
+            )
+            return None
+
+        self._index[extension_id] = full
+        self._hydrated.add(extension_id)
+        return full
 
 
-def load_catalog_from_path(path: Path) -> CatalogSnapshot | None:
-    """Load and parse a catalog.json file.
-
-    Args:
-        path: Path to catalog.json.
-
-    Returns:
-        CatalogSnapshot or None if file missing/corrupt.
-    """
-    if not path.is_file():
-        return None
-    try:
-        raw = path.read_text(encoding="utf-8")
-        data = json.loads(raw)
-        items = [AgentExtensionItem.model_validate(item) for item in data.get("items", [])]
-        return CatalogSnapshot(
-            version=data.get("version", "unknown"),
-            schema_version=data.get("schema_version", 1),
-            items=items,
-        )
-    except (json.JSONDecodeError, OSError, KeyError) as exc:
-        logger.warning("Failed to load catalog from %s: %s", path, exc)
-        return None
+def _catalog_dir() -> Path:
+    """Locate the bundled catalog directory via importlib.resources."""
+    return Path(str(files("vibelens") / "data" / "catalog"))
 
 
 def load_catalog() -> CatalogSnapshot | None:
-    """Load the best available catalog, cached after first call.
-
-    On first call, checks both the user-cached catalog and the bundled
-    catalog, picks whichever has the newer version date, and caches the
-    result for all subsequent calls. Use ``reset_catalog_cache()`` to
-    force a reload.
-
-    Returns:
-        CatalogSnapshot or None if no catalog available.
-    """
+    """Load the bundled catalog, caching the result."""
     global _cached_catalog, _cache_checked  # noqa: PLW0603
     if _cache_checked:
         return _cached_catalog
 
-    _cached_catalog = _load_best_catalog()
+    _cached_catalog = load_catalog_from_dir(_catalog_dir())
     _cache_checked = True
     return _cached_catalog
 
 
 def reset_catalog_cache() -> None:
-    """Clear the cached catalog so the next ``load_catalog()`` reloads from disk."""
+    """Drop the cached catalog so the next call reloads from disk."""
     global _cached_catalog, _cache_checked  # noqa: PLW0603
     _cached_catalog = None
     _cache_checked = False
 
 
-def _load_best_catalog() -> CatalogSnapshot | None:
-    """Pick the best catalog from user cache and bundled paths.
+def load_catalog_from_dir(dir_path: Path) -> CatalogSnapshot | None:
+    """Load a catalog from the given directory layout.
 
-    Returns:
-        CatalogSnapshot or None if no catalog available.
+    Returns ``None`` when the manifest or summary is missing. Raises
+    ``FileNotFoundError`` if the manifest exists but per-type JSONs don't
+    (catalog is structurally incomplete).
     """
-    user_path = USER_CATALOG_DIR / "catalog.json"
-    user_catalog = load_catalog_from_path(user_path)
-    bundled_catalog = load_catalog_from_path(BUNDLED_CATALOG_PATH)
+    manifest_path = dir_path / "manifest.json"
+    summary_path = dir_path / "catalog-summary.json"
+    offsets_path = dir_path / "catalog-offsets.json"
 
-    if user_catalog and bundled_catalog:
-        if user_catalog.version >= bundled_catalog.version:
-            logger.info(
-                "Using user-cached catalog v%s (%d items)",
-                user_catalog.version,
-                len(user_catalog.items),
-            )
-            return user_catalog
-        logger.info(
-            "Using bundled catalog v%s (%d items)",
-            bundled_catalog.version,
-            len(bundled_catalog.items),
-        )
-        return bundled_catalog
+    if not (manifest_path.is_file() and summary_path.is_file()):
+        logger.warning("no catalog at %s (manifest or summary missing)", dir_path)
+        return None
 
-    result = user_catalog or bundled_catalog
-    if result:
-        logger.info("Loaded catalog v%s (%d items)", result.version, len(result.items))
-    else:
-        logger.warning("No catalog available (checked %s and %s)", user_path, BUNDLED_CATALOG_PATH)
-    return result
+    manifest = CatalogManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
+
+    for type_value in manifest.item_counts:
+        expected = dir_path / f"agent-{type_value}.json"
+        if not expected.is_file():
+            raise FileNotFoundError(f"catalog missing {expected.name}")
+
+    summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    items = [AgentExtensionItem.model_validate(raw) for raw in summary_payload.get("items", [])]
+
+    offsets: dict[str, tuple[str, int, int]] = {}
+    if offsets_path.is_file():
+        loaded = _load_offsets(offsets_path)
+        if _sanity_check_offsets(loaded, dir_path):
+            offsets = loaded
+        else:
+            logger.warning("catalog offsets failed sanity check; detail hydration disabled")
+
+    snap = CatalogSnapshot(manifest=manifest, items=items, data_dir=dir_path, offsets=offsets)
+
+    logger.info(
+        "loaded catalog v%s (%d items, hub=%s)",
+        manifest.generated_on,
+        manifest.total,
+        manifest.hub_source,
+    )
+    return snap
+
+
+def _load_offsets(path: Path) -> dict[str, tuple[str, int, int]]:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return {k: (v[0], int(v[1]), int(v[2])) for k, v in raw.items()}
+
+
+def _sanity_check_offsets(
+    offsets: dict[str, tuple[str, int, int]], dir_path: Path
+) -> bool:
+    """Seek + parse first and last id per type. Return False on any failure."""
+    by_type: dict[str, list[str]] = {}
+    for eid, (type_value, _, _) in offsets.items():
+        by_type.setdefault(type_value, []).append(eid)
+
+    for type_value, ids in by_type.items():
+        if not ids:
+            continue
+        path = dir_path / f"agent-{type_value}.json"
+        if not path.is_file():
+            return False
+        try:
+            with path.open("rb") as f:
+                for eid in (ids[0], ids[-1]):
+                    _, offset, length = offsets[eid]
+                    f.seek(offset)
+                    buf = f.read(length)
+                    parsed = json.loads(buf)
+                    if parsed.get("item_id") != eid:
+                        return False
+        except (OSError, ValueError):
+            return False
+    return True
+
+
+def _clear_user_catalog() -> None:
+    """Remove the legacy user catalog directory if present."""
+    if USER_CATALOG_DIR.exists():
+        logger.info("cleared legacy user catalog at %s", USER_CATALOG_DIR)
+        shutil.rmtree(USER_CATALOG_DIR, ignore_errors=True)
+
+
+load_catalog_from_path = load_catalog_from_dir
