@@ -60,6 +60,7 @@ class AgentExtensionType(StrEnum):
     SUBAGENT = "subagent"
     COMMAND = "command"
     HOOK = "hook"
+    MCP_SERVER = "mcp_server"
     REPO = "repo"
 
 

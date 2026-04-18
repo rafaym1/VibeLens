@@ -9,15 +9,16 @@ from vibelens.models.extension import (
 
 
 def test_agent_extension_type_values():
-    """All 6 extension types are present."""
+    """All 7 extension types are present."""
     assert AgentExtensionType.SKILL == "skill"
     assert AgentExtensionType.SUBAGENT == "subagent"
     assert AgentExtensionType.COMMAND == "command"
     assert AgentExtensionType.HOOK == "hook"
     assert AgentExtensionType.REPO == "repo"
     assert AgentExtensionType.PLUGIN == "plugin"
-    assert len(AgentExtensionType) == 6
-    print(f"All 6 extension types: {list(AgentExtensionType)}")
+    assert AgentExtensionType.MCP_SERVER == "mcp_server"
+    assert len(AgentExtensionType) == 7
+    print(f"All 7 extension types: {list(AgentExtensionType)}")
 
 
 def test_file_based_types():
@@ -31,10 +32,11 @@ def test_file_based_types():
 
 
 def test_extension_type_labels():
-    """All 5 types have human-readable labels."""
-    assert len(EXTENSION_TYPE_LABELS) == 5
+    """All 7 types have human-readable labels."""
+    assert len(EXTENSION_TYPE_LABELS) == 7
     assert EXTENSION_TYPE_LABELS[AgentExtensionType.SKILL] == "Skill"
     assert EXTENSION_TYPE_LABELS[AgentExtensionType.REPO] == "Repository"
+    assert EXTENSION_TYPE_LABELS[AgentExtensionType.MCP_SERVER] == "MCP Server"
     print(f"Labels: {EXTENSION_TYPE_LABELS}")
 
 

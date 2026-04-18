@@ -16,6 +16,8 @@ EXTENSION_TYPE_LABELS: dict[AgentExtensionType, str] = {
     AgentExtensionType.SUBAGENT: "Expert Agent",
     AgentExtensionType.COMMAND: "Slash Command",
     AgentExtensionType.HOOK: "Automation",
+    AgentExtensionType.PLUGIN: "Plugin",
+    AgentExtensionType.MCP_SERVER: "MCP Server",
     AgentExtensionType.REPO: "Repository",
 }
 
