@@ -1,535 +1,235 @@
-"""Tests for catalog extension install/uninstall service."""
+"""Tests for catalog_resolver install/uninstall dispatch.
 
-import json
-import shutil
+Every install path now downloads from GitHub (download_directory). HOOK
+and MCP_SERVER are gated upstream by services/extensions/catalog.py;
+this module tests the resolver's direct entry points.
+"""
+
 from pathlib import Path
-from unittest.mock import patch
 
-from vibelens.models.enums import AgentExtensionType, AgentType, ExtensionSource
+import pytest
+
+from vibelens.models.enums import AgentExtensionType, ExtensionSource
 from vibelens.models.extension import AgentExtensionItem
+from vibelens.services.extensions import catalog_resolver
 from vibelens.services.extensions.catalog_resolver import (
     install_catalog_item,
     install_from_source_url,
     uninstall_extension,
 )
-from vibelens.services.extensions.hook_service import HookService
 from vibelens.services.extensions.platforms import AgentPlatform
-from vibelens.services.extensions.skill_service import SkillService
-from vibelens.services.extensions.subagent_service import SubagentService
-from vibelens.storage.extension.hook_store import HookStore
-from vibelens.storage.extension.skill_store import SkillStore
-from vibelens.storage.extension.subagent_store import SubagentStore
-
-DEFAULT_SKILL_CONTENT = "# Test Skill\nContent"
-
-INSTALL_MODULE = "vibelens.services.extensions.catalog_resolver"
 
 
-def _make_platform(tmp_path: Path, name: str = ".claude") -> AgentPlatform:
-    """Build an AgentPlatform rooted under tmp_path (with root dir created)."""
-    root = tmp_path / name
-    root.mkdir(parents=True, exist_ok=True)
-    source = ExtensionSource.CLAUDE if name == ".claude" else ExtensionSource.CODEX
-    supported = frozenset(
-        {
-            AgentExtensionType.SKILL,
-            AgentExtensionType.COMMAND,
-            AgentExtensionType.SUBAGENT,
-            AgentExtensionType.HOOK,
-            AgentExtensionType.PLUGIN,
-        }
-        if source == ExtensionSource.CLAUDE
-        else {
-            AgentExtensionType.SKILL,
-            AgentExtensionType.SUBAGENT,
-            AgentExtensionType.HOOK,
-            AgentExtensionType.PLUGIN,
-        }
-    )
-    return AgentPlatform(
-        source=source,
-        root=root,
-        skills_dir=root / "skills",
-        commands_dir=root / "commands",
-        subagents_dir=root / "agents",
-        hook_config_path=root / "settings.json",
-        supported_types=supported,
-    )
-
-
-def _make_platforms(tmp_path: Path) -> dict[ExtensionSource, AgentPlatform]:
-    """Build PLATFORMS override for claude and codex under tmp_path."""
-    claude = _make_platform(tmp_path=tmp_path, name=".claude")
-    codex = _make_platform(tmp_path=tmp_path, name=".codex")
-    return {claude.source: claude, codex.source: codex}
-
-
-def _make_skill_item(
-    name: str = "test-skill",
-    content: str = DEFAULT_SKILL_CONTENT,
+def _make_item(
+    *,
+    extension_type: AgentExtensionType,
+    name: str = "demo",
+    source_url: str = "https://github.com/acme/widget/tree/main/skills/demo",
 ) -> AgentExtensionItem:
     return AgentExtensionItem(
-        extension_id=f"bwc:skill:{name}",
-        extension_type=AgentExtensionType.SKILL,
+        extension_id=f"tree:acme/widget:{extension_type.value}/{name}",
+        extension_type=extension_type,
         name=name,
-        description="A test skill",
-        tags=[],
-        category="testing",
-        platforms=["claude_code"],
-        quality_score=80.0,
-        popularity=0.5,
-        updated_at="",
-        source_url="",
-        repo_full_name="",
-        install_method="skill_file",
-        install_content=content,
-    )
-
-
-def _make_subagent_item(name: str = "test-subagent") -> AgentExtensionItem:
-    return AgentExtensionItem(
-        extension_id=f"bwc:subagent:{name}",
-        extension_type=AgentExtensionType.SUBAGENT,
-        name=name,
-        description="A test subagent",
-        tags=[],
-        category="testing",
-        platforms=["claude_code"],
-        quality_score=80.0,
-        popularity=0.5,
-        updated_at="",
-        source_url="",
-        repo_full_name="",
-        install_method="skill_file",
-        install_content="---\ndescription: A test subagent\n---\n# Body\n",
-    )
-
-
-def _make_hook_item() -> AgentExtensionItem:
-    hook_entries = [{"matcher": "Bash", "hooks": [{"type": "command", "command": "echo test"}]}]
-    hook_data = {"description": "Test hook", "hooks": {"PreToolUse": hook_entries}}
-    return AgentExtensionItem(
-        extension_id="bwc:hook:test-hook",
-        extension_type=AgentExtensionType.HOOK,
-        name="test-hook",
-        description="A test hook",
-        tags=[],
-        category="automation",
-        platforms=["claude_code"],
+        source_url=source_url,
+        repo_full_name="acme/widget",
+        discovery_source="seed",
+        topics=[],
         quality_score=70.0,
-        popularity=0.0,
-        updated_at="",
-        source_url="",
-        repo_full_name="",
-        install_method="hook_config",
-        install_content=json.dumps(hook_data),
+        popularity=0.5,
+        stars=10,
+        forks=0,
     )
 
 
-def _make_mcp_item() -> AgentExtensionItem:
-    mcp_data = {"mcpServers": {"test-mcp": {"command": "npx", "args": ["-y", "test-server"]}}}
-    return AgentExtensionItem(
-        extension_id="bwc:mcp:test-mcp",
-        extension_type=AgentExtensionType.REPO,
-        name="test-mcp",
-        description="A test MCP",
-        tags=[],
-        category="mcp",
-        platforms=["claude_code"],
-        quality_score=70.0,
-        popularity=0.0,
-        updated_at="",
-        source_url="",
-        repo_full_name="",
-        install_method="mcp_config",
-        install_content=json.dumps(mcp_data),
+def _stub_platform(monkeypatch, tmp_path: Path) -> AgentPlatform:
+    """Install a fake platform with all dirs populated under tmp_path."""
+    root = tmp_path / "agent-root"
+    root.mkdir(parents=True)
+    skills_dir = root / "skills"
+    subagents_dir = root / "agents"
+    commands_dir = root / "commands"
+
+    platform = AgentPlatform(
+        source=ExtensionSource.CLAUDE,
+        root=root,
+        skills_dir=skills_dir,
+        subagents_dir=subagents_dir,
+        commands_dir=commands_dir,
+        plugins_dir=root / "plugins",
+        hook_config_path=root / "settings.json",
+        supported_types=frozenset(
+            {
+                AgentExtensionType.SKILL,
+                AgentExtensionType.SUBAGENT,
+                AgentExtensionType.COMMAND,
+                AgentExtensionType.PLUGIN,
+            }
+        ),
     )
+    monkeypatch.setattr(catalog_resolver, "get_platform", lambda key: platform)
+    return platform
 
 
-def _make_github_skill_item(name: str = "algorithmic-art") -> AgentExtensionItem:
-    return AgentExtensionItem(
-        extension_id=f"featured:skill:{name}",
-        extension_type=AgentExtensionType.SKILL,
-        name=name,
-        description="A featured skill from GitHub",
-        tags=[],
-        category="featured",
-        platforms=["claude_code"],
-        quality_score=90.0,
-        popularity=0.8,
-        updated_at="",
-        source_url="https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
-        repo_full_name="",
-        install_method="skill_file",
-        install_content=None,
-    )
+def test_install_skill_routes_to_skills_dir(monkeypatch, tmp_path: Path):
+    platform = _stub_platform(monkeypatch, tmp_path)
+    captured: dict = {}
 
-
-def _make_brand_guidelines_item() -> AgentExtensionItem:
-    """Create an ExtensionItem matching the brand-guidelines skill."""
-    return AgentExtensionItem(
-        extension_id="featured:skill:brand-guidelines",
-        extension_type=AgentExtensionType.SKILL,
-        name="brand-guidelines",
-        description="Applies Anthropic brand colors and typography.",
-        tags=["agent-skills"],
-        category="ai-assistant",
-        platforms=["claude_code", "codex"],
-        quality_score=95.0,
-        popularity=0.9,
-        updated_at="2026-04-14T01:08:15Z",
-        source_url="https://github.com/anthropics/skills/tree/main/skills/brand-guidelines",
-        repo_full_name="",
-        install_method="skill_file",
-        install_content=None,
-    )
-
-
-# ---------------------------------------------------------------------------
-# install_catalog_item tests
-# ---------------------------------------------------------------------------
-
-
-def test_install_skill_creates_file(tmp_path: Path):
-    """Installing a skill goes through SkillService to central + agent."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    central = SkillStore(root=tmp_path / "central-skills", create=True)
-    agent_store = SkillStore(root=platforms[ExtensionSource.CLAUDE].skills_dir, create=True)
-    service = SkillService(central=central, agents={"claude": agent_store})
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.get_skill_service", return_value=service),
-    ):
-        item = _make_skill_item()
-        installed = install_catalog_item(item=item, target_platform="claude")
-        assert installed == tmp_path / ".claude" / "skills" / "test-skill"
-        assert central.exists("test-skill")
-    print(f"Installed skill at: {installed}")
-
-
-def test_install_subagent_routes_to_agents_dir(tmp_path: Path):
-    """Installing a SUBAGENT lands in .claude/agents/{name}.md, not commands/."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    central = SubagentStore(root=tmp_path / "central-subagents", create=True)
-    agent_store = SubagentStore(root=platforms[ExtensionSource.CLAUDE].subagents_dir, create=True)
-    service = SubagentService(central=central, agents={"claude": agent_store})
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.get_subagent_service", return_value=service),
-    ):
-        item = _make_subagent_item()
-        installed = install_catalog_item(item=item, target_platform="claude")
-        expected = tmp_path / ".claude" / "agents" / "test-subagent.md"
-        assert installed == expected
-        assert installed.is_file()
-        assert not (tmp_path / ".claude" / "commands" / "test-subagent.md").exists()
-    print(f"Installed subagent at: {installed}")
-
-
-def test_install_skill_rejects_overwrite(tmp_path: Path):
-    """Installing a skill to existing path raises FileExistsError."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    central = SkillStore(root=tmp_path / "central-skills", create=True)
-    central.write("test-skill", "existing")
-    agent_store = SkillStore(root=platforms[ExtensionSource.CLAUDE].skills_dir, create=True)
-    service = SkillService(central=central, agents={"claude": agent_store})
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.get_skill_service", return_value=service),
-    ):
-        item = _make_skill_item()
-        try:
-            install_catalog_item(item=item, target_platform="claude", overwrite=False)
-            raise AssertionError("Expected FileExistsError")
-        except FileExistsError:
-            pass
-    print("Correctly rejected overwrite")
-
-
-def test_install_skill_allows_overwrite(tmp_path: Path):
-    """Installing with overwrite=True replaces existing content."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    central = SkillStore(root=tmp_path / "central-skills", create=True)
-    central.write("test-skill", "old content")
-    agent_store = SkillStore(root=platforms[ExtensionSource.CLAUDE].skills_dir, create=True)
-    service = SkillService(central=central, agents={"claude": agent_store})
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.get_skill_service", return_value=service),
-    ):
-        item = _make_skill_item()
-        installed = install_catalog_item(item=item, target_platform="claude", overwrite=True)
-        assert installed == tmp_path / ".claude" / "skills" / "test-skill"
-        content = central.read_raw("test-skill")
-        assert DEFAULT_SKILL_CONTENT in content
-    print("Overwrite succeeded")
-
-
-def test_install_hook_appends_to_settings(tmp_path: Path):
-    """Installing a hook appends to settings.json hooks."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    claude_dir = tmp_path / ".claude"
-    claude_dir.mkdir(parents=True, exist_ok=True)
-    settings_path = claude_dir / "settings.json"
-    settings_path.write_text(json.dumps({"hooks": {}}))
-    central = HookStore(root=tmp_path / "central-hooks", create=True)
-    service = HookService(central=central, agents={"claude": settings_path})
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.get_hook_service", return_value=service),
-    ):
-        item = _make_hook_item()
-        install_catalog_item(item=item, target_platform="claude")
-        settings = json.loads(settings_path.read_text())
-        assert "PreToolUse" in settings["hooks"]
-    print(f"Hook installed, settings: {json.dumps(settings, indent=2)}")
-
-
-def test_install_mcp_merges_to_settings(tmp_path: Path):
-    """Installing an MCP server merges into settings.json mcpServers."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    claude_dir = tmp_path / ".claude"
-    claude_dir.mkdir(parents=True, exist_ok=True)
-    settings_path = claude_dir / "settings.json"
-    settings_path.write_text(json.dumps({"mcpServers": {}}))
-    with patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True):
-        item = _make_mcp_item()
-        install_catalog_item(item=item, target_platform="claude")
-        settings = json.loads(settings_path.read_text())
-        assert "test-mcp" in settings["mcpServers"]
-    print(f"MCP installed: {list(settings['mcpServers'].keys())}")
-
-
-def test_install_unknown_platform_raises():
-    """Installing to unknown platform raises ValueError."""
-    item = _make_skill_item()
-    try:
-        install_catalog_item(item=item, target_platform="unknown_agent")
-        raise AssertionError("Expected ValueError")
-    except ValueError as exc:
-        assert "unknown_agent" in str(exc)
-    print("Correctly rejected unknown platform")
-
-
-# ---------------------------------------------------------------------------
-# install_from_source_url tests
-# ---------------------------------------------------------------------------
-
-
-def test_install_from_source_url_downloads_to_skills_dir(tmp_path: Path):
-    """Installing a featured skill downloads to skills/ directory."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    item = _make_github_skill_item()
-
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.download_directory", return_value=True) as mock_dl,
-    ):
-        installed = install_from_source_url(item=item, target_platform="claude")
-        expected = tmp_path / ".claude" / "skills" / "algorithmic-art"
-        assert installed == expected
-        mock_dl.assert_called_once_with(source_url=item.source_url, target_dir=expected)
-    print(f"Installed featured skill to: {installed}")
-
-
-def test_install_from_source_url_rejects_existing_dir(tmp_path: Path):
-    """Installing from source URL raises FileExistsError if directory exists."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    skill_dir = tmp_path / ".claude" / "skills" / "algorithmic-art"
-    skill_dir.mkdir(parents=True)
-    item = _make_github_skill_item()
-
-    with patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True):
-        try:
-            install_from_source_url(item=item, target_platform="claude", overwrite=False)
-            raise AssertionError("Expected FileExistsError")
-        except FileExistsError:
-            pass
-    print("Correctly rejected existing directory")
-
-
-def test_install_from_source_url_raises_on_no_source():
-    """Installing without source_url raises ValueError."""
-    item = _make_skill_item()
-    item.install_content = None
-    item.source_url = ""
-    try:
-        install_from_source_url(item=item, target_platform="claude")
-        raise AssertionError("Expected ValueError")
-    except ValueError as exc:
-        assert "no installable content" in str(exc)
-    print("Correctly rejected missing source URL")
-
-
-# ---------------------------------------------------------------------------
-# Brand-guidelines multi-platform tests
-# ---------------------------------------------------------------------------
-
-
-def test_install_brand_guidelines_to_claude(tmp_path: Path):
-    """Installing brand-guidelines to claude_code lands in ~/.claude/skills/."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    item = _make_brand_guidelines_item()
-
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.download_directory", return_value=True) as mock_dl,
-    ):
-        installed = install_from_source_url(item=item, target_platform="claude")
-        expected = tmp_path / ".claude" / "skills" / "brand-guidelines"
-        assert installed == expected, f"Expected {expected}, got {installed}"
-        mock_dl.assert_called_once_with(source_url=item.source_url, target_dir=expected)
-    print(f"brand-guidelines installed to claude: {installed}")
-
-
-def test_install_brand_guidelines_to_codex(tmp_path: Path):
-    """Installing brand-guidelines to codex lands in ~/.codex/skills/."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    item = _make_brand_guidelines_item()
-
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.download_directory", return_value=True) as mock_dl,
-    ):
-        installed = install_from_source_url(item=item, target_platform="codex")
-        expected = tmp_path / ".codex" / "skills" / "brand-guidelines"
-        assert installed == expected, f"Expected {expected}, got {installed}"
-        mock_dl.assert_called_once_with(source_url=item.source_url, target_dir=expected)
-    print(f"brand-guidelines installed to codex: {installed}")
-
-
-# ---------------------------------------------------------------------------
-# uninstall_extension tests
-# ---------------------------------------------------------------------------
-
-
-def test_uninstall_skill_directory(tmp_path: Path):
-    """Uninstalling a directory-based skill removes the entire directory."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    skill_dir = tmp_path / ".claude" / "skills" / "brand-guidelines"
-    skill_dir.mkdir(parents=True)
-    (skill_dir / "SKILL.md").write_text("# Brand Guidelines")
-    item = _make_brand_guidelines_item()
-
-    with patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True):
-        removed = uninstall_extension(item=item, target_platform="claude")
-        assert removed == skill_dir
-        assert not skill_dir.exists()
-    print(f"Uninstalled directory skill from: {removed}")
-
-
-def test_uninstall_command_file(tmp_path: Path):
-    """Uninstalling a single-file skill removes the .md file."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    commands_dir = tmp_path / ".claude" / "commands"
-    commands_dir.mkdir(parents=True)
-    command_file = commands_dir / "test-skill.md"
-    command_file.write_text(DEFAULT_SKILL_CONTENT)
-    item = _make_skill_item()
-
-    with patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True):
-        removed = uninstall_extension(item=item, target_platform="claude")
-        assert removed == command_file
-        assert not command_file.exists()
-    print(f"Uninstalled command file from: {removed}")
-
-
-def test_uninstall_not_found_raises(tmp_path: Path):
-    """Uninstalling a non-existent extension raises FileNotFoundError."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    item = _make_skill_item()
-
-    with patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True):
-        try:
-            uninstall_extension(item=item, target_platform="claude")
-            raise AssertionError("Expected FileNotFoundError")
-        except FileNotFoundError:
-            pass
-    print("Correctly raised FileNotFoundError for missing extension")
-
-
-# ---------------------------------------------------------------------------
-# Central store multi-file persistence tests
-# ---------------------------------------------------------------------------
-
-
-def _fake_download_source(source_dir: Path):
-    """Return a download_directory stub that copies a prepared tree."""
-
-    def _fake(source_url: str, target_dir: Path) -> bool:
-        if target_dir.exists():
-            shutil.rmtree(target_dir)
-        shutil.copytree(source_dir, target_dir)
+    def fake_download(*, source_url: str, target_dir: Path) -> bool:
+        captured["url"] = source_url
+        captured["dir"] = target_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+        (target_dir / "SKILL.md").write_text("---\nname: demo\n---\nbody")
         return True
 
-    return _fake
-
-
-def _build_multi_file_source(root: Path) -> Path:
-    """Create a fake downloaded skill tree with SKILL.md + scripts/ + references/."""
-    root.mkdir(parents=True, exist_ok=True)
-    (root / "SKILL.md").write_text(
-        "---\ndescription: Claude API helpers\n---\n# Claude API\nBody text.\n",
-        encoding="utf-8",
+    monkeypatch.setattr(catalog_resolver, "download_directory", fake_download)
+    monkeypatch.setattr(
+        catalog_resolver, "_mirror_skill_to_central", lambda *, name, target_dir: None
     )
-    scripts_dir = root / "scripts"
-    scripts_dir.mkdir()
-    (scripts_dir / "tool.py").write_text("print('hi')\n", encoding="utf-8")
-    refs_dir = root / "references"
-    refs_dir.mkdir()
-    (refs_dir / "note.md").write_text("# Note\n", encoding="utf-8")
-    return root
+
+    item = _make_item(extension_type=AgentExtensionType.SKILL)
+    installed = install_catalog_item(item=item, target_platform="claude", overwrite=False)
+    assert installed == platform.skills_dir / "demo"
+    assert captured["dir"] == platform.skills_dir / "demo"
+    print(f"skill installed at {installed}")
 
 
-def test_install_from_source_copies_full_tree_to_central(tmp_path: Path):
-    """Catalog install copies SKILL.md + scripts/ + references/ into the central store."""
-    platforms = _make_platforms(tmp_path=tmp_path)
-    source_tree = _build_multi_file_source(root=tmp_path / "source" / "claude-api")
+def test_install_subagent_routes_to_subagents_dir(monkeypatch, tmp_path: Path):
+    platform = _stub_platform(monkeypatch, tmp_path)
 
-    central_root = tmp_path / "central"
-    codex_root = tmp_path / "codex-central-skills"
-    central = SkillStore(root=central_root, create=True)
-    codex_store = SkillStore(root=codex_root, create=True)
-    service = SkillService(central=central, agents={AgentType.CODEX: codex_store})
+    def fake_download(*, source_url: str, target_dir: Path) -> bool:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        return True
 
+    monkeypatch.setattr(catalog_resolver, "download_directory", fake_download)
+    item = _make_item(
+        extension_type=AgentExtensionType.SUBAGENT,
+        name="reviewer",
+        source_url="https://github.com/acme/widget/tree/main/agents/reviewer",
+    )
+    installed = install_catalog_item(item=item, target_platform="claude", overwrite=False)
+    assert installed == platform.subagents_dir / "reviewer"
+
+
+def test_install_command_routes_to_commands_dir(monkeypatch, tmp_path: Path):
+    platform = _stub_platform(monkeypatch, tmp_path)
+
+    def fake_download(*, source_url: str, target_dir: Path) -> bool:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        return True
+
+    monkeypatch.setattr(catalog_resolver, "download_directory", fake_download)
+    item = _make_item(
+        extension_type=AgentExtensionType.COMMAND,
+        name="sync",
+        source_url="https://github.com/acme/widget/tree/main/commands/sync",
+    )
+    installed = install_catalog_item(item=item, target_platform="claude", overwrite=False)
+    assert installed == platform.commands_dir / "sync"
+
+
+def test_install_unsupported_type_for_platform_raises(monkeypatch, tmp_path: Path):
+    """Installing a SKILL onto a platform that doesn't support skills fails."""
+    root = tmp_path / "agent-root"
+    root.mkdir()
+    platform = AgentPlatform(
+        source=ExtensionSource.CODEX,
+        root=root,
+        skills_dir=None,
+        subagents_dir=None,
+        commands_dir=None,
+        plugins_dir=None,
+        hook_config_path=None,
+        supported_types=frozenset({AgentExtensionType.COMMAND}),
+    )
+    monkeypatch.setattr(catalog_resolver, "get_platform", lambda key: platform)
+
+    item = _make_item(extension_type=AgentExtensionType.SKILL)
+    with pytest.raises(ValueError, match="does not support"):
+        install_catalog_item(item=item, target_platform="codex", overwrite=False)
+
+
+def test_install_existing_dir_without_overwrite_raises(monkeypatch, tmp_path: Path):
+    platform = _stub_platform(monkeypatch, tmp_path)
+    (platform.skills_dir / "demo").mkdir(parents=True)
+
+    monkeypatch.setattr(catalog_resolver, "download_directory", lambda **_: True)
+    item = _make_item(extension_type=AgentExtensionType.SKILL)
+    with pytest.raises(FileExistsError):
+        install_catalog_item(item=item, target_platform="claude", overwrite=False)
+
+
+def test_install_with_overwrite_proceeds(monkeypatch, tmp_path: Path):
+    platform = _stub_platform(monkeypatch, tmp_path)
+    target = platform.skills_dir / "demo"
+    target.mkdir(parents=True)
+
+    def fake_download(*, source_url: str, target_dir: Path) -> bool:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        (target_dir / "SKILL.md").write_text("new")
+        return True
+
+    monkeypatch.setattr(catalog_resolver, "download_directory", fake_download)
+    monkeypatch.setattr(
+        catalog_resolver, "_mirror_skill_to_central", lambda *, name, target_dir: None
+    )
+    item = _make_item(extension_type=AgentExtensionType.SKILL)
+    installed = install_catalog_item(item=item, target_platform="claude", overwrite=True)
+    assert installed == target
+
+
+def test_install_from_source_url_invalid_url_raises(monkeypatch, tmp_path: Path):
+    _stub_platform(monkeypatch, tmp_path)
     item = AgentExtensionItem(
-        extension_id="featured:skill:claude-api",
+        extension_id="bogus:1",
         extension_type=AgentExtensionType.SKILL,
-        name="claude-api",
-        description="Claude API helpers",
-        tags=[],
-        category="featured",
-        platforms=["claude_code"],
-        quality_score=90.0,
-        popularity=0.8,
-        updated_at="",
-        source_url="https://github.com/anthropics/skills/tree/main/skills/claude-api",
-        repo_full_name="",
-        install_method="skill_file",
-        install_content=None,
+        name="bogus",
+        source_url="https://example.com/not-github",
+        repo_full_name="acme/widget",
+        discovery_source="seed",
+        topics=[],
+        quality_score=0.0,
+        popularity=0.0,
+        stars=0,
+        forks=0,
     )
+    with pytest.raises(ValueError, match="no installable content"):
+        install_from_source_url(item=item, target_platform="claude", overwrite=False)
 
-    with (
-        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True),
-        patch(f"{INSTALL_MODULE}.get_skill_service", return_value=service),
-        patch(
-            f"{INSTALL_MODULE}.download_directory",
-            side_effect=_fake_download_source(source_dir=source_tree),
-        ),
-    ):
-        install_from_source_url(item=item, target_platform="claude")
 
-    central_skill_dir = central_root / "claude-api"
-    assert (central_skill_dir / "SKILL.md").is_file()
-    assert (central_skill_dir / "scripts" / "tool.py").is_file()
-    assert (central_skill_dir / "references" / "note.md").is_file()
-    central_entries = sorted(p.name for p in central_skill_dir.iterdir())
-    print(f"Central store contents for claude-api: {central_entries}")
+def test_install_download_failure_raises(monkeypatch, tmp_path: Path):
+    _stub_platform(monkeypatch, tmp_path)
+    monkeypatch.setattr(catalog_resolver, "download_directory", lambda **_: False)
+    item = _make_item(extension_type=AgentExtensionType.SKILL)
+    with pytest.raises(ValueError, match="Failed to download"):
+        install_catalog_item(item=item, target_platform="claude", overwrite=False)
 
-    # End-to-end: syncing from central to codex must carry auxiliary files too.
-    service.sync_to_agents(name="claude-api", agents=["codex"])
-    codex_skill_dir = codex_root / "claude-api"
-    assert (codex_skill_dir / "SKILL.md").is_file()
-    assert (codex_skill_dir / "scripts" / "tool.py").is_file()
-    assert (codex_skill_dir / "references" / "note.md").is_file()
-    print(f"Codex skill contents after sync: {sorted(p.name for p in codex_skill_dir.iterdir())}")
+
+def test_uninstall_skill_directory(monkeypatch, tmp_path: Path):
+    platform = _stub_platform(monkeypatch, tmp_path)
+    target = platform.skills_dir / "demo"
+    target.mkdir(parents=True)
+    (target / "SKILL.md").write_text("x")
+
+    item = _make_item(extension_type=AgentExtensionType.SKILL)
+    removed = uninstall_extension(item=item, target_platform="claude")
+    assert removed == target
+    assert not target.exists()
+
+
+def test_uninstall_command_file(monkeypatch, tmp_path: Path):
+    platform = _stub_platform(monkeypatch, tmp_path)
+    platform.commands_dir.mkdir(parents=True, exist_ok=True)
+    f = platform.commands_dir / "sync.md"
+    f.write_text("---\nname: sync\n---")
+
+    item = _make_item(extension_type=AgentExtensionType.COMMAND, name="sync")
+    removed = uninstall_extension(item=item, target_platform="claude")
+    assert removed == f
+    assert not f.exists()
+
+
+def test_uninstall_not_found_raises(monkeypatch, tmp_path: Path):
+    _stub_platform(monkeypatch, tmp_path)
+    item = _make_item(extension_type=AgentExtensionType.SKILL, name="missing")
+    with pytest.raises(FileNotFoundError):
+        uninstall_extension(item=item, target_platform="claude")
