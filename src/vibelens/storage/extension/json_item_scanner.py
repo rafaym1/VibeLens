@@ -40,7 +40,7 @@ def scan_items(buf: bytes, id_key: str) -> Iterator[tuple[str, int, int]]:
     """
     array_start = _find_items_array(buf)
     cursor = array_start + 1
-    id_key_bytes = f'"{id_key}"'.encode("utf-8")
+    id_key_bytes = f'"{id_key}"'.encode()
 
     while cursor < len(buf):
         cursor = _skip_ws_and_commas(buf, cursor)
