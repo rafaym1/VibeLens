@@ -8,7 +8,6 @@ In demo mode, iterates the user's registered upload stores (from the
 upload registry in deps.py) plus the shared example store.
 """
 
-
 from vibelens.deps import (
     get_all_upload_stores,
     get_example_store,
@@ -129,9 +128,7 @@ def load_from_all_stores(session_id: str) -> list | None:
     return get_example_store().load(session_id)
 
 
-def get_metadata_from_stores(
-    session_id: str, session_token: str | None = None
-) -> dict | None:
+def get_metadata_from_stores(session_id: str, session_token: str | None = None) -> dict | None:
     """Get metadata for a session from the user's stores or examples.
 
     Args:

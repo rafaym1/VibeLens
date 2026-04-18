@@ -87,10 +87,7 @@ def filter_metadata(
         result = [m for m in result if m.get("project_path") == project_path]
 
     if agent_name:
-        result = [
-            m for m in result
-            if (m.get("agent") or {}).get("name") == agent_name
-        ]
+        result = [m for m in result if (m.get("agent") or {}).get("name") == agent_name]
 
     if date_from or date_to:
         result = [m for m in result if _in_date_range(m, date_from, date_to)]

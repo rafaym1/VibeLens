@@ -103,10 +103,7 @@ class BaseTrajectoryStore(ABC):
         return self._sort_trajectories(trajectories)
 
     def _enrich_refs_from_index(
-        self,
-        session_id: str,
-        trajectories: list[Trajectory],
-        metadata_cache: dict[str, dict],
+        self, session_id: str, trajectories: list[Trajectory], metadata_cache: dict[str, dict]
     ) -> None:
         """Carry over continuation refs from the index to loaded trajectories.
 
@@ -190,9 +187,7 @@ class BaseTrajectoryStore(ABC):
             self._build_index()
         return self._metadata_cache  # type: ignore[return-value]
 
-    def _ensure_index_snapshot(
-        self,
-    ) -> tuple[dict[str, dict], dict[str, tuple[Path, BaseParser]]]:
+    def _ensure_index_snapshot(self) -> tuple[dict[str, dict], dict[str, tuple[Path, BaseParser]]]:
         """Lazy-load index and return both caches as a snapshot.
 
         Captures _metadata_cache and _index together after _build_index

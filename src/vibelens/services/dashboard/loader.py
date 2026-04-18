@@ -95,8 +95,7 @@ def get_dashboard_stats(
         DashboardStats with all chart data.
     """
     cache_key = (
-        f"dash:{project_path or 'all'}:{date_from}:{date_to}"
-        f":{session_token}:{agent_name or 'all'}"
+        f"dash:{project_path or 'all'}:{date_from}:{date_to}:{session_token}:{agent_name or 'all'}"
     )
     if cache_key in _dashboard_cache:
         return _dashboard_cache[cache_key]
@@ -138,8 +137,7 @@ def get_tool_usage(
         ToolUsageStat list sorted by call_count descending.
     """
     cache_key = (
-        f"tools:{project_path or 'all'}:{date_from}:{date_to}"
-        f":{session_token}:{agent_name or 'all'}"
+        f"tools:{project_path or 'all'}:{date_from}:{date_to}:{session_token}:{agent_name or 'all'}"
     )
     if cache_key in _tool_usage_cache:
         return _tool_usage_cache[cache_key]
@@ -152,9 +150,7 @@ def get_tool_usage(
     return result
 
 
-def get_session_analytics(
-    session_id: str, session_token: str | None
-) -> SessionAnalytics | None:
+def get_session_analytics(session_id: str, session_token: str | None) -> SessionAnalytics | None:
     """Compute detailed analytics for a single session.
 
     Args:
@@ -208,9 +204,7 @@ def warm_cache() -> None:
     _dashboard_cache[cache_key_dash] = stats
 
     # Tool usage requires full trajectories — load in parallel
-    trajectories = _load_and_enrich_trajectories(
-        filtered, session_token=None, parallel=True
-    )
+    trajectories = _load_and_enrich_trajectories(filtered, session_token=None, parallel=True)
     usage = compute_tool_usage(trajectories)
     _tool_usage_cache[cache_key_tools] = usage
 
@@ -247,9 +241,7 @@ def _load_and_enrich_trajectories(
     return _load_sessions_parallel(valid_metadata, session_token, total)
 
 
-def _load_one_session(
-    meta: dict, session_id: str, session_token: str | None
-) -> Trajectory | None:
+def _load_one_session(meta: dict, session_id: str, session_token: str | None) -> Trajectory | None:
     """Load a single session and enrich its project_path.
 
     Args:
