@@ -54,7 +54,7 @@ class ExtensionListResponse(BaseModel):
 class CatalogListResponse(BaseModel):
     """Paginated catalog listing response."""
 
-    items: list[dict] = Field(description="Extension items (without install_content).")
+    items: list[dict] = Field(description="Summary-projected extension items.")
     total: int = Field(description="Total matching items.")
     page: int = Field(description="Current page number.")
     per_page: int = Field(description="Items per page.")
@@ -93,7 +93,7 @@ class CatalogInstallResponse(BaseModel):
 class ExtensionMetaResponse(BaseModel):
     """Catalog metadata for frontend filter/sort options."""
 
-    categories: list[str] = Field(description="Unique category values from catalog.")
+    topics: list[str] = Field(description="Unique topics across the catalog.")
     has_profile: bool = Field(description="Whether a user profile exists for relevance sorting.")
 
 

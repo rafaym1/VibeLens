@@ -1,5 +1,6 @@
 """Tests for extension catalog API endpoints."""
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -8,61 +9,72 @@ from fastapi.testclient import TestClient
 from vibelens.app import create_app
 from vibelens.models.enums import AgentExtensionType
 from vibelens.models.extension import AgentExtensionItem
-from vibelens.storage.extension.catalog import CatalogSnapshot
+from vibelens.storage.extension.catalog import CatalogManifest, CatalogSnapshot
+
+
+def _make_item(
+    *,
+    extension_id: str,
+    extension_type: AgentExtensionType,
+    name: str,
+    description: str,
+    topics: list[str] | None = None,
+) -> AgentExtensionItem:
+    return AgentExtensionItem(
+        extension_id=extension_id,
+        extension_type=extension_type,
+        name=name,
+        description=description,
+        topics=topics or [],
+        source_url=f"https://github.com/test/{name}/tree/main",
+        repo_full_name=f"test/{name}",
+        discovery_source="seed",
+        quality_score=80.0,
+        popularity=0.5,
+        stars=10,
+        forks=0,
+    )
 
 
 def _make_snapshot() -> CatalogSnapshot:
-    """Create a test catalog snapshot."""
     items = [
-        AgentExtensionItem(
+        _make_item(
             extension_id="bwc:skill:test-skill",
             extension_type=AgentExtensionType.SKILL,
             name="test-skill",
             description="A test skill",
-            tags=["testing"],
-            category="testing",
-            platforms=["claude_code"],
-            quality_score=80.0,
-            popularity=0.5,
-            updated_at="2026-04-01T00:00:00Z",
-            source_url="https://github.com/test/repo",
-            repo_full_name="test/repo",
-            install_method="skill_file",
-            install_content="# Test Skill\nContent here.",
+            topics=["testing"],
         ),
-        AgentExtensionItem(
-            extension_id="bwc:mcp:test-mcp",
-            extension_type=AgentExtensionType.REPO,
-            name="test-mcp",
-            description="A test MCP server",
-            tags=["mcp"],
-            category="development",
-            platforms=["claude_code"],
-            quality_score=75.0,
-            popularity=0.3,
-            updated_at="",
-            source_url="",
-            repo_full_name="",
-            install_method="mcp_config",
-            install_command="npx test-server",
-            install_content=(
-                '{"mcpServers": {"test-mcp": {"command": "npx", "args": ["test-server"]}}}'
-            ),
+        _make_item(
+            extension_id="bwc:plugin:test-plugin",
+            extension_type=AgentExtensionType.PLUGIN,
+            name="test-plugin",
+            description="A test plugin",
+            topics=["plugin"],
         ),
     ]
-    return CatalogSnapshot(version="2026-04-13", schema_version=1, items=items)
+    manifest = CatalogManifest(
+        generated_on="2026-04-13",
+        hub_source="test",
+        total=len(items),
+        item_counts={"skill": 1, "plugin": 1},
+        file_sizes={},
+    )
+    return CatalogSnapshot(manifest=manifest, items=items, data_dir=Path("/nonexistent"))
 
 
 @pytest.fixture
 def client():
-    """Create test client with mocked catalog."""
-    with patch("vibelens.services.extensions.catalog.load_catalog", return_value=_make_snapshot()):
+    snapshot = _make_snapshot()
+    with (
+        patch("vibelens.services.extensions.catalog.load_catalog", return_value=snapshot),
+        patch("vibelens.api.extensions.catalog.load_catalog", return_value=snapshot),
+    ):
         app = create_app()
         yield TestClient(app)
 
 
 def test_list_extensions(client):
-    """GET /api/extensions returns paginated items."""
     resp = client.get("/api/extensions/catalog")
     assert resp.status_code == 200
     data = resp.json()
@@ -72,63 +84,52 @@ def test_list_extensions(client):
 
 
 def test_list_extensions_search(client):
-    """GET /api/extensions?search=mcp filters by keyword."""
-    resp = client.get("/api/extensions/catalog?search=mcp")
+    resp = client.get("/api/extensions/catalog?search=plugin")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
-    assert data["items"][0]["extension_id"] == "bwc:mcp:test-mcp"
-    print(f"Search 'mcp': {data['total']} results")
+    assert data["items"][0]["extension_id"] == "bwc:plugin:test-plugin"
 
 
 def test_list_extensions_type_filter(client):
-    """GET /api/extensions?extension_type=skill filters by type."""
     resp = client.get("/api/extensions/catalog?extension_type=skill")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
     assert data["items"][0]["extension_type"] == "skill"
-    print(f"Type filter: {data['total']} results")
 
 
-def test_get_extension_item(client):
-    """GET /api/extensions/{item_id} returns full item."""
-    resp = client.get("/api/extensions/catalog/bwc:skill:test-skill")
+def test_list_extensions_accepts_deprecated_category_param(client):
+    """Old clients passing ?category=... still get 200 (param ignored)."""
+    resp = client.get("/api/extensions/catalog?category=testing")
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 2
+
+
+def test_list_extensions_accepts_deprecated_platform_param(client):
+    resp = client.get("/api/extensions/catalog?platform=claude")
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 2
+
+
+def test_meta_returns_topics(client):
+    resp = client.get("/api/extensions/catalog/meta")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["extension_id"] == "bwc:skill:test-skill"
-    assert data["install_content"] is not None
-    print(f"Got item: {data['extension_id']}")
+    assert "topics" in data
+    assert sorted(data["topics"]) == ["plugin", "testing"]
+
+
+def test_get_extension_item_returns_summary_when_offsets_empty(client):
+    """Detail endpoint falls back to summary when get_full has no offsets."""
+    resp = client.get("/api/extensions/catalog/bwc:skill:test-skill")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["extension_id"] == "bwc:skill:test-skill"
+    # Detail-only fields stay None when hydration falls back to summary.
+    assert body["item_metadata"] is None
 
 
 def test_get_extension_item_not_found(client):
-    """GET /api/extensions/nonexistent returns 404."""
     resp = client.get("/api/extensions/catalog/nonexistent")
-    assert resp.status_code == 404
-    print("404 for nonexistent item")
-
-
-def test_get_extension_content_with_install_content(client):
-    """Content endpoint returns install_content for file-based items."""
-    resp = client.get("/api/extensions/catalog/bwc:skill:test-skill/content")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["content_type"] == "install_content"
-    assert "Test Skill" in data["content"]
-    print(f"Content type: {data['content_type']}, length: {len(data['content'])}")
-
-
-def test_get_extension_content_null_for_empty_item(client):
-    """Content endpoint returns null content for item without install_content or repo."""
-    # bwc:mcp:test-mcp has install_content (MCP JSON config), so it should return it
-    resp = client.get("/api/extensions/catalog/bwc:mcp:test-mcp/content")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["content"] is not None
-    print(f"MCP content type: {data['content_type']}")
-
-
-def test_get_extension_content_not_found(client):
-    """Content endpoint returns 404 for unknown item."""
-    resp = client.get("/api/extensions/catalog/test:skill:nonexistent/content")
     assert resp.status_code == 404

@@ -10,12 +10,12 @@ from vibelens.schemas.extensions import (
     ExtensionMetaResponse,
 )
 from vibelens.services.extensions.catalog import (
-    get_extension_by_id,
     get_extension_metadata,
     install_extension,
     list_extensions,
     resolve_extension_content,
 )
+from vibelens.storage.extension.catalog import load_catalog
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -25,23 +25,38 @@ router = APIRouter(tags=["catalog"])
 
 @router.get("")
 async def list_extensions_endpoint(
-    search: str | None = Query(default=None, description="Search name, description, tags"),
-    extension_type: str | None = Query(default=None, description="Filter by extension type"),
-    category: str | None = Query(default=None, description="Filter by category"),
-    platform: str | None = Query(default=None, description="Filter by platform"),
-    sort: str = Query(
-        default="quality", description="Sort: quality, name, popularity, recent, relevance"
+    search: str | None = Query(default=None, description="Search name, description, topics."),
+    extension_type: str | None = Query(default=None, description="Filter by extension type."),
+    category: str | None = Query(
+        default=None,
+        deprecated=True,
+        description="Deprecated: filter ignored since the 2026-04 catalog migration.",
     ),
-    page: int = Query(default=1, ge=1, description="Page number"),
-    per_page: int = Query(default=50, ge=1, le=200, description="Items per page"),
+    platform: str | None = Query(
+        default=None,
+        deprecated=True,
+        description="Deprecated: platforms are not derived in this release.",
+    ),
+    sort: str = Query(
+        default="quality",
+        description="Sort: quality, name, popularity, recent, relevance.",
+    ),
+    page: int = Query(default=1, ge=1, description="Page number."),
+    per_page: int = Query(default=50, ge=1, le=200, description="Items per page."),
 ) -> CatalogListResponse:
-    """List extension catalog items with search, filters, and pagination."""
+    """List extension catalog items with search, type filter, and pagination.
+
+    The ``category`` and ``platform`` query parameters are accepted for
+    backward compatibility with older clients and ignored server-side.
+    """
+    if category is not None or platform is not None:
+        logger.debug(
+            "ignoring deprecated filter(s): category=%r platform=%r", category, platform
+        )
     try:
         items, total = list_extensions(
             search=search,
             extension_type=extension_type,
-            category=category,
-            platform=platform,
             sort=sort,
             page=page,
             per_page=per_page,
@@ -53,12 +68,12 @@ async def list_extensions_endpoint(
 
 @router.get("/meta")
 async def extension_meta() -> ExtensionMetaResponse:
-    """Return extension catalog metadata for frontend filter and sort options."""
+    """Return catalog-wide topics + profile availability for filter/sort UI."""
     try:
-        categories, has_profile = get_extension_metadata()
+        topics, has_profile = get_extension_metadata()
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return ExtensionMetaResponse(categories=categories, has_profile=has_profile)
+    return ExtensionMetaResponse(topics=topics, has_profile=has_profile)
 
 
 @router.get("/{item_id:path}/content")
@@ -74,7 +89,10 @@ async def get_extension_content(item_id: str) -> dict:
 async def install_extension_endpoint(
     item_id: str, body: CatalogInstallRequest
 ) -> CatalogInstallResponse:
-    """Install an extension item to one or more agent platforms."""
+    """Install an extension item to one or more agent platforms.
+
+    HOOK / MCP_SERVER / REPO items return 501 (service gates them).
+    """
     platforms = body.target_platforms
     logger.info(
         "Install request: item=%s, platforms=%s, overwrite=%s", item_id, platforms, body.overwrite
@@ -94,8 +112,9 @@ async def install_extension_endpoint(
                 first_path = str(path)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except NotImplementedError as exc:
+            raise HTTPException(status_code=501, detail=str(exc)) from exc
         except FileExistsError:
-            # Auto-retry with overwrite for multi-platform installs
             try:
                 name, path = install_extension(
                     item_id=item_id, target_platform=platform, overwrite=True
@@ -116,22 +135,31 @@ async def install_extension_endpoint(
     if not all_ok:
         failed = {k: v.message for k, v in results.items() if not v.success}
         logger.error("Install incomplete for %s: %s", item_id, failed)
+    summary = (
+        f"Installed to {sum(r.success for r in results.values())}/{len(platforms)} platforms"
+    )
     return CatalogInstallResponse(
         success=all_ok,
         installed_path=first_path,
-        message=f"Installed to {sum(r.success for r in results.values())}"
-        f"/{len(platforms)} platforms",
+        message=summary,
         results=results,
     )
 
 
 # NOTE: This catch-all detail route must be declared LAST. The `:path` converter
-# is greedy, so declaring it before `/content` or `/install` routes causes it to
-# swallow those suffixes for item IDs containing slashes or colons.
+# is greedy; declaring it before `/content` or `/install` causes it to swallow
+# those suffixes for item IDs containing slashes or colons.
 @router.get("/{item_id:path}")
 async def get_extension_item(item_id: str) -> dict:
-    """Get full extension item by ID, including install_content."""
-    item = get_extension_by_id(item_id=item_id)
-    if not item:
+    """Return the full extension record; falls back to the summary on offset failure."""
+    snap = load_catalog()
+    if snap is None:
+        raise HTTPException(status_code=404, detail="catalog unavailable")
+    full = snap.get_full(item_id)
+    if full is not None:
+        return full.model_dump(mode="json")
+    summary = snap.get_item(item_id)
+    if summary is None:
         raise HTTPException(status_code=404, detail=f"Item {item_id} not found")
-    return item.model_dump(mode="json")
+    logger.warning("returning summary for %s; detail hydration failed", item_id)
+    return summary.model_dump(mode="json")
