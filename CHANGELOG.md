@@ -1,5 +1,26 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Catalog schema migrated to `agent-tool-hub` format. `AgentExtensionItem` field names aligned to the hub; `tags → topics`, `license_name → license`. Detail-only fields (`scores`, `item_metadata`, `readme_description`, `repo_description`, `author`, `author_followers`, `contributors_count`, `created_at`, `discovery_origin`, `validation_errors`) load on demand via byte offsets.
+- Catalog list API drops `category` and `platform` query parameters (accepted-but-ignored for backward compatibility). Metadata endpoint returns `topics` instead of `categories`.
+- Catalog scoring weights rebalanced (relevance 50%, quality 30%, popularity 15%, composability 5%) since platforms is unavailable this release.
+- Startup latency increases ~1–3s to warm the new catalog. The legacy `~/.vibelens/catalog/` user cache is deleted on startup (contents not migrated).
+
+### Added
+- `scripts/build_catalog.py` converts `agent-tool-hub` output into the bundled two-tier catalog (summary + offsets + per-type JSONs).
+- `MCP_SERVER` extension type.
+
+### Removed
+- Catalog `install_content` / `install_method` payloads. Every install now fetches from `source_url` at install time.
+- Frontend "Category" and "Platform" filter dropdowns in the Explore tab.
+
+### Unsupported this release
+- HOOK install from the catalog returns 501. Hook items still browse and view fine.
+- MCP_SERVER install from the catalog returns 501.
+- REPO install from the catalog returns 501 (the hub does not emit REPO items).
+
 ## [1.0.0] - 2026-04-17
 
 ### Added
