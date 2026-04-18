@@ -76,7 +76,7 @@ function RecommendationCard({
   const [installed, setInstalled] = useState(isInstalled);
 
   const relevance = rec.scores.relevance ?? 0;
-  const tags = rec.item.tags ?? [];
+  const tags = rec.item.topics ?? [];
 
   const handleInstallStateChange = useCallback(
     (itemId: string, success: boolean, installError: string | null) => {

@@ -10,7 +10,7 @@ def test_command_defaults():
     command = Command(name="my-command")
     assert command.name == "my-command"
     assert command.description == ""
-    assert command.tags == []
+    assert command.topics == []
     assert command.content_hash == ""
     assert command.installed_in == []
 
@@ -20,12 +20,12 @@ def test_command_full_fields():
     command = Command(
         name="test-command",
         description="A test command",
-        tags=["testing", "demo"],
+        topics=["testing", "demo"],
         content_hash="abc123",
         installed_in=["claude", "codex"],
     )
     assert command.description == "A test command"
-    assert command.tags == ["testing", "demo"]
+    assert command.topics == ["testing", "demo"]
     assert command.installed_in == ["claude", "codex"]
 
 
@@ -49,8 +49,8 @@ def test_command_name_validation_accepts_kebab():
 
 def test_command_serialization():
     """Command serializes to dict cleanly."""
-    command = Command(name="my-command", description="desc", tags=["a"])
+    command = Command(name="my-command", description="desc", topics=["a"])
     data = command.model_dump()
     assert data["name"] == "my-command"
-    assert data["tags"] == ["a"]
+    assert data["topics"] == ["a"]
     assert data["installed_in"] == []

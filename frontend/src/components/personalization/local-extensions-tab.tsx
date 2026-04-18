@@ -356,7 +356,7 @@ function SkillCard({
   onDelete: () => void;
   onViewDetail: (skill: Skill) => void;
 }) {
-  const tags = skill.tags || [];
+  const tags = skill.topics || [];
   const allowedTools = skill.allowed_tools || [];
 
   return (
@@ -427,7 +427,7 @@ function SkillDetailPopup({
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [hoveredTarget, setHoveredTarget] = useState<string | null>(null);
 
-  const tags = skill.tags || [];
+  const tags = skill.topics || [];
   const allowedTools = skill.allowed_tools || [];
 
   useEffect(() => {

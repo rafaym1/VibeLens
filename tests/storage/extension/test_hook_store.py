@@ -34,14 +34,14 @@ class TestParseHookJson:
         hook = parse_hook_json("safety-guard", SAMPLE_HOOK_JSON)
         assert hook.name == "safety-guard"
         assert hook.description == "A sample hook"
-        assert hook.tags == ["safety"]
+        assert hook.topics == ["safety"]
         assert "PreToolUse" in hook.hook_config
         assert hook.content_hash != ""
 
     def test_parses_minimal(self):
         hook = parse_hook_json("minimal", MINIMAL_HOOK_JSON)
         assert hook.description == "Minimal"
-        assert hook.tags == []
+        assert hook.topics == []
         assert hook.hook_config == {}
 
     def test_uses_filename_as_name(self):

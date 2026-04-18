@@ -354,7 +354,7 @@ export interface ExtensionSyncTarget {
 export interface Skill {
   name: string;
   description: string;
-  tags: string[];
+  topics: string[];
   allowed_tools: string[];
   content_hash: string;
   installed_in: string[];
@@ -377,7 +377,7 @@ export interface RecommendationItem {
   source_url: string;
   updated_at: string;
   description: string;
-  tags: string[];
+  topics: string[];
   stars: number;
   forks: number;
   license: string;

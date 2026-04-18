@@ -45,7 +45,7 @@ def test_get_item_returns_parsed_plugin(service: PluginService):
     plugin = service.get_item("my-plugin")
     assert plugin.name == "my-plugin"
     assert plugin.version == "1.0.0"
-    assert "testing" in plugin.tags
+    assert "testing" in plugin.topics
     assert plugin.installed_in == []
 
 

@@ -46,13 +46,13 @@ class TestParseCommandMd:
         command = parse_command_md("sample-command", SAMPLE_COMMAND_MD)
         assert command.name == "sample-command"
         assert command.description == "A sample command"
-        assert command.tags == ["testing"]
+        assert command.topics == ["testing"]
         assert command.content_hash != ""
 
     def test_parses_minimal(self):
         command = parse_command_md("minimal", MINIMAL_COMMAND_MD)
         assert command.description == "Minimal"
-        assert command.tags == []
+        assert command.topics == []
 
     def test_no_frontmatter(self):
         command = parse_command_md("bare", NO_FRONTMATTER_MD)

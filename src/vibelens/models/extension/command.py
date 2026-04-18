@@ -1,6 +1,6 @@
 """Command metadata model parsed from flat .md command files."""
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 
@@ -8,9 +8,15 @@ from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 class Command(BaseModel):
     """Parsed command metadata from a flat .md file."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     name: str = Field(description="Kebab-case command identifier (filename without .md).")
     description: str = Field(default="", description="From frontmatter.")
-    tags: list[str] = Field(default_factory=list, description="From frontmatter.")
+    topics: list[str] = Field(
+        default_factory=list,
+        alias="tags",
+        description="Classification topics; accepts legacy `tags:` frontmatter key.",
+    )
     content_hash: str = Field(default="", description="SHA256 of raw .md content.")
     installed_in: list[str] = Field(default_factory=list, description="Agent keys where installed.")
 

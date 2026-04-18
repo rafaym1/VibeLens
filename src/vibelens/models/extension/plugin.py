@@ -1,6 +1,6 @@
 """Plugin metadata model parsed from .claude-plugin/plugin.json files."""
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 
@@ -8,10 +8,16 @@ from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 class Plugin(BaseModel):
     """Parsed plugin.json metadata."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     name: str = Field(description="Kebab-case plugin identifier (directory name).")
     description: str = Field(default="", description="From plugin.json.")
     version: str = Field(default="0.0.0", description="From plugin.json version field.")
-    tags: list[str] = Field(default_factory=list, description="From plugin.json keywords.")
+    topics: list[str] = Field(
+        default_factory=list,
+        alias="tags",
+        description="From plugin.json keywords; accepts legacy `tags:` key.",
+    )
     content_hash: str = Field(default="", description="SHA256 of raw plugin.json.")
     installed_in: list[str] = Field(default_factory=list, description="Agent keys where installed.")
 

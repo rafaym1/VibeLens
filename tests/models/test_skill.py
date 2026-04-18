@@ -8,7 +8,7 @@ def test_skill_defaults():
     skill = Skill(name="my-skill")
     assert skill.name == "my-skill"
     assert skill.description == ""
-    assert skill.tags == []
+    assert skill.topics == []
     assert skill.allowed_tools == []
     assert skill.content_hash == ""
     assert skill.installed_in == []
@@ -19,13 +19,13 @@ def test_skill_full_fields():
     skill = Skill(
         name="test-skill",
         description="A test skill",
-        tags=["testing", "demo"],
+        topics=["testing", "demo"],
         allowed_tools=["Bash", "Read"],
         content_hash="abc123",
         installed_in=["claude", "codex"],
     )
     assert skill.description == "A test skill"
-    assert skill.tags == ["testing", "demo"]
+    assert skill.topics == ["testing", "demo"]
     assert skill.allowed_tools == ["Bash", "Read"]
     assert skill.installed_in == ["claude", "codex"]
 
@@ -52,8 +52,28 @@ def test_skill_name_validation_accepts_kebab():
 
 def test_skill_serialization():
     """Skill serializes to dict cleanly."""
-    skill = Skill(name="my-skill", description="desc", tags=["a"])
+    skill = Skill(name="my-skill", description="desc", topics=["a"])
     data = skill.model_dump()
     assert data["name"] == "my-skill"
-    assert data["tags"] == ["a"]
+    assert data["topics"] == ["a"]
     assert data["installed_in"] == []
+
+
+def test_skill_accepts_legacy_tags_alias():
+    """Existing YAML frontmatter uses `tags:`; must still load."""
+    skill = Skill.model_validate({"name": "demo", "description": "x", "tags": ["a", "b"]})
+    assert skill.topics == ["a", "b"]
+
+
+def test_skill_accepts_topics_directly():
+    """New code can use `topics:` directly."""
+    skill = Skill.model_validate({"name": "demo", "description": "x", "topics": ["a"]})
+    assert skill.topics == ["a"]
+
+
+def test_skill_dumps_topics_by_default():
+    """model_dump emits the field name (topics), not the alias."""
+    skill = Skill(name="demo", description="x", topics=["a"])
+    dumped = skill.model_dump()
+    assert "topics" in dumped
+    assert "tags" not in dumped

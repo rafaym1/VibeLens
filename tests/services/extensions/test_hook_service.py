@@ -59,7 +59,7 @@ def _read_settings(path):
 class TestInstall:
     def test_install_creates_hook(self, service):
         hook = service.install(
-            name="my-hook", description="desc", tags=["a"], hook_config=SAMPLE_CONFIG
+            name="my-hook", description="desc", topics=["a"], hook_config=SAMPLE_CONFIG
         )
         assert hook.name == "my-hook"
         assert hook.description == "desc"
@@ -68,25 +68,25 @@ class TestInstall:
 
     def test_install_with_sync(self, service, claude_settings):
         hook = service.install(
-            name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG, sync_to=["claude"]
+            name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG, sync_to=["claude"]
         )
         assert "claude" in hook.installed_in
         assert claude_settings.exists()
 
     def test_install_duplicate_raises(self, service):
-        service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG)
         with pytest.raises(FileExistsError):
-            service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
+            service.install(name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG)
 
     def test_install_invalid_name_raises(self, service):
         with pytest.raises(ValueError, match="kebab-case"):
-            service.install(name="Not Valid", description="", tags=[], hook_config=SAMPLE_CONFIG)
+            service.install(name="Not Valid", description="", topics=[], hook_config=SAMPLE_CONFIG)
 
 
 class TestSync:
     def test_sync_adds_marker(self, service, claude_settings):
         """CRITICAL: After sync, agent's settings.json has the _vibelens_managed marker."""
-        service.install(name="safety-guard", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="safety-guard", description="", topics=[], hook_config=SAMPLE_CONFIG)
         service.sync_to_agents("safety-guard", ["claude"])
 
         data = _read_settings(claude_settings)
@@ -98,7 +98,7 @@ class TestSync:
 
     def test_sync_idempotent(self, service, claude_settings):
         """CRITICAL: Calling sync twice does not duplicate entries."""
-        service.install(name="safety-guard", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="safety-guard", description="", topics=[], hook_config=SAMPLE_CONFIG)
         service.sync_to_agents("safety-guard", ["claude"])
         service.sync_to_agents("safety-guard", ["claude"])
 
@@ -109,7 +109,7 @@ class TestSync:
         assert len(managed) == 1
 
     def test_sync_unknown_agent_returns_false(self, service):
-        service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG)
         results = service.sync_to_agents("my-hook", ["unknown"])
         assert results["unknown"] is False
 
@@ -129,7 +129,7 @@ class TestSync:
         }
         claude_settings.write_text(json.dumps(existing, indent=2), encoding="utf-8")
 
-        service.install(name="safety-guard", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="safety-guard", description="", topics=[], hook_config=SAMPLE_CONFIG)
         service.sync_to_agents("safety-guard", ["claude"])
 
         data = _read_settings(claude_settings)
@@ -141,8 +141,8 @@ class TestSync:
 class TestUnsync:
     def test_unsync_removes_only_matching(self, service, claude_settings):
         """CRITICAL: Two hooks synced; unsyncing one leaves the other."""
-        service.install(name="hook-a", description="", tags=[], hook_config=SAMPLE_CONFIG)
-        service.install(name="hook-b", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="hook-a", description="", topics=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="hook-b", description="", topics=[], hook_config=SAMPLE_CONFIG)
         service.sync_to_agents("hook-a", ["claude"])
         service.sync_to_agents("hook-b", ["claude"])
 
@@ -167,7 +167,7 @@ class TestUnsync:
         }
         claude_settings.write_text(json.dumps(existing, indent=2), encoding="utf-8")
 
-        service.install(name="managed-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="managed-hook", description="", topics=[], hook_config=SAMPLE_CONFIG)
         service.sync_to_agents("managed-hook", ["claude"])
         service.uninstall_from_agent("managed-hook", "claude")
 
@@ -178,12 +178,12 @@ class TestUnsync:
         assert not any(g.get(VIBELENS_MARKER_KEY) == "managed-hook" for g in groups)
 
     def test_unsync_not_found_raises(self, service):
-        service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG)
         with pytest.raises(FileNotFoundError):
             service.uninstall_from_agent("my-hook", "claude")
 
     def test_unsync_unknown_agent_raises(self, service):
-        service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG)
         with pytest.raises(KeyError):
             service.uninstall_from_agent("my-hook", "unknown")
 
@@ -191,7 +191,7 @@ class TestUnsync:
 class TestUninstall:
     def test_uninstall_removes_from_central_and_agents(self, service, claude_settings):
         service.install(
-            name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG, sync_to=["claude"]
+            name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG, sync_to=["claude"]
         )
         removed = service.uninstall("my-hook")
         assert "claude" in removed
@@ -206,7 +206,7 @@ class TestUninstall:
 
 class TestModify:
     def test_modify_updates_fields(self, service):
-        service.install(name="my-hook", description="old", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="my-hook", description="old", topics=[], hook_config=SAMPLE_CONFIG)
         updated = service.modify("my-hook", description="new")
         assert updated.description == "new"
         assert updated.hook_config == SAMPLE_CONFIG
@@ -214,7 +214,7 @@ class TestModify:
     def test_modify_auto_syncs(self, service, claude_settings):
         """CRITICAL: If installed in an agent, modify updates agent's settings.json."""
         service.install(
-            name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG, sync_to=["claude"]
+            name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG, sync_to=["claude"]
         )
         service.modify("my-hook", hook_config=UPDATED_CONFIG)
 
@@ -236,7 +236,7 @@ class TestQuery:
         service.install(
             name="my-hook",
             description="",
-            tags=[],
+            topics=[],
             hook_config=SAMPLE_CONFIG,
             sync_to=["claude", "codex"],
         )
@@ -245,21 +245,21 @@ class TestQuery:
         assert sorted(str(a) for a in installed) == ["claude", "codex"]
 
     def test_list_hooks(self, service):
-        service.install(name="alpha", description="", tags=[], hook_config=SAMPLE_CONFIG)
-        service.install(name="beta", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="alpha", description="", topics=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="beta", description="", topics=[], hook_config=SAMPLE_CONFIG)
         hooks, total = service.list_items()
         assert total == 2
         assert {h.name for h in hooks} == {"alpha", "beta"}
 
     def test_list_hooks_search(self, service):
-        service.install(name="alpha", description="", tags=[], hook_config=SAMPLE_CONFIG)
-        service.install(name="beta", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="alpha", description="", topics=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="beta", description="", topics=[], hook_config=SAMPLE_CONFIG)
         hooks, total = service.list_items(search="alpha")
         assert total == 1
         assert hooks[0].name == "alpha"
 
     def test_get_hook(self, service):
-        service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG)
         hook = service.get_item("my-hook")
         assert hook.name == "my-hook"
 
@@ -268,7 +268,7 @@ class TestQuery:
             service.get_item("nonexistent")
 
     def test_get_hook_content(self, service):
-        service.install(name="my-hook", description="sample", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="my-hook", description="sample", topics=[], hook_config=SAMPLE_CONFIG)
         content = service.get_item_content("my-hook")
         assert "sample" in content
 
@@ -332,7 +332,7 @@ class TestImportFromAgent:
             }
         }
         claude_settings.write_text(json.dumps(existing, indent=2), encoding="utf-8")
-        service.install(name="existing", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="existing", description="", topics=[], hook_config=SAMPLE_CONFIG)
         with pytest.raises(FileExistsError):
             service.import_from_agent(
                 agent="claude",
@@ -344,7 +344,7 @@ class TestImportFromAgent:
 
 class TestCache:
     def test_invalidate_clears_cache(self, service):
-        service.install(name="my-hook", description="", tags=[], hook_config=SAMPLE_CONFIG)
+        service.install(name="my-hook", description="", topics=[], hook_config=SAMPLE_CONFIG)
         service.list_items()
         service.invalidate()
         assert service._cache is None

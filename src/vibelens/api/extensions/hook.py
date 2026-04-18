@@ -90,7 +90,7 @@ def install_hook(req: HookInstallRequest) -> dict:
         hook = service.install(
             name=req.name,
             description=req.description,
-            tags=req.tags,
+            topics=req.topics,
             hook_config=req.hook_config,
             sync_to=req.sync_to,
         )
@@ -109,7 +109,7 @@ def modify_hook(name: str, req: HookModifyRequest) -> dict:
         hook = service.modify(
             name=name,
             description=req.description,
-            tags=req.tags,
+            topics=req.topics,
             hook_config=req.hook_config,
         )
     except FileNotFoundError:

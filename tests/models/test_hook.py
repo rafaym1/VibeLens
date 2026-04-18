@@ -10,7 +10,7 @@ def test_hook_defaults():
     hook = Hook(name="my-hook")
     assert hook.name == "my-hook"
     assert hook.description == ""
-    assert hook.tags == []
+    assert hook.topics == []
     assert hook.hook_config == {}
     assert hook.content_hash == ""
     assert hook.installed_in == []
@@ -29,13 +29,13 @@ def test_hook_full_fields():
     hook = Hook(
         name="safety-guard",
         description="Blocks dangerous commands",
-        tags=["safety", "bash"],
+        topics=["safety", "bash"],
         hook_config=config,
         content_hash="abc123",
         installed_in=["claude"],
     )
     assert hook.description == "Blocks dangerous commands"
-    assert hook.tags == ["safety", "bash"]
+    assert hook.topics == ["safety", "bash"]
     assert hook.hook_config == config
     assert hook.installed_in == ["claude"]
 
@@ -64,11 +64,11 @@ def test_hook_serialization():
     hook = Hook(
         name="my-hook",
         description="desc",
-        tags=["a"],
+        topics=["a"],
         hook_config={"PreToolUse": []},
     )
     data = hook.model_dump()
     assert data["name"] == "my-hook"
-    assert data["tags"] == ["a"]
+    assert data["topics"] == ["a"]
     assert data["hook_config"] == {"PreToolUse": []}
     assert data["installed_in"] == []

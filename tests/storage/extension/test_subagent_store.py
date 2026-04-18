@@ -34,13 +34,13 @@ class TestParseSubagentMd:
         subagent = parse_subagent_md("sample-subagent", SAMPLE_SUBAGENT_MD)
         assert subagent.name == "sample-subagent"
         assert subagent.description == "A sample subagent"
-        assert subagent.tags == ["testing"]
+        assert subagent.topics == ["testing"]
         assert subagent.content_hash != ""
 
     def test_parses_minimal(self):
         subagent = parse_subagent_md("minimal", MINIMAL_SUBAGENT_MD)
         assert subagent.description == "Minimal"
-        assert subagent.tags == []
+        assert subagent.topics == []
 
     def test_no_frontmatter(self):
         subagent = parse_subagent_md("bare", NO_FRONTMATTER_MD)

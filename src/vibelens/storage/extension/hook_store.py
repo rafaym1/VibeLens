@@ -80,7 +80,7 @@ def parse_hook_json(name: str, text: str) -> Hook:
     return Hook(
         name=name,
         description=description,
-        tags=tags,
+        topics=tags,
         hook_config=hook_config,
         content_hash=compute_content_hash(text),
     )
@@ -98,7 +98,7 @@ def serialize_hook(hook: Hook) -> str:
     data = {
         "name": hook.name,
         "description": hook.description,
-        "tags": hook.tags,
+        "tags": hook.topics,
         "hook_config": hook.hook_config,
     }
     return json.dumps(data, indent=JSON_INDENT)

@@ -1,6 +1,6 @@
 """Hook metadata model parsed from flat .json hook files."""
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from vibelens.storage.extension.base_store import VALID_EXTENSION_NAME
 
@@ -13,9 +13,15 @@ class Hook(BaseModel):
     The central store remains a single ``{name}.json`` per hook.
     """
 
+    model_config = ConfigDict(populate_by_name=True)
+
     name: str = Field(description="Kebab-case hook identifier (filename without .json).")
     description: str = Field(default="", description="Human description of the hook.")
-    tags: list[str] = Field(default_factory=list, description="Tags for discovery.")
+    topics: list[str] = Field(
+        default_factory=list,
+        alias="tags",
+        description="Topics for discovery; accepts legacy `tags:` key.",
+    )
     hook_config: dict[str, list[dict]] = Field(
         default_factory=dict, description="Event-name (e.g. PreToolUse)."
     )

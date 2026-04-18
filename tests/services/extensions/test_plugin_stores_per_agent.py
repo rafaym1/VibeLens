@@ -76,7 +76,7 @@ def test_canonical_layout_store_round_trips(tmp_path: Path):
     assert round_tripped is not None
     assert round_tripped.name == "my-plugin"
     assert round_tripped.version == "1.0.0"
-    assert round_tripped.tags == ["testing"]
+    assert round_tripped.topics == ["testing"]
 
 
 def test_gemini_store_writes_flat_manifest(tmp_path: Path):
@@ -107,5 +107,5 @@ def test_gemini_store_round_trips_tags(tmp_path: Path):
     # Read the gemini manifest through the store's parser.
     plugin = gemini_store.read("my-plugin")
     assert plugin is not None
-    assert plugin.tags == ["testing"]
+    assert plugin.topics == ["testing"]
     assert plugin.version == "1.0.0"

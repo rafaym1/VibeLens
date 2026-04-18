@@ -41,7 +41,7 @@ class HookService(BaseExtensionService[Hook]):
         self,
         name: str,
         description: str = "",
-        tags: list[str] | None = None,
+        topics: list[str] | None = None,
         hook_config: dict[str, list[dict]] | None = None,
         sync_to: list[str] | None = None,
         content: str | None = None,
@@ -51,7 +51,7 @@ class HookService(BaseExtensionService[Hook]):
         Args:
             name: Kebab-case hook name.
             description: Human description.
-            tags: Tags for discovery.
+            topics: Topics for discovery.
             hook_config: Event-name to list-of-hook-groups mapping.
             sync_to: Agent keys to sync to after install.
             content: Raw JSON content (overrides structured fields if provided).
@@ -70,7 +70,10 @@ class HookService(BaseExtensionService[Hook]):
 
         if content is None:
             hook = Hook(
-                name=name, description=description, tags=tags or [], hook_config=hook_config or {}
+                name=name,
+                description=description,
+                topics=topics or [],
+                hook_config=hook_config or {},
             )
             content = serialize_hook(hook)
 
@@ -84,7 +87,7 @@ class HookService(BaseExtensionService[Hook]):
         self,
         name: str,
         description: str | None = None,
-        tags: list[str] | None = None,
+        topics: list[str] | None = None,
         hook_config: dict[str, list[dict]] | None = None,
         content: str | None = None,
     ) -> Hook:
@@ -93,7 +96,7 @@ class HookService(BaseExtensionService[Hook]):
         Args:
             name: Hook name.
             description: New description, or None to keep current.
-            tags: New tags, or None to keep current.
+            topics: New topics, or None to keep current.
             hook_config: New hook_config, or None to keep current.
             content: Raw JSON content (overrides structured fields if provided).
 
@@ -111,7 +114,7 @@ class HookService(BaseExtensionService[Hook]):
             hook = Hook(
                 name=name,
                 description=description if description is not None else existing.description,
-                tags=tags if tags is not None else existing.tags,
+                topics=topics if topics is not None else existing.topics,
                 hook_config=hook_config if hook_config is not None else existing.hook_config,
             )
             content = serialize_hook(hook)

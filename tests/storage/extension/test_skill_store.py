@@ -64,14 +64,14 @@ class TestParseSkillMd:
         skill = parse_skill_md("sample-skill", SAMPLE_SKILL_MD)
         assert skill.name == "sample-skill"
         assert skill.description == "A sample skill for testing"
-        assert skill.tags == ["testing", "demo"]
+        assert skill.topics == ["testing", "demo"]
         assert skill.allowed_tools == ["Bash", "Read"]
         assert skill.content_hash != ""
 
     def test_parses_minimal(self):
         skill = parse_skill_md("minimal", MINIMAL_SKILL_MD)
         assert skill.description == "Minimal"
-        assert skill.tags == []
+        assert skill.topics == []
         assert skill.allowed_tools == []
 
     def test_no_frontmatter(self):

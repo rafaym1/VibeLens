@@ -10,7 +10,7 @@ def test_subagent_defaults():
     subagent = Subagent(name="my-subagent")
     assert subagent.name == "my-subagent"
     assert subagent.description == ""
-    assert subagent.tags == []
+    assert subagent.topics == []
     assert subagent.content_hash == ""
     assert subagent.installed_in == []
 
@@ -20,12 +20,12 @@ def test_subagent_full_fields():
     subagent = Subagent(
         name="test-subagent",
         description="A test subagent",
-        tags=["testing", "demo"],
+        topics=["testing", "demo"],
         content_hash="abc123",
         installed_in=["claude", "codex"],
     )
     assert subagent.description == "A test subagent"
-    assert subagent.tags == ["testing", "demo"]
+    assert subagent.topics == ["testing", "demo"]
     assert subagent.installed_in == ["claude", "codex"]
 
 
@@ -49,8 +49,8 @@ def test_subagent_name_validation_accepts_kebab():
 
 def test_subagent_serialization():
     """Subagent serializes to dict cleanly."""
-    subagent = Subagent(name="my-subagent", description="desc", tags=["a"])
+    subagent = Subagent(name="my-subagent", description="desc", topics=["a"])
     data = subagent.model_dump()
     assert data["name"] == "my-subagent"
-    assert data["tags"] == ["a"]
+    assert data["topics"] == ["a"]
     assert data["installed_in"] == []

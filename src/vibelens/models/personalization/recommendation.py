@@ -1,6 +1,6 @@
 """Recommendation pipeline models — catalog, profile, rationale, and ranked items."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from vibelens.models.enums import AgentExtensionType
 from vibelens.models.personalization.constants import DESCRIPTION_RATIONALE
@@ -9,6 +9,8 @@ from vibelens.models.personalization.constants import DESCRIPTION_RATIONALE
 class RecommendationItem(BaseModel):
     """A catalog item surfaced by the recommendation pipeline."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     extension_id: str = Field(description="Unique identifier.")
     extension_type: AgentExtensionType = Field(description="Classified type.")
     name: str = Field(description="Display name.")
@@ -16,7 +18,11 @@ class RecommendationItem(BaseModel):
     source_url: str = Field(description="GitHub URL.")
     updated_at: str = Field(description="Last commit ISO timestamp.")
     description: str = Field(description="Plain language, 1-2 sentences.")
-    tags: list[str] = Field(description="Searchable tags.")
+    topics: list[str] = Field(
+        default_factory=list,
+        alias="tags",
+        description="Searchable topics; accepts legacy `tags:` key.",
+    )
     stars: int = Field(default=0, description="GitHub star count.")
     forks: int = Field(default=0, description="GitHub fork count.")
     license: str = Field(default="", description="Repository license identifier (e.g. MIT).")
