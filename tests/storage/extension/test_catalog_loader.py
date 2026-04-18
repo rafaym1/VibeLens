@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 from vibelens.storage.extension.catalog import (
-    CatalogManifest,
     CatalogSnapshot,
     _clear_user_catalog,
     load_catalog_from_dir,
