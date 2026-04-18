@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from vibelens.api.extensions.factory import build_typed_router
+from vibelens.models.enums import AgentExtensionType
 from vibelens.services.extensions.subagent_service import SubagentService
 from vibelens.storage.extension.subagent_store import SubagentStore
 
@@ -29,7 +30,7 @@ def subagent_service(tmp_path):
 
 @pytest.fixture
 def client(subagent_service):
-    router = build_typed_router(lambda: subagent_service, "subagent")
+    router = build_typed_router(lambda: subagent_service, AgentExtensionType.SUBAGENT)
     app = FastAPI()
     app.include_router(router, prefix="/api/extensions")
     return TestClient(app)

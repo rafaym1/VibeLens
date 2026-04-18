@@ -95,3 +95,17 @@ class ExtensionMetaResponse(BaseModel):
 
     categories: list[str] = Field(description="Unique category values from catalog.")
     has_profile: bool = Field(description="Whether a user profile exists for relevance sorting.")
+
+
+class AgentCapability(BaseModel):
+    """Per-agent capability entry."""
+
+    key: str = Field(description="ExtensionSource value, e.g. 'claude'.")
+    installed: bool = Field(description="Whether the agent's root directory exists.")
+    supported_types: list[str] = Field(description="Extension types this agent can install.")
+
+
+class AgentCapabilitiesResponse(BaseModel):
+    """Response for GET /extensions/agents."""
+
+    agents: list[AgentCapability] = Field(description="All known platforms.")

@@ -77,8 +77,7 @@ async def install_extension_endpoint(
     """Install an extension item to one or more agent platforms."""
     platforms = body.target_platforms
     logger.info(
-        "Install request: item=%s, platforms=%s, overwrite=%s",
-        item_id, platforms, body.overwrite,
+        "Install request: item=%s, platforms=%s, overwrite=%s", item_id, platforms, body.overwrite
     )
     results: dict[str, CatalogInstallResult] = {}
     first_path = ""

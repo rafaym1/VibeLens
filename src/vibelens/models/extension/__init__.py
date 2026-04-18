@@ -6,18 +6,20 @@ from vibelens.models.extension.hook import Hook
 from vibelens.models.extension.item import (
     EXTENSION_TYPE_LABELS,
     FILE_BASED_TYPES,
-    ExtensionItem,
+    AgentExtensionItem,
 )
+from vibelens.models.extension.plugin import Plugin
 from vibelens.models.extension.skill import Skill
 from vibelens.models.extension.subagent import Subagent
 
 __all__ = [
     "EXTENSION_TYPE_LABELS",
     "Command",
-    "ExtensionItem",
+    "AgentExtensionItem",
     "ExtensionSource",
     "FILE_BASED_TYPES",
     "Hook",
+    "Plugin",
     "Skill",
     "Subagent",
 ]

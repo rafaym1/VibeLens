@@ -4,19 +4,20 @@ from vibelens.models.enums import AgentExtensionType
 from vibelens.models.extension import (
     EXTENSION_TYPE_LABELS,
     FILE_BASED_TYPES,
-    ExtensionItem,
+    AgentExtensionItem,
 )
 
 
 def test_agent_extension_type_values():
-    """All 5 extension types are present."""
+    """All 6 extension types are present."""
     assert AgentExtensionType.SKILL == "skill"
     assert AgentExtensionType.SUBAGENT == "subagent"
     assert AgentExtensionType.COMMAND == "command"
     assert AgentExtensionType.HOOK == "hook"
     assert AgentExtensionType.REPO == "repo"
-    assert len(AgentExtensionType) == 5
-    print(f"All 5 extension types: {list(AgentExtensionType)}")
+    assert AgentExtensionType.PLUGIN == "plugin"
+    assert len(AgentExtensionType) == 6
+    print(f"All 6 extension types: {list(AgentExtensionType)}")
 
 
 def test_file_based_types():
@@ -53,8 +54,8 @@ def test_extension_item_is_file_based():
         repo_full_name="test/repo",
         install_method="skill_file",
     )
-    skill_item = ExtensionItem(extension_type=AgentExtensionType.SKILL, **base_kwargs)
-    repo_item = ExtensionItem(extension_type=AgentExtensionType.REPO, **base_kwargs)
+    skill_item = AgentExtensionItem(extension_type=AgentExtensionType.SKILL, **base_kwargs)
+    repo_item = AgentExtensionItem(extension_type=AgentExtensionType.REPO, **base_kwargs)
 
     assert skill_item.is_file_based is True
     assert repo_item.is_file_based is False

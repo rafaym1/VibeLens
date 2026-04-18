@@ -19,7 +19,7 @@ from vibelens.deps import get_personalization_store
 from vibelens.llm.backend import InferenceBackend
 from vibelens.llm.cost_estimator import CostEstimate, estimate_analysis_cost
 from vibelens.llm.tokenizer import count_tokens
-from vibelens.models.extension import ExtensionItem
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.models.llm.inference import InferenceRequest
 from vibelens.models.personalization.enums import PersonalizationMode
 from vibelens.models.personalization.recommendation import (
@@ -334,7 +334,7 @@ async def _generate_profile(
 
 def _retrieve_and_score(
     catalog: CatalogSnapshot, profile: UserProfile
-) -> list[tuple[ExtensionItem, float]]:
+) -> list[tuple[AgentExtensionItem, float]]:
     """L3: TF-IDF retrieval then weighted scoring.
 
     Args:
@@ -363,7 +363,7 @@ def _retrieve_and_score(
 async def _generate_rationales(
     backend: InferenceBackend,
     profile: UserProfile,
-    scored_candidates: list[tuple[ExtensionItem, float]],
+    scored_candidates: list[tuple[AgentExtensionItem, float]],
     log_dir: Path,
     top_n: int = RATIONALE_MAX_RESULTS,
 ) -> tuple[RationaleOutput, Metrics]:
@@ -419,7 +419,7 @@ async def _generate_rationales(
 
 
 def _merge_and_rank(
-    scored_candidates: list[tuple[ExtensionItem, float]], rationale_output: RationaleOutput
+    scored_candidates: list[tuple[AgentExtensionItem, float]], rationale_output: RationaleOutput
 ) -> list[RankedRecommendationItem]:
     """Combine L3 scores with L4 ranked rationales into final recommendations.
 

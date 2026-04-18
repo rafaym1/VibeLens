@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from vibelens.models.enums import AgentExtensionType, AgentType, ExtensionSource
-from vibelens.models.extension import ExtensionItem
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.services.extensions.catalog_resolver import install_catalog_item
 from vibelens.services.extensions.command_service import CommandService
 from vibelens.services.extensions.hook_service import HookService
@@ -23,6 +23,8 @@ from vibelens.storage.extension.subagent_store import SubagentStore
 INSTALL_MODULE = "vibelens.services.extensions.catalog_resolver"
 CLAUDE_KEY = "claude"
 CODEX_KEY = "codex"
+CLAUDE_SRC = ExtensionSource.CLAUDE
+CODEX_SRC = ExtensionSource.CODEX
 
 SUBAGENT_MD = "---\ndescription: A test subagent\n---\n# Body\n"
 SUBAGENT_MD_V2 = "---\ndescription: Updated subagent\n---\n# Body v2\n"
@@ -33,27 +35,32 @@ HOOK_GROUP = {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo 
 HOOK_GROUP_V2 = {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo second"}]}
 
 
-def _make_platform(root: Path, source: ExtensionSource, install_key: str) -> AgentPlatform:
+def _make_platform(root: Path, source: ExtensionSource) -> AgentPlatform:
     """Build an AgentPlatform rooted under root."""
+    root.mkdir(parents=True, exist_ok=True)
     return AgentPlatform(
         source=source,
         root=root,
         skills_dir=root / "skills",
         commands_dir=root / "commands",
         subagents_dir=root / "agents",
-        settings_path=root / "settings.json",
-        install_key=install_key,
+        hook_config_path=root / "settings.json",
+        supported_types=frozenset(
+            {
+                AgentExtensionType.SKILL,
+                AgentExtensionType.COMMAND,
+                AgentExtensionType.SUBAGENT,
+                AgentExtensionType.HOOK,
+                AgentExtensionType.PLUGIN,
+            }
+        ),
     )
 
 
-def _make_platforms(tmp_path: Path) -> dict[str, AgentPlatform]:
-    claude = _make_platform(
-        root=tmp_path / ".claude", source=ExtensionSource.CLAUDE, install_key=CLAUDE_KEY
-    )
-    codex = _make_platform(
-        root=tmp_path / ".codex", source=ExtensionSource.CODEX, install_key=CODEX_KEY
-    )
-    return {claude.install_key: claude, codex.install_key: codex}
+def _make_platforms(tmp_path: Path) -> dict[ExtensionSource, AgentPlatform]:
+    claude = _make_platform(root=tmp_path / ".claude", source=ExtensionSource.CLAUDE)
+    codex = _make_platform(root=tmp_path / ".codex", source=ExtensionSource.CODEX)
+    return {claude.source: claude, codex.source: codex}
 
 
 def _make_item(
@@ -61,8 +68,8 @@ def _make_item(
     name: str,
     install_content: str,
     install_method: str = "skill_file",
-) -> ExtensionItem:
-    return ExtensionItem(
+) -> AgentExtensionItem:
+    return AgentExtensionItem(
         extension_id=f"bwc:{extension_type.value}:{name}",
         extension_type=extension_type,
         name=name,
@@ -84,8 +91,8 @@ def _subagent_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> Su
     """Build a SubagentService whose agents map matches the test platforms."""
     central = SubagentStore(root=tmp_path / "central-subagents", create=True)
     agents = {
-        CLAUDE_KEY: SubagentStore(root=platforms[CLAUDE_KEY].subagents_dir, create=True),
-        CODEX_KEY: SubagentStore(root=platforms[CODEX_KEY].subagents_dir, create=True),
+        CLAUDE_KEY: SubagentStore(root=platforms[CLAUDE_SRC].subagents_dir, create=True),
+        CODEX_KEY: SubagentStore(root=platforms[CODEX_SRC].subagents_dir, create=True),
     }
     return SubagentService(central=central, agents=agents)
 
@@ -93,8 +100,8 @@ def _subagent_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> Su
 def _command_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> CommandService:
     central = CommandStore(root=tmp_path / "central-commands", create=True)
     agents = {
-        CLAUDE_KEY: CommandStore(root=platforms[CLAUDE_KEY].commands_dir, create=True),
-        CODEX_KEY: CommandStore(root=platforms[CODEX_KEY].commands_dir, create=True),
+        CLAUDE_KEY: CommandStore(root=platforms[CLAUDE_SRC].commands_dir, create=True),
+        CODEX_KEY: CommandStore(root=platforms[CODEX_SRC].commands_dir, create=True),
     }
     return CommandService(central=central, agents=agents)
 
@@ -102,8 +109,8 @@ def _command_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> Com
 def _hook_service(tmp_path: Path, platforms: dict[str, AgentPlatform]) -> HookService:
     central = HookStore(root=tmp_path / "central-hooks", create=True)
     agent_settings = {
-        CLAUDE_KEY: platforms[CLAUDE_KEY].settings_path,
-        CODEX_KEY: platforms[CODEX_KEY].settings_path,
+        CLAUDE_KEY: platforms[CLAUDE_SRC].hook_config_path,
+        CODEX_KEY: platforms[CODEX_SRC].hook_config_path,
     }
     return HookService(central=central, agents=agent_settings)
 
@@ -115,7 +122,9 @@ def _patch_all(
     hook_svc: HookService | None = None,
 ):
     """Helper: layer patches for platforms + relevant service getters."""
-    patches = [patch(f"{INSTALL_MODULE}.INSTALLABLE_PLATFORMS", platforms)]
+    patches = [
+        patch.dict("vibelens.services.extensions.platforms.PLATFORMS", platforms, clear=True)
+    ]
     if subagent_svc is not None:
         patches.append(patch(f"{INSTALL_MODULE}.get_subagent_service", return_value=subagent_svc))
     if command_svc is not None:
@@ -155,7 +164,7 @@ def test_subagent_install_populates_central_and_agent(tmp_path: Path):
     finally:
         _stop(patches)
 
-    agent_file = platforms[CLAUDE_KEY].subagents_dir / "my-agent.md"
+    agent_file = platforms[CLAUDE_SRC].subagents_dir / "my-agent.md"
     central_file = tmp_path / "central-subagents" / "my-agent.md"
     assert returned == agent_file, f"Expected return path {agent_file}, got {returned}"
     assert agent_file.is_file(), "Subagent not written to agent dir"
@@ -182,8 +191,8 @@ def test_subagent_install_second_platform_reuses_central(tmp_path: Path):
     finally:
         _stop(patches)
 
-    claude_file = platforms[CLAUDE_KEY].subagents_dir / "shared.md"
-    codex_file = platforms[CODEX_KEY].subagents_dir / "shared.md"
+    claude_file = platforms[CLAUDE_SRC].subagents_dir / "shared.md"
+    codex_file = platforms[CODEX_SRC].subagents_dir / "shared.md"
     central_file = tmp_path / "central-subagents" / "shared.md"
     assert returned == codex_file
     assert claude_file.is_file(), "Claude agent copy missing"
@@ -212,7 +221,7 @@ def test_subagent_install_overwrite_true_replaces_central(tmp_path: Path):
         _stop(patches)
 
     central_file = tmp_path / "central-subagents" / "swap.md"
-    agent_file = platforms[CLAUDE_KEY].subagents_dir / "swap.md"
+    agent_file = platforms[CLAUDE_SRC].subagents_dir / "swap.md"
     assert central_file.read_text() == SUBAGENT_MD_V2
     assert agent_file.read_text() == SUBAGENT_MD_V2
     print(f"Overwrite replaced central: {central_file}")
@@ -238,7 +247,7 @@ def test_command_install_populates_central_and_agent(tmp_path: Path):
     finally:
         _stop(patches)
 
-    agent_file = platforms[CLAUDE_KEY].commands_dir / "run-task.md"
+    agent_file = platforms[CLAUDE_SRC].commands_dir / "run-task.md"
     central_file = tmp_path / "central-commands" / "run-task.md"
     assert returned == agent_file
     assert agent_file.is_file()
@@ -267,7 +276,7 @@ def test_command_install_overwrite_true_replaces_central(tmp_path: Path):
         _stop(patches)
 
     central_file = tmp_path / "central-commands" / "swap-cmd.md"
-    agent_file = platforms[CLAUDE_KEY].commands_dir / "swap-cmd.md"
+    agent_file = platforms[CLAUDE_SRC].commands_dir / "swap-cmd.md"
     assert central_file.read_text() == COMMAND_MD_V2
     assert agent_file.read_text() == COMMAND_MD_V2
 
@@ -304,7 +313,7 @@ def test_hook_install_populates_central_and_tags_agent_settings(tmp_path: Path):
     central_data = json.loads(central_file.read_text())
     assert "PreToolUse" in central_data["hook_config"]
 
-    settings_path = platforms[CLAUDE_KEY].settings_path
+    settings_path = platforms[CLAUDE_SRC].hook_config_path
     settings = json.loads(settings_path.read_text())
     groups = settings["hooks"]["PreToolUse"]
     assert len(groups) == 1
@@ -332,7 +341,7 @@ def test_hook_install_dedups_via_marker(tmp_path: Path):
     finally:
         _stop(patches)
 
-    settings = json.loads(platforms[CLAUDE_KEY].settings_path.read_text())
+    settings = json.loads(platforms[CLAUDE_SRC].hook_config_path.read_text())
     groups = settings["hooks"]["PreToolUse"]
     managed = [g for g in groups if g.get("_vibelens_managed") == "dedup-hook"]
     assert len(managed) == 1, f"Expected single managed group, got {len(managed)}"
@@ -364,7 +373,7 @@ def test_hook_install_overwrite_updates_central_and_agent(tmp_path: Path):
     finally:
         _stop(patches)
 
-    settings = json.loads(platforms[CLAUDE_KEY].settings_path.read_text())
+    settings = json.loads(platforms[CLAUDE_SRC].hook_config_path.read_text())
     groups = settings["hooks"]["PreToolUse"]
     managed = [g for g in groups if g.get("_vibelens_managed") == "swap-hook"]
     assert len(managed) == 1
@@ -379,7 +388,7 @@ def test_hook_uninstall_from_agent_removes_only_managed(tmp_path: Path):
     service = _hook_service(tmp_path=tmp_path, platforms=platforms)
 
     # Seed an unmanaged group so we can verify it survives uninstall.
-    settings_path = platforms[CLAUDE_KEY].settings_path
+    settings_path = platforms[CLAUDE_SRC].hook_config_path
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     unmanaged = {
         "hooks": {

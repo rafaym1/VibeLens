@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from vibelens.models.extension import ExtensionItem
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.storage.extension.catalog import load_catalog_from_path
 
 
@@ -48,7 +48,7 @@ def test_load_catalog_from_path():
     assert snapshot is not None
     assert snapshot.version == "2026-04-10"
     assert len(snapshot.items) == 5
-    assert all(isinstance(item, ExtensionItem) for item in snapshot.items)
+    assert all(isinstance(item, AgentExtensionItem) for item in snapshot.items)
     print(f"Loaded {len(snapshot.items)} items, version={snapshot.version}")
     path.unlink()
 

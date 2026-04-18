@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from vibelens.api.extensions.factory import build_typed_router
+from vibelens.models.enums import AgentExtensionType
 from vibelens.services.extensions.skill_service import SkillService
 from vibelens.storage.extension.skill_store import SkillStore
 
@@ -29,7 +30,7 @@ def skill_service(tmp_path):
 
 @pytest.fixture
 def client(skill_service):
-    router = build_typed_router(lambda: skill_service, "skill")
+    router = build_typed_router(lambda: skill_service, AgentExtensionType.SKILL)
     app = FastAPI()
     app.include_router(router, prefix="/api/extensions")
     return TestClient(app)

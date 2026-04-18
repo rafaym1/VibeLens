@@ -99,21 +99,21 @@ def get_skill_service():
 def _build_agent_skill_stores() -> dict:
     """Build agent SkillStore instances from platform registry.
 
-    Installable platforms (those with an install_key) always get a store
-    so that catalog installs can sync to them even if the directory does
-    not exist yet.  Non-installable platforms are only included when the
-    directory already exists on disk.
+    Stores are created only when the platform root exists AND the platform
+    supports the SKILL type.
     """
+    from vibelens.models.enums import AgentExtensionType
     from vibelens.services.extensions.platforms import PLATFORMS
     from vibelens.storage.extension.skill_store import SkillStore
 
     stores: dict[str, SkillStore] = {}
     for source, platform in PLATFORMS.items():
+        if AgentExtensionType.SKILL not in platform.supported_types:
+            continue
+        if not platform.root.expanduser().is_dir():
+            continue
         resolved = platform.skills_dir.expanduser().resolve()
-        if platform.install_key:
-            stores[source.value] = SkillStore(resolved, create=True)
-        elif resolved.is_dir():
-            stores[source.value] = SkillStore(resolved)
+        stores[source.value] = SkillStore(resolved, create=True)
     return stores
 
 
@@ -133,24 +133,23 @@ def get_command_service():
 
 
 def _build_agent_command_stores() -> dict:
-    """Build agent CommandStore instances from platform registry.
+    """Build agent CommandStore instances.
 
-    Installable platforms (those with an install_key and a commands_dir)
-    always get a store so that catalog installs can sync to them even if
-    the directory does not exist yet.
+    Stores are created only when the platform root exists AND the platform
+    supports COMMAND type.
     """
+    from vibelens.models.enums import AgentExtensionType
     from vibelens.services.extensions.platforms import PLATFORMS
     from vibelens.storage.extension.command_store import CommandStore
 
     stores: dict[str, CommandStore] = {}
     for source, platform in PLATFORMS.items():
-        if platform.commands_dir is None:
+        if AgentExtensionType.COMMAND not in platform.supported_types:
+            continue
+        if platform.commands_dir is None or not platform.root.expanduser().is_dir():
             continue
         resolved = platform.commands_dir.expanduser().resolve()
-        if platform.install_key:
-            stores[source.value] = CommandStore(resolved, create=True)
-        elif resolved.is_dir():
-            stores[source.value] = CommandStore(resolved)
+        stores[source.value] = CommandStore(resolved, create=True)
     return stores
 
 
@@ -170,23 +169,23 @@ def get_subagent_service():
 
 
 def _build_agent_subagent_stores() -> dict:
-    """Build agent SubagentStore instances from platform registry.
+    """Build agent SubagentStore instances.
 
-    Subagents live in their own directory (``platform.subagents_dir``), not
-    shared with commands.
+    Stores are created only when the platform root exists AND the platform
+    supports SUBAGENT type.
     """
+    from vibelens.models.enums import AgentExtensionType
     from vibelens.services.extensions.platforms import PLATFORMS
     from vibelens.storage.extension.subagent_store import SubagentStore
 
     stores: dict[str, SubagentStore] = {}
     for source, platform in PLATFORMS.items():
-        if platform.subagents_dir is None:
+        if AgentExtensionType.SUBAGENT not in platform.supported_types:
+            continue
+        if platform.subagents_dir is None or not platform.root.expanduser().is_dir():
             continue
         resolved = platform.subagents_dir.expanduser().resolve()
-        if platform.install_key:
-            stores[source.value] = SubagentStore(resolved, create=True)
-        elif resolved.is_dir():
-            stores[source.value] = SubagentStore(resolved)
+        stores[source.value] = SubagentStore(resolved, create=True)
     return stores
 
 
@@ -199,26 +198,91 @@ def get_hook_service():
 
         settings = get_settings()
         central = HookStore(settings.storage.managed_hooks_dir, create=True)
-        agent_settings = _build_agent_settings_paths()
+        agent_settings = _build_agent_hook_config_paths()
         return HookService(central=central, agents=agent_settings)
 
     return _get_or_create("hook_service", _create)
 
 
-def _build_agent_settings_paths() -> dict:
-    """Build mapping of string agent key to each platform's settings.json path.
+def get_plugin_service():
+    """Return cached PluginService singleton."""
 
-    Only platforms with a non-None ``settings_path`` (CLAUDE, CODEX) are included.
-    The file does not need to exist yet — it will be created on first sync.
+    def _create():
+        from vibelens.services.extensions.plugin_service import PluginService
+        from vibelens.storage.extension.plugin_stores import PluginStore
+
+        settings = get_settings()
+        central = PluginStore(settings.storage.managed_plugins_dir, create=True)
+        agent_plugin_stores = _build_agent_plugin_stores()
+        return PluginService(central=central, agents=agent_plugin_stores)
+
+    return _get_or_create("plugin_service", _create)
+
+
+def _build_agent_plugin_stores() -> dict:
+    """Build agent plugin store instances from platform registry.
+
+    Each agent uses the store class that matches its on-disk manifest
+    layout: Claude goes through the 4-file marketplace merge; Codex,
+    Cursor, and Copilot use the canonical Claude-shape layout with
+    renamed manifest directories; Gemini uses a flat
+    ``gemini-extension.json`` with field translation.
     """
+    from vibelens.models.enums import AgentExtensionType, ExtensionSource
+    from vibelens.services.extensions.platforms import PLATFORMS
+    from vibelens.storage.extension.plugin_stores import (
+        ClaudePluginStore,
+        CodexPluginStore,
+        CopilotPluginStore,
+        CursorPluginStore,
+        GeminiPluginStore,
+        PluginStore,
+    )
+
+    store_class_map = {
+        ExtensionSource.CODEX: CodexPluginStore,
+        ExtensionSource.CURSOR: CursorPluginStore,
+        ExtensionSource.COPILOT: CopilotPluginStore,
+        ExtensionSource.GEMINI: GeminiPluginStore,
+    }
+
+    stores: dict = {}
+    for source, platform in PLATFORMS.items():
+        if AgentExtensionType.PLUGIN not in platform.supported_types:
+            continue
+        if not platform.root.expanduser().is_dir():
+            continue
+        if source == ExtensionSource.CLAUDE:
+            cache_root = (
+                platform.root.expanduser() / "plugins" / "cache" / "vibelens"
+            )
+            stores[source.value] = ClaudePluginStore(cache_root, create=True)
+            continue
+        if platform.plugins_dir is None:
+            continue
+        resolved = platform.plugins_dir.expanduser().resolve()
+        store_class = store_class_map.get(source, PluginStore)
+        stores[source.value] = store_class(resolved, create=True)
+    return stores
+
+
+def _build_agent_hook_config_paths() -> dict:
+    """Build mapping of agent key to each platform's hook config file path.
+
+    Only platforms that support HOOK type and have a hook_config_path are
+    included. The file does not need to exist yet — it will be created on
+    first sync.
+    """
+    from vibelens.models.enums import AgentExtensionType
     from vibelens.services.extensions.platforms import PLATFORMS
 
     paths: dict[str, Path] = {}
     for source, platform in PLATFORMS.items():
-        if platform.settings_path is None:
+        if AgentExtensionType.HOOK not in platform.supported_types:
             continue
-        resolved = platform.settings_path.expanduser().resolve()
-        paths[source.value] = resolved
+        if platform.hook_config_path is None:
+            continue
+        paths[source.value] = platform.hook_config_path.expanduser().resolve()
     return paths
 
 

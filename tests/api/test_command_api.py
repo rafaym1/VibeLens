@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from vibelens.api.extensions.factory import build_typed_router
+from vibelens.models.enums import AgentExtensionType
 from vibelens.services.extensions.command_service import CommandService
 from vibelens.storage.extension.command_store import CommandStore
 
@@ -29,7 +30,7 @@ def command_service(tmp_path):
 
 @pytest.fixture
 def client(command_service):
-    router = build_typed_router(lambda: command_service, "command")
+    router = build_typed_router(lambda: command_service, AgentExtensionType.COMMAND)
     app = FastAPI()
     app.include_router(router, prefix="/api/extensions")
     return TestClient(app)

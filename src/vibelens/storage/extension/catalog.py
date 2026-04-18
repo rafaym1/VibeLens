@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, PrivateAttr
 
-from vibelens.models.extension import ExtensionItem
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -31,14 +31,14 @@ class CatalogSnapshot(BaseModel):
 
     version: str = Field(description="Catalog version date string (e.g. 2026-04-10).")
     schema_version: int = Field(default=1, description="Catalog schema version.")
-    items: list[ExtensionItem] = Field(default_factory=list, description="All catalog items.")
-    _index: dict[str, ExtensionItem] = PrivateAttr(default_factory=dict)
+    items: list[AgentExtensionItem] = Field(default_factory=list, description="All catalog items.")
+    _index: dict[str, AgentExtensionItem] = PrivateAttr(default_factory=dict)
 
     def model_post_init(self, __context: object) -> None:
         """Build item lookup index after loading."""
         self._index = {item.extension_id: item for item in self.items}
 
-    def get_item(self, item_id: str) -> ExtensionItem | None:
+    def get_item(self, item_id: str) -> AgentExtensionItem | None:
         """Look up a catalog item by ID.
 
         Args:
@@ -64,7 +64,7 @@ def load_catalog_from_path(path: Path) -> CatalogSnapshot | None:
     try:
         raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)
-        items = [ExtensionItem.model_validate(item) for item in data.get("items", [])]
+        items = [AgentExtensionItem.model_validate(item) for item in data.get("items", [])]
         return CatalogSnapshot(
             version=data.get("version", "unknown"),
             schema_version=data.get("schema_version", 1),

@@ -5,7 +5,7 @@ from pathlib import Path
 from cachetools import TTLCache
 
 from vibelens.deps import get_personalization_store
-from vibelens.models.extension import ExtensionItem
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.models.personalization.recommendation import UserProfile
 from vibelens.services.extensions.catalog_resolver import (
     install_catalog_item,
@@ -81,7 +81,7 @@ def get_extension_metadata() -> tuple[list[str], bool]:
     return categories, has_profile
 
 
-def get_extension_by_id(item_id: str) -> ExtensionItem | None:
+def get_extension_by_id(item_id: str) -> AgentExtensionItem | None:
     """Look up a single catalog item by ID.
 
     Args:
@@ -181,12 +181,12 @@ def _get_catalog() -> CatalogSnapshot:
 
 
 def _filter_items(
-    items: list[ExtensionItem],
+    items: list[AgentExtensionItem],
     search: str | None,
     extension_type: str | None,
     category: str | None,
     platform: str | None,
-) -> list[ExtensionItem]:
+) -> list[AgentExtensionItem]:
     """Apply search and filter criteria to items.
 
     Args:
@@ -223,7 +223,7 @@ def _filter_items(
     return result
 
 
-def _score_relevance(item: ExtensionItem, keywords: list[str]) -> float:
+def _score_relevance(item: AgentExtensionItem, keywords: list[str]) -> float:
     """Score item relevance against user profile keywords.
 
     Args:
@@ -257,8 +257,8 @@ def _load_latest_profile() -> UserProfile | None:
 
 
 def _sort_items(
-    items: list[ExtensionItem], sort: str, profile: UserProfile | None = None
-) -> list[ExtensionItem]:
+    items: list[AgentExtensionItem], sort: str, profile: UserProfile | None = None
+) -> list[AgentExtensionItem]:
     """Sort items by the given criterion.
 
     Args:
@@ -285,7 +285,7 @@ def _sort_items(
     return sorted(items, key=lambda i: i.quality_score, reverse=True)
 
 
-async def _resolve_content(item: ExtensionItem) -> dict:
+async def _resolve_content(item: AgentExtensionItem) -> dict:
     """Resolve displayable content for an extension item.
 
     Args:

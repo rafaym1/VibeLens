@@ -80,12 +80,32 @@ interface SyncTargetsCache {
   invalidate(): void;
 }
 
+export type AgentCapability = {
+  key: string;
+  installed: boolean;
+  supported_types: string[];
+};
+
+export type AgentCapabilitiesResponse = {
+  agents: AgentCapability[];
+};
+
+interface AgentsApi {
+  list(): Promise<AgentCapabilitiesResponse>;
+}
+
+interface PluginApi {
+  uninstall(name: string, agent: string): Promise<{ name: string; agent: string; removed_path: string }>;
+}
+
 export interface ExtensionsClient {
   catalog: CatalogApi;
   skills: TypeApi<unknown>;
   commands: TypeApi<unknown>;
   hooks: TypeApi<unknown>;
   subagents: TypeApi<unknown>;
+  plugins: PluginApi;
+  agents: AgentsApi;
   syncTargets: SyncTargetsCache;
 }
 
@@ -286,12 +306,36 @@ export function createExtensionsClient(
     },
   };
 
+  const agents: AgentsApi = {
+    async list() {
+      const res = await fetchFn(`${BASE}/agents`);
+      if (!res.ok) throw new Error("Failed to fetch agents");
+      return res.json();
+    },
+  };
+
+  const plugins: PluginApi = {
+    async uninstall(name, agent) {
+      const res = await fetchFn(
+        `${BASE}/plugins/${encodeURIComponent(name)}/agents/${encodeURIComponent(agent)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.detail || `Failed to uninstall plugin ${name} from ${agent}`);
+      }
+      return res.json();
+    },
+  };
+
   return {
     catalog,
     skills: createTypeApi(fetchFn, "skills"),
     commands: createTypeApi(fetchFn, "commands"),
     hooks: createTypeApi(fetchFn, "hooks"),
     subagents: createTypeApi(fetchFn, "subagents"),
+    plugins,
+    agents,
     syncTargets,
   };
 }

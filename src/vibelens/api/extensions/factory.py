@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from vibelens.models.enums import AgentExtensionType
 from vibelens.schemas.extensions import (
     ExtensionDetailResponse,
     ExtensionInstallRequest,
@@ -19,12 +20,13 @@ DEFAULT_PAGE_SIZE = 50
 
 
 def build_typed_router(
-    service_getter: Callable[[], BaseExtensionService[Any]], type_name: str
+    service_getter: Callable[[], BaseExtensionService[Any]], extension_type: AgentExtensionType
 ) -> APIRouter:
     """Generate CRUD router for a file-based extension type.
 
-    Used for skill, command, subagent. Hook has a hand-written router.
+    Used for skill, command, subagent, plugin. Hook has a hand-written router.
     """
+    type_name = extension_type.value
     plural = f"{type_name}s"
     label = type_name.capitalize()
     router = APIRouter(prefix=f"/{plural}", tags=[plural])

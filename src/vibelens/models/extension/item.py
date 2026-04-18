@@ -20,7 +20,7 @@ EXTENSION_TYPE_LABELS: dict[AgentExtensionType, str] = {
 }
 
 
-class ExtensionItem(BaseModel):
+class AgentExtensionItem(BaseModel):
     """A discoverable agent extension with quality metrics and installation metadata.
 
     Represents a skill, subagent, command, hook, or repo that users can

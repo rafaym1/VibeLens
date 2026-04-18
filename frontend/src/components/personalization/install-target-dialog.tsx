@@ -1,6 +1,7 @@
 import { Check, Download, Loader2, Monitor, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useExtensionsClient } from "../../app";
+import type { AgentCapability } from "../../api/extensions";
 import type { ExtensionSyncTarget } from "../../types";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "../ui/modal";
 import { normalizeSourceType, SOURCE_LABELS } from "./constants";
@@ -56,6 +57,31 @@ export function InstallTargetDialog({
 }: InstallTargetDialogProps) {
   const client = useExtensionsClient();
   const [fetchedInstalled, setFetchedInstalled] = useState<string[] | null>(null);
+  const [capabilities, setCapabilities] = useState<AgentCapability[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await client.agents.list();
+        if (!cancelled) setCapabilities(data.agents);
+      } catch {
+        /* best-effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  const supportedAgentKeys = useMemo(() => {
+    if (capabilities === null) return null;
+    return new Set(
+      capabilities
+        .filter((a) => a.installed && a.supported_types.includes(typeKey))
+        .map((a) => a.key),
+    );
+  }, [capabilities, typeKey]);
 
   // Auto-fetch installed_in if caller didn't provide it.
   useEffect(() => {
@@ -155,6 +181,10 @@ export function InstallTargetDialog({
         {syncTargets.length > 0 && (
           <div className="space-y-2">
             {syncTargets.map((target) => {
+              const normalizedAgent = normalizeSourceType(target.agent);
+              const supportsType =
+                supportedAgentKeys === null ||
+                supportedAgentKeys.has(normalizedAgent);
               const isInstalled = installedSet.has(target.agent);
               const isToggled = toggled.has(target.agent);
               // Four visual states based on (isInstalled, isToggled):
@@ -202,11 +232,17 @@ export function InstallTargetDialog({
                     ? { label: "Will install", cls: "bg-accent-teal-subtle text-accent-teal border-accent-teal-border" }
                     : null;
 
+              const unsupportedTooltip = supportsType
+                ? undefined
+                : `${SOURCE_LABELS[normalizedAgent] || target.agent} does not support ${typeKey}`;
+
               return (
                 <button
                   key={target.agent}
-                  onClick={() => toggleTarget(target.agent)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition text-left ${rowClass}`}
+                  onClick={() => supportsType && toggleTarget(target.agent)}
+                  disabled={!supportsType}
+                  title={unsupportedTooltip}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition text-left ${rowClass} ${!supportsType ? "opacity-40 cursor-not-allowed" : ""}`}
                 >
                   <div
                     className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition ${boxClass}`}
@@ -216,10 +252,15 @@ export function InstallTargetDialog({
                   <Monitor className={`w-4 h-4 shrink-0 ${iconColor}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-secondary flex items-center gap-2 flex-wrap">
-                      {SOURCE_LABELS[normalizeSourceType(target.agent)] || target.agent}
-                      {badge && (
+                      {SOURCE_LABELS[normalizedAgent] || target.agent}
+                      {badge && supportsType && (
                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${badge.cls}`}>
                           {badge.label}
+                        </span>
+                      )}
+                      {!supportsType && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-subtle text-dimmed border-card">
+                          Not supported
                         </span>
                       )}
                     </p>

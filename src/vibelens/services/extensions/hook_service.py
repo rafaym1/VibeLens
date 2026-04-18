@@ -32,10 +32,10 @@ class HookService(BaseExtensionService[Hook]):
 
         Args:
             central: Central HookStore under ``~/.vibelens/hooks/``.
-            agents: Map of agent key (string) to each agent's ``settings.json`` path.
+            agents: Map of agent key to each agent's hook config JSON path.
         """
         super().__init__(central_store=central, agent_stores={})
-        self._settings_paths: dict[str, Path] = {str(k): v for k, v in agents.items()}
+        self._hook_config_paths: dict[str, Path] = {str(k): v for k, v in agents.items()}
 
     def install(
         self,
@@ -220,7 +220,7 @@ class HookService(BaseExtensionService[Hook]):
             raise FileExistsError(f"Hook {name!r} already exists in central store")
 
         agent_key = self._resolve_agent_key(agent)
-        settings = self._read_settings(self._settings_paths[agent_key])
+        settings = self._read_settings(self._hook_config_paths[agent_key])
         groups = settings.get(HOOKS_ROOT_KEY, {}).get(event_name, [])
         matching = [g for g in groups if g.get("matcher") == matcher]
         if not matching:
@@ -235,19 +235,19 @@ class HookService(BaseExtensionService[Hook]):
         return self.get_item(name)
 
     def list_sync_targets(self) -> list[SyncTarget]:
-        """Return sync targets with settings_path as dir."""
+        """Return sync targets with each agent's hook config path."""
         return [
             SyncTarget(
                 agent=agent_key,
                 count=self._count_managed_hooks(path),
                 dir=str(path),
             )
-            for agent_key, path in self._settings_paths.items()
+            for agent_key, path in self._hook_config_paths.items()
         ]
 
     def _find_installed_agents(self, name: str) -> list[str]:
         """Return agent keys whose settings.json has any group marked with this hook."""
-        return [key for key in self._settings_paths if self._agent_has_marker(name, key)]
+        return [key for key in self._hook_config_paths if self._agent_has_marker(name, key)]
 
     def _sync_to_agent_by_key(self, name: str, agent_key: str) -> None:
         """Merge central hook into one agent's settings.json."""
@@ -255,7 +255,7 @@ class HookService(BaseExtensionService[Hook]):
         if hook is None:
             return
 
-        path = self._settings_paths[agent_key]
+        path = self._hook_config_paths[agent_key]
         settings = self._read_settings(path)
         hooks_root = settings.setdefault(HOOKS_ROOT_KEY, {})
 
@@ -271,7 +271,7 @@ class HookService(BaseExtensionService[Hook]):
 
     def _remove_marker_from_settings(self, name: str, agent_key: str) -> None:
         """Remove every hook group tagged with ``name`` from this agent's settings."""
-        path = self._settings_paths[agent_key]
+        path = self._hook_config_paths[agent_key]
         settings = self._read_settings(path)
         hooks_root = settings.get(HOOKS_ROOT_KEY, {})
         if not hooks_root:
@@ -291,7 +291,7 @@ class HookService(BaseExtensionService[Hook]):
 
     def _agent_has_marker(self, name: str, agent_key: str) -> bool:
         """Return True if the agent's settings.json contains any group marked with this hook."""
-        path = self._settings_paths[agent_key]
+        path = self._hook_config_paths[agent_key]
         settings = self._read_settings(path)
         hooks_root = settings.get(HOOKS_ROOT_KEY, {})
         for groups in hooks_root.values():
@@ -314,7 +314,7 @@ class HookService(BaseExtensionService[Hook]):
     def _resolve_agent_key(self, agent: str) -> str:
         """Look up an agent key from the settings paths dict."""
         key = agent.value if hasattr(agent, "value") else str(agent)
-        if key not in self._settings_paths:
+        if key not in self._hook_config_paths:
             raise KeyError(f"Unknown agent: {agent!r}")
         return key
 

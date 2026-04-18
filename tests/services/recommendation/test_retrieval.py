@@ -1,13 +1,13 @@
 """Tests for TF-IDF keyword retrieval backend."""
 
 from vibelens.models.enums import AgentExtensionType
-from vibelens.models.extension import ExtensionItem
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.services.recommendation.retrieval import KeywordRetrieval
 
 
-def _make_item(name: str, description: str, tags: list[str] | None = None) -> ExtensionItem:
+def _make_item(name: str, description: str, tags: list[str] | None = None) -> AgentExtensionItem:
     """Build a minimal ExtensionItem for testing."""
-    return ExtensionItem(
+    return AgentExtensionItem(
         extension_id=f"test/{name}",
         extension_type=AgentExtensionType.SKILL,
         name=name,

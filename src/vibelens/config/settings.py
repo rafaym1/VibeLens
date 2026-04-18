@@ -72,6 +72,10 @@ class StorageConfig(BaseModel):
         default=Path.home() / ".vibelens" / "hooks",
         description="Central directory for VibeLens-managed hooks.",
     )
+    managed_plugins_dir: Path = Field(
+        default=Path.home() / ".vibelens" / "plugins",
+        description="Central directory for VibeLens-managed plugins.",
+    )
     friction_dir: Path = Field(
         default=Path.home() / ".vibelens" / "friction",
         description="Directory for persisted friction analysis results.",
@@ -242,6 +246,7 @@ class Settings(BaseSettings):
         self.storage.managed_commands_dir = self.storage.managed_commands_dir.expanduser()
         self.storage.managed_subagents_dir = self.storage.managed_subagents_dir.expanduser()
         self.storage.managed_hooks_dir = self.storage.managed_hooks_dir.expanduser()
+        self.storage.managed_plugins_dir = self.storage.managed_plugins_dir.expanduser()
         self.storage.friction_dir = self.storage.friction_dir.expanduser()
         self.storage.personalization_dir = self.storage.personalization_dir.expanduser()
         self.storage.recommendation_dir = self.storage.recommendation_dir.expanduser()

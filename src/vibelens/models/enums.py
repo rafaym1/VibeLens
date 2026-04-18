@@ -52,6 +52,17 @@ class ExtensionSource(StrEnum):
     CENTRAL = "central"
 
 
+class AgentExtensionType(StrEnum):
+    """Types of agent extensions that can be discovered, installed, and managed."""
+
+    SKILL = "skill"
+    PLUGIN = "plugin"
+    SUBAGENT = "subagent"
+    COMMAND = "command"
+    HOOK = "hook"
+    REPO = "repo"
+
+
 class StepSource(StrEnum):
     """Originator of a trajectory step (ATIF v1.6)."""
 
@@ -85,13 +96,3 @@ class SessionPhase(StrEnum):
     VERIFICATION = "verification"
     DEBUGGING = "debugging"
     MIXED = "mixed"
-
-
-class AgentExtensionType(StrEnum):
-    """Types of agent extensions that can be discovered, installed, and managed."""
-
-    SKILL = "skill"
-    SUBAGENT = "subagent"
-    COMMAND = "command"
-    HOOK = "hook"
-    REPO = "repo"

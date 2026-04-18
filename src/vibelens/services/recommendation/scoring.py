@@ -4,7 +4,7 @@ Combines retrieval relevance, quality, platform match, popularity,
 and composability into a final score per candidate.
 """
 
-from vibelens.models.extension import ExtensionItem
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.models.personalization.recommendation import UserProfile
 
 # Signal weights from spec
@@ -32,8 +32,8 @@ PLATFORM_ALIASES: dict[str, str] = {
 
 
 def score_candidates(
-    candidates: list[tuple[ExtensionItem, float]], profile: UserProfile, top_k: int = 15
-) -> list[tuple[ExtensionItem, float]]:
+    candidates: list[tuple[AgentExtensionItem, float]], profile: UserProfile, top_k: int = 15
+) -> list[tuple[AgentExtensionItem, float]]:
     """Score and rank retrieval candidates using weighted signals.
 
     Args:
@@ -44,7 +44,7 @@ def score_candidates(
     Returns:
         Top-k (ExtensionItem, composite_score) pairs sorted by score descending.
     """
-    scored: list[tuple[ExtensionItem, float]] = []
+    scored: list[tuple[AgentExtensionItem, float]] = []
 
     for item, relevance in candidates:
         composite = (
@@ -60,7 +60,7 @@ def score_candidates(
     return scored[:top_k]
 
 
-def _score_quality(item: ExtensionItem) -> float:
+def _score_quality(item: AgentExtensionItem) -> float:
     """Normalize quality score to 0.0-1.0 range.
 
     Args:
@@ -84,7 +84,7 @@ def _normalize_platform(name: str) -> str:
     return PLATFORM_ALIASES.get(name.lower(), name.lower())
 
 
-def _score_platform_match(item: ExtensionItem, profile: UserProfile) -> float:
+def _score_platform_match(item: AgentExtensionItem, profile: UserProfile) -> float:
     """Binary platform match: 1.0 if any user platform matches, else 0.0.
 
     Normalizes both profile and catalog platform names to handle
@@ -102,7 +102,7 @@ def _score_platform_match(item: ExtensionItem, profile: UserProfile) -> float:
     return 1.0 if user_platforms & item_platforms else 0.0
 
 
-def _score_popularity(item: ExtensionItem) -> float:
+def _score_popularity(item: AgentExtensionItem) -> float:
     """Return pre-normalized popularity score.
 
     Args:

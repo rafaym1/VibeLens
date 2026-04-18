@@ -7,12 +7,13 @@ from pathlib import Path
 from vibelens.deps import (
     get_command_service,
     get_hook_service,
+    get_plugin_service,
     get_skill_service,
     get_subagent_service,
 )
 from vibelens.models.enums import AgentExtensionType
-from vibelens.models.extension import ExtensionItem
-from vibelens.services.extensions.platforms import INSTALLABLE_PLATFORMS, AgentPlatform
+from vibelens.models.extension import AgentExtensionItem
+from vibelens.services.extensions.platforms import AgentPlatform, get_platform
 from vibelens.utils.github import GITHUB_TREE_RE, download_directory
 from vibelens.utils.log import get_logger
 
@@ -20,26 +21,25 @@ logger = get_logger(__name__)
 
 
 def _resolve_platform(target_platform: str) -> AgentPlatform:
-    """Look up a platform by install key, raising ValueError if unknown.
+    """Look up a platform by ExtensionSource value and verify it is installed.
 
     Args:
-        target_platform: Install key (e.g. 'claude_code', 'codex').
+        target_platform: Platform key (e.g. 'claude', 'codex').
 
     Returns:
         Matching AgentPlatform.
 
     Raises:
-        ValueError: If target_platform is not a known install key.
+        ValueError: If target_platform is unknown or its root does not exist.
     """
-    platform = INSTALLABLE_PLATFORMS.get(target_platform)
-    if not platform:
-        available = list(INSTALLABLE_PLATFORMS.keys())
-        raise ValueError(f"Unknown platform: {target_platform}. Available: {available}")
+    platform = get_platform(target_platform)
+    if not platform.root.expanduser().is_dir():
+        raise ValueError(f"Agent {target_platform!r} not installed")
     return platform
 
 
 def install_catalog_item(
-    item: ExtensionItem, target_platform: str, overwrite: bool = False
+    item: AgentExtensionItem, target_platform: str, overwrite: bool = False
 ) -> Path:
     """Install a catalog item to the target agent platform.
 
@@ -64,6 +64,13 @@ def install_catalog_item(
     """
     platform = _resolve_platform(target_platform)
 
+    if item.extension_type not in platform.supported_types and item.install_method != "mcp_config":
+        raise ValueError(f"Agent {target_platform!r} does not support {item.extension_type.value}")
+
+    if item.extension_type == AgentExtensionType.PLUGIN:
+        return _install_plugin(
+            item=item, target_platform=target_platform, platform=platform, overwrite=overwrite
+        )
     if item.extension_type == AgentExtensionType.SUBAGENT:
         if not platform.subagents_dir:
             raise ValueError(f"Platform {target_platform} has no subagents directory")
@@ -92,18 +99,18 @@ def install_catalog_item(
             overwrite=overwrite,
         )
     elif item.extension_type == AgentExtensionType.HOOK:
-        if not platform.settings_path:
-            raise ValueError(f"Platform {target_platform} has no settings file")
-        return _install_hook_via_service(
+        if not platform.hook_config_path:
+            raise ValueError(f"Platform {target_platform} has no hook config path")
+        return _install_hook(
             item=item,
             target_platform=target_platform,
-            settings_path=platform.settings_path,
+            settings_path=platform.hook_config_path,
             overwrite=overwrite,
         )
     elif item.install_method == "mcp_config":
-        if not platform.settings_path:
-            raise ValueError(f"Platform {target_platform} has no settings file")
-        return _install_mcp(item=item, settings_path=platform.settings_path)
+        if not platform.hook_config_path:
+            raise ValueError(f"Platform {target_platform} has no config path for MCP")
+        return _install_mcp(item=item, settings_path=platform.hook_config_path)
     else:
         raise ValueError(
             f"Cannot auto-install item type {item.extension_type} with method {item.install_method}"
@@ -111,7 +118,7 @@ def install_catalog_item(
 
 
 def install_from_source_url(
-    item: ExtensionItem, target_platform: str, overwrite: bool = False
+    item: AgentExtensionItem, target_platform: str, overwrite: bool = False
 ) -> Path:
     """Install a catalog item by downloading its skill directory from GitHub.
 
@@ -168,7 +175,7 @@ def install_from_source_url(
     return target_dir
 
 
-def uninstall_extension(item: ExtensionItem, target_platform: str) -> Path:
+def uninstall_extension(item: AgentExtensionItem, target_platform: str) -> Path:
     """Remove an installed extension from the target platform.
 
     Args:
@@ -183,6 +190,18 @@ def uninstall_extension(item: ExtensionItem, target_platform: str) -> Path:
         FileNotFoundError: If the extension is not installed.
     """
     platform = _resolve_platform(target_platform)
+
+    if item.extension_type == AgentExtensionType.PLUGIN:
+        service = get_plugin_service()
+        try:
+            service.uninstall_from_agent(item.name, target_platform)
+        except KeyError as exc:
+            raise FileNotFoundError(str(exc)) from exc
+        installed_path = _plugin_installed_path(
+            platform=platform, name=item.name, target_platform=target_platform
+        )
+        logger.info("Uninstalled plugin %s from %s", item.extension_id, installed_path)
+        return installed_path
 
     # Check skills dir first (directory-based installs)
     skill_dir = platform.skills_dir / item.name
@@ -210,7 +229,7 @@ def uninstall_extension(item: ExtensionItem, target_platform: str) -> Path:
     raise FileNotFoundError(f"Extension {item.name} not found on platform {target_platform}")
 
 
-def _install_file(item: ExtensionItem, target_dir: Path, overwrite: bool) -> Path:
+def _install_file(item: AgentExtensionItem, target_dir: Path, overwrite: bool) -> Path:
     """Write install_content to target directory as {name}.md.
 
     Args:
@@ -236,7 +255,7 @@ def _install_file(item: ExtensionItem, target_dir: Path, overwrite: bool) -> Pat
 
 
 def _install_skill(
-    item: ExtensionItem, target_platform: str, agent_dir: Path, overwrite: bool
+    item: AgentExtensionItem, target_platform: str, agent_dir: Path, overwrite: bool
 ) -> Path:
     """Install a SKILL via SkillService; populate central + agent dir.
 
@@ -272,7 +291,7 @@ def _install_skill(
 
 
 def _install_subagent(
-    item: ExtensionItem, target_platform: str, agent_dir: Path, overwrite: bool
+    item: AgentExtensionItem, target_platform: str, agent_dir: Path, overwrite: bool
 ) -> Path:
     """Install a SUBAGENT via SubagentService; populate central + agent dir.
 
@@ -300,7 +319,7 @@ def _install_subagent(
 
 
 def _install_command(
-    item: ExtensionItem, target_platform: str, agent_dir: Path, overwrite: bool
+    item: AgentExtensionItem, target_platform: str, agent_dir: Path, overwrite: bool
 ) -> Path:
     """Install a COMMAND via CommandService; populate central + agent dir.
 
@@ -327,8 +346,8 @@ def _install_command(
     return installed
 
 
-def _install_hook_via_service(
-    item: ExtensionItem, target_platform: str, settings_path: Path, overwrite: bool
+def _install_hook(
+    item: AgentExtensionItem, target_platform: str, settings_path: Path, overwrite: bool
 ) -> Path:
     """Install a HOOK via HookService; populate central + tagged merge into settings.
 
@@ -364,7 +383,7 @@ def _install_hook_via_service(
     return settings_path
 
 
-def _install_mcp(item: ExtensionItem, settings_path: Path) -> Path:
+def _install_mcp(item: AgentExtensionItem, settings_path: Path) -> Path:
     """Merge MCP server config into settings.json mcpServers.
 
     Args:
@@ -412,3 +431,85 @@ def _write_settings(settings_path: Path, settings: dict) -> None:
     """
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+
+
+def _install_plugin(
+    item: AgentExtensionItem, target_platform: str, platform: AgentPlatform, overwrite: bool
+) -> Path:
+    """Install a PLUGIN extension via PluginService.
+
+    The service writes the plugin manifest to the VibeLens central plugin
+    store and syncs the full plugin directory to the target agent's store.
+    Claude agent stores drive the 4-file marketplace merge under the hood;
+    other agents perform a plain directory drop into ``plugins_dir``.
+    """
+    manifest_text = _fetch_plugin_manifest(item=item)
+    service = get_plugin_service()
+
+    try:
+        service.install(name=item.name, content=manifest_text, sync_to=[target_platform])
+    except FileExistsError:
+        if not overwrite:
+            raise
+        service.modify(name=item.name, content=manifest_text)
+        service.sync_to_agents(name=item.name, agents=[target_platform])
+
+    _populate_plugin_assets(item=item, service=service)
+    service.sync_to_agents(name=item.name, agents=[target_platform])
+
+    installed_path = _plugin_installed_path(
+        platform=platform, name=item.name, target_platform=target_platform
+    )
+    logger.info("Installed plugin %s to %s", item.extension_id, installed_path)
+    return installed_path
+
+
+def _fetch_plugin_manifest(item: AgentExtensionItem) -> str:
+    """Extract plugin.json text from install_content or download from source_url."""
+    if item.install_content:
+        payload = json.loads(item.install_content)
+        if not isinstance(payload, dict) or "plugin.json" not in payload:
+            raise ValueError(f"Plugin {item.name}: install_content must include 'plugin.json'")
+        return json.dumps(payload["plugin.json"], indent=2)
+
+    if not item.source_url:
+        raise ValueError(f"Plugin {item.name}: no install_content or source_url")
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as scratch:
+        scratch_dir = Path(scratch) / item.name
+        scratch_dir.mkdir(parents=True)
+        if not download_directory(source_url=item.source_url, target_dir=scratch_dir):
+            raise ValueError(f"Failed to download plugin from {item.source_url}")
+        manifest_path = scratch_dir / ".claude-plugin" / "plugin.json"
+        if not manifest_path.is_file():
+            raise ValueError(
+                f"Plugin {item.name}: downloaded tree missing .claude-plugin/plugin.json"
+            )
+        return manifest_path.read_text(encoding="utf-8")
+
+
+def _populate_plugin_assets(item: AgentExtensionItem, service) -> None:
+    """Download plugin assets (skills, commands, agents) into the central plugin dir.
+
+    For plugins sourced from GitHub, copy the full tree alongside the
+    manifest so that ``sync_to_agents`` carries all files. Plugins with
+    only ``install_content`` contribute just the manifest.
+    """
+    if not item.source_url:
+        return
+    central_plugin_dir = Path(service.get_item_path(item.name)).parent.parent
+    central_plugin_dir.parent.mkdir(parents=True, exist_ok=True)
+    download_directory(source_url=item.source_url, target_dir=central_plugin_dir)
+
+
+def _plugin_installed_path(platform: AgentPlatform, name: str, target_platform: str) -> Path:
+    """Return the on-agent installed path for a plugin (for reporting)."""
+    from vibelens.models.enums import ExtensionSource
+
+    if platform.source == ExtensionSource.CLAUDE:
+        return platform.root.expanduser() / "plugins" / "cache" / "vibelens" / name
+    if platform.plugins_dir is None:
+        raise ValueError(f"Platform {target_platform} has no plugins directory")
+    return platform.plugins_dir.expanduser() / name

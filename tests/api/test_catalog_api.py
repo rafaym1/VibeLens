@@ -7,14 +7,14 @@ from fastapi.testclient import TestClient
 
 from vibelens.app import create_app
 from vibelens.models.enums import AgentExtensionType
-from vibelens.models.extension import ExtensionItem
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.storage.extension.catalog import CatalogSnapshot
 
 
 def _make_snapshot() -> CatalogSnapshot:
     """Create a test catalog snapshot."""
     items = [
-        ExtensionItem(
+        AgentExtensionItem(
             extension_id="bwc:skill:test-skill",
             extension_type=AgentExtensionType.SKILL,
             name="test-skill",
@@ -30,7 +30,7 @@ def _make_snapshot() -> CatalogSnapshot:
             install_method="skill_file",
             install_content="# Test Skill\nContent here.",
         ),
-        ExtensionItem(
+        AgentExtensionItem(
             extension_id="bwc:mcp:test-mcp",
             extension_type=AgentExtensionType.REPO,
             name="test-mcp",
