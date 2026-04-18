@@ -230,7 +230,12 @@ async def process_zip(
     except Exception as exc:
         logger.warning("Upload processing failed for %s: %s", filename, exc, exc_info=True)
         result.errors.append({"filename": filename, "error": str(exc)})
-    finally:
+        # Failed upload is not usable. Drop the whole per-upload dir
+        # (which contains the zip and any partial extraction) so failed
+        # uploads do not accumulate under settings.upload.dir.
+        await asyncio.to_thread(shutil.rmtree, dest_dir, True)
+    else:
+        # Success: keep the zip as an archive; only drop the extraction dir.
         extraction_dir = dest_dir / EXTRACTED_SUBDIR
         await asyncio.to_thread(cleanup_extraction, extraction_dir=extraction_dir)
 

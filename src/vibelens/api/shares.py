@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from vibelens.deps import get_settings, get_share_service
+from vibelens.models.enums import AppMode
 from vibelens.schemas.share import ShareMeta, ShareRequest, ShareResponse
 from vibelens.services.session.crud import get_session
 from vibelens.services.session.flow import compute_flow_from_trajectories
@@ -25,7 +26,7 @@ def _build_share_url(request: Request, session_id: str) -> str:
     settings = get_settings()
     if settings.server.public_url:
         base = settings.server.public_url.rstrip("/")
-    elif settings.mode.value == "demo":
+    elif settings.mode == AppMode.DEMO:
         base = DEMO_PUBLIC_URL
     elif settings.server.host in LOCAL_HOSTS:
         base = f"http://localhost:{settings.server.port}"
