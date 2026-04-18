@@ -62,7 +62,10 @@ class AgentExtensionItem(BaseModel):
         default=None, description="Per-dimension score breakdown."
     )
     quality_score: float = Field(description="Weighted composite 0-100.")
-    popularity: float = Field(description="log1p(stars)/log1p(MAX_STARS), 0.0-1.0.")
+    popularity: float = Field(
+        default=0.0,
+        description="log1p(stars)/log1p(MAX_STARS). Pre-baked at catalog-build time.",
+    )
 
     stars: int = Field(description="GitHub star count.")
     forks: int = Field(description="GitHub fork count.")
