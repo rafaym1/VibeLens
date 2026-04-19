@@ -13,9 +13,17 @@ Refer to `DESIGN.md`
 
 ## Testing
 
-- Ruff: `ruff check src/ tests/`
-- Run: `pytest tests/ -v -s` (use `-s` to see print output).
+The full suite takes ~2m45s. Run only what you need:
+
+- **Default during edits:** target the test file(s) that exercise the code you changed. `uv run pytest tests/<path>/<file>.py -v -s`.
+- **Multi-file change:** run the test directory matching the area, e.g. `uv run pytest tests/storage/ tests/ingest/`.
+- **Big change** (touching ≥3 areas, refactoring shared code, or changing public API): run the whole suite once at the end. `uv run pytest tests/`.
+- **Always before commit:** `uv run ruff check src/ tests/`. Cheap.
+
+Conventions:
+
 - Tests should log detailed output with `print()` for manual verification, not just assertions.
+- Use `-s` to see print output when iterating.
 
 ## Release
 
