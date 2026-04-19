@@ -35,6 +35,10 @@ class SkillStore(BaseExtensionStore[Skill]):
         """Return path to the skill's SKILL.md inside its named subdirectory."""
         return self._root / name / SKILL_FILENAME
 
+    def _item_root(self, name: str) -> Path:
+        """Return the skill's on-disk directory (containing SKILL.md + assets)."""
+        return self._root / name
+
     def _parse(self, name: str, text: str) -> Skill:
         """Parse raw SKILL.md text into a Skill."""
         return parse_skill_md(name, text)

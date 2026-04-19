@@ -50,6 +50,10 @@ class PluginStore(BaseExtensionStore[Plugin]):
         """Return path to this store's native manifest inside the plugin dir."""
         return self._root / name / self._manifest_rel_path
 
+    def _item_root(self, name: str) -> Path:
+        """Return the plugin's on-disk directory (containing manifest + assets)."""
+        return self._root / name
+
     def _parse(self, name: str, text: str) -> Plugin:
         return parse_plugin_manifest(name=name, text=text)
 

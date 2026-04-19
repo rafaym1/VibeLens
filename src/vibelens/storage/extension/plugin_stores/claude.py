@@ -63,6 +63,13 @@ class ClaudePluginStore(BaseExtensionStore[Plugin]):
             return self._root / name / CANONICAL_MANIFEST_DIR / MANIFEST_FILENAME
         return version_dir / CANONICAL_MANIFEST_DIR / MANIFEST_FILENAME
 
+    def _item_root(self, name: str) -> Path:
+        """Return the plugin's current version directory (containing manifest + assets)."""
+        version_dir = self._version_dir(name)
+        if version_dir is None:
+            return self._root / name
+        return version_dir
+
     def _parse(self, name: str, text: str) -> Plugin:
         return parse_plugin_manifest(name=name, text=text)
 

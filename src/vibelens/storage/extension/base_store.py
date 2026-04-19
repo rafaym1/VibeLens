@@ -62,6 +62,14 @@ class BaseExtensionStore(ABC, Generic[TItem]):
     def _item_path(self, name: str) -> Path:
         """Return the primary file path for a given item name."""
 
+    def _item_root(self, name: str) -> Path:
+        """Return the on-disk root for an item.
+
+        Default: same as ``_item_path`` (single-file stores). Dir-based
+        stores override to return the item's containing directory.
+        """
+        return self._item_path(name)
+
     @abstractmethod
     def _parse(self, name: str, text: str) -> TItem:
         """Parse raw content text into a domain model."""

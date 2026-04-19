@@ -164,8 +164,19 @@ class BaseExtensionService(Generic[T]):
         return self._central.read_raw(name)
 
     def get_item_path(self, name: str) -> str:
-        """Get the central store path for an extension."""
+        """Get the central store path for an extension's primary file."""
         return str(self._central._item_path(name))
+
+    def get_item_root(self, name: str) -> str:
+        """Get the central store root directory for an extension.
+
+        For single-file types (command, subagent) this returns the file path
+        itself, same as :meth:`get_item_path`. For dir-based types (skill,
+        plugin) this returns the extension's root directory regardless of
+        how deep the primary file lives (e.g. plugin manifests nested under
+        ``.claude-plugin/``).
+        """
+        return str(self._central._item_root(name))
 
     def sync_to_agents(self, name: str, agents: list[str]) -> dict[str, bool]:
         """Copy extension from central to specified agents. Returns per-agent success."""
