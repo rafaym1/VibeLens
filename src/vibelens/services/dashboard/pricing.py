@@ -34,7 +34,7 @@ def compute_cost_from_tokens(
     pricing = lookup_pricing(model)
     if not pricing:
         return None
-    non_cached_input = input_tokens - cache_read_tokens
+    non_cached_input = max(0, input_tokens - cache_read_tokens)
     cost = (
         non_cached_input * pricing.input_per_mtok
         + cache_read_tokens * pricing.cache_read_per_mtok
@@ -72,7 +72,7 @@ def compute_step_cost(step: Step, session_model: str | None = None) -> float | N
         return None
 
     m = step.metrics
-    non_cached_input = m.prompt_tokens - m.cached_tokens
+    non_cached_input = max(0, m.prompt_tokens - m.cached_tokens)
 
     cost = (
         non_cached_input * pricing.input_per_mtok

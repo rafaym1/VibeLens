@@ -125,5 +125,5 @@ def _format_csv_row(session_id: str, agg: SessionAggregate) -> list:
         agg.cache_read_tokens,
         agg.cache_creation_tokens,
         agg.tool_calls,
-        round(agg.cost_usd, 6) if agg.cost_usd else "",
+        round(agg.cost_usd, 6),
     ]

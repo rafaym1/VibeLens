@@ -119,5 +119,3 @@ def _gemini_to_canonical_text(gemini_text: str) -> str:
         if isinstance(keywords, list) and keywords:
             canonical["keywords"] = keywords
     return json.dumps(canonical, indent=2)
-
-
