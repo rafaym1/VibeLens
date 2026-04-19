@@ -2,11 +2,6 @@
 
 Agent session visualization and personalization platform.
 
-## Key Concepts
-
-- **Trajectory**: Root container for a single agent session — includes steps, agent metadata, final metrics, and cross-references.
-- **Step**: One turn in a conversation (user prompt, agent response, or system message) with optional tool calls and observations.
-
 ## Frontend Conventions (React + Vite + Tailwind)
 
 Refer to `DESIGN.md`
@@ -27,12 +22,14 @@ Conventions:
 
 ## Release
 
-See [`docs/release.md`](docs/release.md) for the full release flow. Short version:
+Canonical flow: [`docs/release.md`](docs/release.md). User-facing entry points: [`README.md`](README.md) (PyPI badge, [CHANGELOG](CHANGELOG.md) link).
 
-1. **Version bump**: Update `version` in both `pyproject.toml` and `src/vibelens/__init__.py` (must match).
-2. **Changelog**: Move `[Unreleased]` entries into a new `## [x.y.z] - YYYY-MM-DD` section.
-3. **Frontend** (if changed): `cd frontend && npm run build && cd ..`.
-4. **Verify**: `uv build && uv run ruff check src/ tests/ && uv run pytest tests/ -v`.
-5. **Commit, tag, push**: `git commit -am "Release vX.Y.Z" && git tag vX.Y.Z && git push origin main --tags`.
-6. **GitHub Release**: `gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."`.
-7. **PyPI**: automated by `.github/workflows/publish.yml` on tag push (trusted publishing). No twine, no API token.
+Quick-reference for executing a release:
+
+1. **Version bump** — update `version` in `pyproject.toml` and `__version__` in `src/vibelens/__init__.py`. They must match.
+2. **CHANGELOG** — promote `[Unreleased]` entries into a new `## [X.Y.Z] - YYYY-MM-DD` section. Keep the `[Unreleased]` heading empty for the next cycle.
+3. **Catalog** (only if `agent-tool-hub` output is newer): `uv run python scripts/build_catalog.py --hub-output <path> --out src/vibelens/data/catalog`. Commit the regenerated `src/vibelens/data/catalog/`.
+4. **Frontend** (only if `frontend/src/` changed): `cd frontend && npm run build && cd ..`. Commit `src/vibelens/static/`.
+5. **Verify**: `uv run ruff check src/ tests/ && uv run pytest tests/ && uv build`.
+6. **Tag and push**: `git commit -am "Release vX.Y.Z" && git tag vX.Y.Z && git push origin main --tags`. Trusted publishing on PyPI (`.github/workflows/publish.yml`) takes over from the tag push — no token, no `twine`.
+7. **GitHub Release** (use the CHANGELOG entry as the body): `gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(...)"`.
