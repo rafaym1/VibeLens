@@ -489,6 +489,7 @@ class ClaudeParser(BaseParser):
             List of Step objects.
         """
         raw_entries = _parse_jsonl_content(content, diagnostics)
+        raw_entries = _deduplicate_entries_by_uuid(raw_entries)
 
         # Two-pass: first scan user messages for tool results,
         # then construct Steps with results already paired
@@ -734,6 +735,27 @@ def _parse_jsonl_content(
         ):
             raw_entries.append(_make_enqueue_user_entry(entry))
     return raw_entries
+
+
+def _deduplicate_entries_by_uuid(entries: list[dict]) -> list[dict]:
+    """Drop entries whose uuid has already appeared in this stream.
+
+    Claude Code occasionally re-emits the same JSONL line (observed with
+    compaction replay, where a prior turn is re-written). Emitting
+    both copies produces Step objects with duplicate step_id, which the
+    Trajectory validator then rejects. Keeping only the first occurrence
+    preserves ordering without losing information.
+    """
+    seen: set[str] = set()
+    deduped: list[dict] = []
+    for entry in entries:
+        uuid = entry.get("uuid", "")
+        if uuid and uuid in seen:
+            continue
+        if uuid:
+            seen.add(uuid)
+        deduped.append(entry)
+    return deduped
 
 
 def _collect_dequeued_timestamps(all_parsed: list[dict]) -> set[str]:
@@ -1305,6 +1327,11 @@ def _collect_tool_results(raw_entries: list[dict]) -> dict[str, dict]:
     calls do not lose early results to eviction. Also captures the
     event-level ``toolUseResult`` field (structured metadata like
     exit_code, stdout, stderr) for downstream extraction.
+
+    Note: does not use shared.tool_pairing.collect_tool_results_by_id
+    because claude carries richer per-result state (raw content may be
+    a list with image blocks, plus the event-level ``toolUseResult``
+    metadata) that does not fit the shared ObservationResult shape.
     """
     tool_results: dict[str, dict] = {}
     for entry in raw_entries:
