@@ -335,8 +335,15 @@ class TestLoadSnapshotPattern:
 class TestCacheHitOrRebuild:
     """Test that _try_load_from_cache is binary: perfect hit or full rebuild."""
 
-    def test_stale_file_triggers_full_rebuild(self, test_settings, sample_history, sample_sessions):
-        """When any file changed since cache was written, _try_load_from_cache returns False."""
+    def test_stale_file_triggers_partial_rebuild(
+        self, test_settings, sample_history, sample_sessions
+    ):
+        """When one file changed, _try_load_from_cache uses the partial-rebuild path.
+
+        The partial path returns True (cache was usable) while still re-parsing
+        the single stale file. The full-rebuild fallback is reserved for missing
+        or corrupt cache files, not stale entries.
+        """
         data_dirs, _, test_project = test_settings
         source = LocalSource(data_dirs=data_dirs)
 
@@ -353,8 +360,12 @@ class TestCacheHitOrRebuild:
         session_file.write_text(session_file.read_text() + "\n")
 
         result = source._try_load_from_cache()
-        assert result is False, "Stale files should trigger full rebuild, not incremental update"
-        print("Stale file correctly triggers full rebuild (returns False)")
+        assert result is True, "Stale files should trigger partial rebuild and return True"
+        # Both sessions should still be in the index after partial rebuild.
+        assert source._metadata_cache is not None
+        assert "session-001" in source._metadata_cache
+        assert "session-002" in source._metadata_cache
+        print("Stale file correctly triggers partial rebuild (returns True)")
 
 
 class TestParserResilience:

@@ -14,23 +14,28 @@ from vibelens.utils.log import get_logger
 logger = get_logger(__name__)
 
 # Bump to invalidate all existing caches after schema changes
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 # User-home path for the persistent session index cache
 DEFAULT_CACHE_PATH = Path.home() / ".vibelens" / "session_index.json"
 
 
-def load_cache(cache_path: Path = DEFAULT_CACHE_PATH) -> dict | None:
+def load_cache(cache_path: Path | None = None) -> dict | None:
     """Load the persistent index cache from disk.
 
     Returns None if the cache file is missing, corrupt, or has an
     incompatible version — triggering a full rebuild.
 
     Args:
-        cache_path: Path to the cache JSON file.
+        cache_path: Path to the cache JSON file. Defaults to the
+            module-level ``DEFAULT_CACHE_PATH`` (resolved at call time
+            so tests can monkeypatch the module attr).
 
     Returns:
-        Cache dict with 'entries' and 'continuation_map', or None.
+        Cache dict with 'entries', 'file_mtimes', 'path_to_session_id',
+        'continuation_map', and 'dropped_paths', or None.
     """
+    if cache_path is None:
+        cache_path = DEFAULT_CACHE_PATH
     if not cache_path.exists():
         return None
     try:
@@ -49,7 +54,8 @@ def save_cache(
     file_mtimes: dict[str, float],
     continuation_map: dict[str, str],
     path_to_session_id: dict[str, str] | None = None,
-    cache_path: Path = DEFAULT_CACHE_PATH,
+    dropped_paths: dict[str, int] | None = None,
+    cache_path: Path | None = None,
 ) -> None:
     """Write the index cache to disk.
 
@@ -58,8 +64,14 @@ def save_cache(
         file_mtimes: file_path_str -> mtime_ns for staleness detection.
         continuation_map: current_session_id -> previous_session_id.
         path_to_session_id: file_path_str -> real session_id for index remapping.
-        cache_path: Path to write the cache file.
+        dropped_paths: file_path_str -> mtime_ns for files dropped as empty/invalid.
+            Lets the next startup skip re-parsing them as long as their mtime is
+            unchanged.
+        cache_path: Path to write the cache file. Defaults to the
+            module-level ``DEFAULT_CACHE_PATH`` (resolved at call time).
     """
+    if cache_path is None:
+        cache_path = DEFAULT_CACHE_PATH
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "version": CACHE_VERSION,
@@ -67,6 +79,7 @@ def save_cache(
         "file_mtimes": file_mtimes,
         "continuation_map": continuation_map,
         "path_to_session_id": path_to_session_id or {},
+        "dropped_paths": dropped_paths or {},
         "entries": metadata_cache,
     }
     try:

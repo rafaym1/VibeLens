@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 def build_session_index(
     file_index: dict[str, tuple[Path, BaseParser]], data_dirs: dict[BaseParser, Path]
-) -> list[Trajectory]:
+) -> tuple[list[Trajectory], list[Path]]:
     """Build validated, deduplicated skeleton trajectories from all agents.
 
     Each parser's ``parse_session_index`` method is called first for a fast
@@ -31,23 +31,74 @@ def build_session_index(
         data_dirs: Parser -> resolved data directory for index lookups.
 
     Returns:
-        Deduplicated skeleton Trajectory list (no steps).
+        Tuple of (validated skeleton Trajectory list, list of dropped file
+        paths from empty/invalid sessions).
     """
     parsers = list({parser for _, parser in file_index.values()})
-    skeletons = _collect_all_skeletons(parsers, file_index, data_dirs)
-    valid = _dedup_and_validate(skeletons, file_index)
+    silent_drops: list[Path] = []
+    skeletons = _collect_all_skeletons(parsers, file_index, data_dirs, dropped_sink=silent_drops)
+    valid, dropped_paths = _dedup_and_validate(skeletons, file_index)
+    dropped_paths = dropped_paths + silent_drops
     # TODO(perf-spec 2026-04-18): re-enable once _enrich_continuation_refs
     # bug is fixed (it currently misses some chains). The partial-rebuild
     # path in storage/trajectory/local.py also assumes this is disabled —
     # restoring it requires reasoning about cross-file chain invalidation.
     # _enrich_continuation_refs(valid, file_index)
-    return valid
+    return valid, dropped_paths
+
+
+def build_partial_session_index(
+    file_index: dict[str, tuple[Path, BaseParser]], only_paths: set[str]
+) -> tuple[list[Trajectory], list[Path]]:
+    """Build skeletons for a path-scoped subset of ``file_index``.
+
+    Used by the per-file partial-rebuild path in LocalTrajectoryStore. Skips
+    the per-parser fast index (history.jsonl etc.) since ``only_paths``
+    already names the files of interest; drives directly through
+    :func:`_build_orphaned_skeletons` for each parser.
+
+    Mutates ``file_index`` for ID remapping and empty-file pruning, same as
+    :func:`build_session_index`.
+
+    Args:
+        file_index: Mutable session_id -> (filepath, parser) map.
+        only_paths: Set of filepath strings to (re)parse. Other entries are
+            ignored.
+
+    Returns:
+        Tuple of (skeleton trajectories for the subset, list of dropped paths).
+    """
+    if not only_paths:
+        return [], []
+
+    target_sids = {sid for sid, (fpath, _) in file_index.items() if str(fpath) in only_paths}
+    if not target_sids:
+        return [], []
+
+    parsers = list({file_index[sid][1] for sid in target_sids})
+    silent_drops: list[Path] = []
+    raw_skeletons: list[Trajectory] = []
+    for parser in parsers:
+        # _build_orphaned_skeletons treats sids not in `indexed_ids` as
+        # orphans to re-parse. To re-parse exactly our targets, mark every
+        # other id as "already indexed". The parser-filter inside the helper
+        # narrows by `p is parser`, so cross-parser entries are harmless.
+        indexed_ids = set(file_index) - target_sids
+        raw_skeletons.extend(
+            _build_orphaned_skeletons(
+                parser, file_index, indexed_ids, dropped_sink=silent_drops
+            )
+        )
+
+    valid, dropped_paths = _dedup_and_validate(raw_skeletons, file_index)
+    return valid, dropped_paths + silent_drops
 
 
 def _collect_all_skeletons(
     parsers: list[BaseParser],
     file_index: dict[str, tuple[Path, BaseParser]],
     data_dirs: dict[BaseParser, Path],
+    dropped_sink: list[Path] | None = None,
 ) -> list[Trajectory]:
     """Collect skeleton trajectories from all parsers using polymorphic dispatch.
 
@@ -55,6 +106,13 @@ def _collect_all_skeletons(
     cover all discovered files, orphaned files are parsed individually
     as a fallback. This handles sessions created by Claude Code Desktop
     or other tools that don't write to the index file.
+
+    Args:
+        parsers: Parser instances to dispatch over.
+        file_index: Mutable session_id -> (path, parser) map.
+        data_dirs: Parser -> data directory map.
+        dropped_sink: Optional list to receive paths of files that produced
+            no parseable trajectory.
     """
     all_trajectories: list[Trajectory] = []
 
@@ -65,9 +123,10 @@ def _collect_all_skeletons(
             if skeletons is not None:
                 reconciled = _reconcile_index_skeletons(parser, skeletons, file_index)
                 all_trajectories.extend(reconciled)
-                # Fall back to file parsing for sessions not in the index
                 indexed_ids = {t.session_id for t in reconciled}
-                orphaned = _build_orphaned_skeletons(parser, file_index, indexed_ids)
+                orphaned = _build_orphaned_skeletons(
+                    parser, file_index, indexed_ids, dropped_sink=dropped_sink
+                )
                 if orphaned:
                     logger.info(
                         "Recovered %d sessions not in %s index via file parsing",
@@ -82,7 +141,10 @@ def _collect_all_skeletons(
 
 
 def _build_orphaned_skeletons(
-    parser: BaseParser, file_index: dict[str, tuple[Path, BaseParser]], indexed_ids: set[str]
+    parser: BaseParser,
+    file_index: dict[str, tuple[Path, BaseParser]],
+    indexed_ids: set[str],
+    dropped_sink: list[Path] | None = None,
 ) -> list[Trajectory]:
     """Parse session files not covered by the parser's fast index.
 
@@ -93,6 +155,9 @@ def _build_orphaned_skeletons(
         parser: The parser instance to use.
         file_index: Session file index.
         indexed_ids: Session IDs already covered by the fast index.
+        dropped_sink: Optional list to receive paths of files that produced
+            no parseable trajectory. Lets the caller persist them so the
+            next startup doesn't retry.
 
     Returns:
         Skeleton trajectories for orphaned files.
@@ -110,6 +175,9 @@ def _build_orphaned_skeletons(
         try:
             trajs = p.parse_file(fpath)
             if not trajs:
+                if dropped_sink is not None:
+                    dropped_sink.append(fpath)
+                file_index.pop(old_sid, None)
                 continue
             main = trajs[0]
             real_sid = main.session_id
@@ -120,6 +188,9 @@ def _build_orphaned_skeletons(
             result.append(main)
         except Exception:
             logger.debug("Failed to parse orphaned file %s, skipping", fpath)
+            if dropped_sink is not None:
+                dropped_sink.append(fpath)
+            file_index.pop(old_sid, None)
     return result
 
 
@@ -204,7 +275,7 @@ def _build_file_parse_skeletons(
 
 def _dedup_and_validate(
     skeletons: list[Trajectory], file_index: dict[str, tuple[Path, BaseParser]]
-) -> list[Trajectory]:
+) -> tuple[list[Trajectory], list[Path]]:
     """Remove duplicates and drop sessions with no first_message.
 
     Empty/corrupt files that exist on disk but have no parseable content
@@ -215,25 +286,26 @@ def _dedup_and_validate(
         file_index: Mutable session file index for pruning empty entries.
 
     Returns:
-        Deduplicated, validated skeleton list.
+        Tuple of (deduplicated valid skeletons, list of dropped file paths).
     """
     seen_ids: set[str] = set()
     valid: list[Trajectory] = []
-    dropped = 0
+    dropped_paths: list[Path] = []
 
     for traj in skeletons:
         if traj.session_id in seen_ids:
             continue
         seen_ids.add(traj.session_id)
         if not traj.first_message:
-            file_index.pop(traj.session_id, None)
-            dropped += 1
+            entry = file_index.pop(traj.session_id, None)
+            if entry is not None:
+                dropped_paths.append(entry[0])
             continue
         valid.append(traj)
 
-    if dropped:
-        logger.info("Dropped %d empty sessions from index", dropped)
-    return valid
+    if dropped_paths:
+        logger.info("Dropped %d empty sessions from index", len(dropped_paths))
+    return valid, dropped_paths
 
 
 def _enrich_continuation_refs(

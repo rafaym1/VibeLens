@@ -7,10 +7,11 @@ across all agents.
 """
 
 import threading
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from vibelens.ingest.fast_metrics import scan_session_metrics
-from vibelens.ingest.index_builder import build_session_index
+from vibelens.ingest.index_builder import build_partial_session_index, build_session_index
 from vibelens.ingest.index_cache import collect_file_mtimes, load_cache, save_cache
 from vibelens.ingest.parsers import LOCAL_PARSER_CLASSES
 from vibelens.ingest.parsers.base import BaseParser
@@ -20,6 +21,16 @@ from vibelens.storage.trajectory.base import BaseTrajectoryStore
 from vibelens.utils import get_logger
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class CachePartition:
+    """Result of comparing the current file index against the persisted cache."""
+
+    unchanged: dict[str, tuple[Path, "BaseParser"]] = field(default_factory=dict)
+    changed: dict[str, tuple[Path, "BaseParser"]] = field(default_factory=dict)
+    new: dict[str, tuple[Path, "BaseParser"]] = field(default_factory=dict)
+    removed_paths: set[str] = field(default_factory=set)
 
 
 def _extract_session_id(filepath: Path, agent_type: AgentType) -> str:
@@ -41,31 +52,62 @@ def _extract_session_id(filepath: Path, agent_type: AgentType) -> str:
     return f"{agent_type.value}:{stem}"
 
 
-def _has_stale_files(
-    file_index: dict[str, tuple[Path, BaseParser]], cached_mtimes: dict[str, float]
-) -> bool:
-    """Check whether any files changed or were removed since the cache was written.
+def _partition_files(
+    file_index: dict[str, tuple[Path, BaseParser]],
+    cached_mtimes: dict[str, int],
+    dropped_paths: dict[str, int],
+) -> tuple[CachePartition, dict[str, int]]:
+    """Compare current file index against the cache and partition by state.
 
     Args:
-        file_index: Current session_id -> (filepath, parser) map.
-        cached_mtimes: filepath_str -> mtime_ns from previous cache.
+        file_index: Current session_id -> (filepath, parser) map after
+            ``_discover_files`` and ``_remap_index``.
+        cached_mtimes: filepath_str -> mtime_ns from the previous cache.
+        dropped_paths: filepath_str -> mtime_ns for files the previous build
+            dropped as empty/invalid. Files in here with unchanged mtimes are
+            excluded from the partition entirely (not retried).
 
     Returns:
-        True if any file is new, changed, or removed.
+        Tuple of (CachePartition, fresh_dropped_paths) where ``fresh_dropped_paths``
+        is the subset of ``dropped_paths`` whose files still exist with the
+        same mtime — these carry forward into the next saved cache.
     """
+    unchanged: dict[str, tuple[Path, BaseParser]] = {}
+    changed: dict[str, tuple[Path, BaseParser]] = {}
+    new: dict[str, tuple[Path, BaseParser]] = {}
+    fresh_dropped: dict[str, int] = {}
     current_paths: set[str] = set()
-    for _sid, (fpath, _parser) in file_index.items():
+
+    for sid, (fpath, parser) in file_index.items():
         path_str = str(fpath)
-        current_paths.add(path_str)
         try:
             current_mtime = fpath.stat().st_mtime_ns
         except OSError:
-            return True
-        cached_mtime = cached_mtimes.get(path_str)
-        if cached_mtime is None or current_mtime != cached_mtime:
-            return True
+            # File vanished between _discover_files and stat; treat as removed
+            # by skipping it entirely. The removed_paths logic below ignores it
+            # too because it is not in cached_mtimes if previously absent, or
+            # it will be in removed_paths if it was previously cached.
+            continue
+        current_paths.add(path_str)
 
-    return bool(set(cached_mtimes.keys()) - current_paths)
+        # Filter out previously-dropped paths whose mtime is unchanged.
+        if path_str in dropped_paths and dropped_paths[path_str] == current_mtime:
+            fresh_dropped[path_str] = current_mtime
+            continue
+
+        cached_mtime = cached_mtimes.get(path_str)
+        if cached_mtime is None:
+            new[sid] = (fpath, parser)
+        elif cached_mtime != current_mtime:
+            changed[sid] = (fpath, parser)
+        else:
+            unchanged[sid] = (fpath, parser)
+
+    removed_paths = set(cached_mtimes.keys()) - current_paths
+    return (
+        CachePartition(unchanged=unchanged, changed=changed, new=new, removed_paths=removed_paths),
+        fresh_dropped,
+    )
 
 
 class LocalTrajectoryStore(BaseTrajectoryStore):
@@ -155,31 +197,138 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
                 self._index[session_id] = (filepath, parser)
 
     def _try_load_from_cache(self) -> bool:
-        """Load index from persistent cache if no files changed.
+        """Load index from persistent cache, taking a partial-rebuild path when possible.
 
-        Returns True only on a perfect cache hit (zero stale files).
-        Any staleness falls through to _full_rebuild.
+        Fast path: every file in the current index has the same mtime as the
+        cache → hydrate `_metadata_cache` and return.
+
+        Partial path: a subset of files changed/added/removed → re-parse only
+        those, hydrate the rest from cache, persist updated cache.
+
+        Returns False (falls through to ``_full_rebuild``) when the cache is
+        missing, version-mismatched, or the partial rebuild itself raises.
         """
         cache = load_cache()
         if not cache:
             return False
 
-        cached_mtimes = cache.get("file_mtimes", {})
-        cached_entries = cache.get("entries", {})
-        cached_path_map = cache.get("path_to_session_id", {})
+        cached_mtimes: dict[str, int] = {k: int(v) for k, v in cache.get("file_mtimes", {}).items()}
+        cached_entries: dict[str, dict] = cache.get("entries", {})
+        cached_path_map: dict[str, str] = cache.get("path_to_session_id", {})
+        cached_dropped: dict[str, int] = {
+            k: int(v) for k, v in cache.get("dropped_paths", {}).items()
+        }
 
-        if _has_stale_files(self._index, cached_mtimes):
-            return False
-
+        # Remap before partitioning so cached real session_ids line up with _index.
         self._remap_index(cached_path_map)
+
+        partition, fresh_dropped = _partition_files(self._index, cached_mtimes, cached_dropped)
+
+        # Drop dropped-paths from _index — they should not appear as live sessions.
+        if fresh_dropped:
+            for sid in [
+                s for s, (fpath, _p) in self._index.items() if str(fpath) in fresh_dropped
+            ]:
+                self._index.pop(sid, None)
+
+        is_fast_path = (
+            not partition.changed and not partition.new and not partition.removed_paths
+        )
+        if is_fast_path:
+            self._metadata_cache = {}
+            for sid in self._index:
+                if sid in cached_entries:
+                    meta = cached_entries[sid]
+                    meta["filepath"] = str(self._index[sid][0])
+                    self._metadata_cache[sid] = meta
+            logger.info("Loaded %d sessions from index cache", len(self._metadata_cache))
+            return True
+
+        try:
+            self._partial_rebuild(partition, cached_entries, fresh_dropped)
+        except Exception:
+            logger.warning("Partial rebuild failed, falling back to full rebuild", exc_info=True)
+            return False
+        return True
+
+    def _partial_rebuild(
+        self,
+        partition: CachePartition,
+        cached_entries: dict[str, dict],
+        fresh_dropped: dict[str, int],
+    ) -> None:
+        """Re-parse only changed/new files; hydrate the rest from cache."""
+        # Hydrate unchanged entries from cache.
         self._metadata_cache = {}
-        for sid in self._index:
+        for sid in partition.unchanged:
             if sid in cached_entries:
                 meta = cached_entries[sid]
                 meta["filepath"] = str(self._index[sid][0])
                 self._metadata_cache[sid] = meta
-        logger.info("Loaded %d sessions from index cache", len(self._metadata_cache))
-        return True
+
+        # Re-parse changed + new.
+        only_paths = {
+            str(fpath) for fpath, _p in partition.changed.values()
+        } | {str(fpath) for fpath, _p in partition.new.values()}
+
+        new_dropped: dict[str, int] = {}
+        if only_paths:
+            partial_skeletons, dropped_paths = build_partial_session_index(
+                self._index, only_paths
+            )
+            _enrich_skeleton_metrics(partial_skeletons, self._index)
+            for t in partial_skeletons:
+                meta = t.model_dump(exclude={"steps"}, mode="json")
+                entry = self._index.get(t.session_id)
+                if entry:
+                    meta["filepath"] = str(entry[0])
+                self._metadata_cache[t.session_id] = meta
+            for fpath in dropped_paths:
+                try:
+                    new_dropped[str(fpath)] = fpath.stat().st_mtime_ns
+                except OSError:
+                    continue
+
+        # Drop removed_paths' sids — but only if they came from the cache and
+        # were not re-claimed by a freshly parsed file at a different path.
+        # A removed path is "stale" in the cache; if the same session_id was
+        # produced by partial rebuild for a NEW path, that new entry wins.
+        if partition.removed_paths:
+            current_paths = {str(fpath) for fpath, _p in self._index.values()}
+            for sid, entry in cached_entries.items():
+                cached_filepath = entry.get("filepath")
+                if cached_filepath not in partition.removed_paths:
+                    continue
+                # Only purge if we did NOT just add a fresh entry for this sid.
+                meta = self._metadata_cache.get(sid)
+                if meta is None:
+                    continue
+                if meta.get("filepath") == cached_filepath:
+                    self._metadata_cache.pop(sid, None)
+                    self._index.pop(sid, None)
+                # else: sid was re-bound to a current path; keep the new entry.
+            del current_paths
+
+        merged_dropped = {**fresh_dropped, **new_dropped}
+        post_mtimes = collect_file_mtimes(self._index)
+        path_to_session_id = {str(fpath): sid for sid, (fpath, _p) in self._index.items()}
+        save_cache(
+            self._metadata_cache,
+            post_mtimes,
+            continuation_map={},
+            path_to_session_id=path_to_session_id,
+            dropped_paths=merged_dropped,
+        )
+
+        logger.info(
+            "Loaded %d sessions from index cache "
+            "(%d unchanged, %d added, %d re-parsed, %d removed)",
+            len(self._metadata_cache),
+            len(partition.unchanged),
+            len(partition.new),
+            len(partition.changed),
+            len(partition.removed_paths),
+        )
 
     def _remap_index(self, path_to_session_id: dict[str, str]) -> None:
         """Remap _index keys using the cached path -> real session_id mapping.
@@ -198,13 +347,13 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
         self._index = new_index
 
     def _full_rebuild(self) -> None:
-        """Full index rebuild: parse all files, enrich refs, write cache."""
+        """Full index rebuild: parse all files, write cache."""
         # Capture mtimes BEFORE rebuild — build_session_index mutates _index
         # (remaps orphaned IDs, drops empty files), so we need the pre-remap
         # paths to match what _discover_files will produce on next startup.
         pre_rebuild_mtimes = collect_file_mtimes(self._index)
 
-        trajectories = build_session_index(self._index, self._data_dirs)
+        trajectories, dropped_paths = build_session_index(self._index, self._data_dirs)
 
         # Enrich skeletons with fast-scanned metrics for dashboard stats
         _enrich_skeleton_metrics(trajectories, self._index)
@@ -222,8 +371,19 @@ class LocalTrajectoryStore(BaseTrajectoryStore):
 
         # Build path -> real session_id map for cache restoration
         path_to_session_id = {str(fpath): sid for sid, (fpath, _parser) in self._index.items()}
-        continuation_map = _extract_continuation_map(self._metadata_cache)
-        save_cache(self._metadata_cache, pre_rebuild_mtimes, continuation_map, path_to_session_id)
+        dropped_paths_dict: dict[str, int] = {}
+        for fpath in dropped_paths:
+            try:
+                dropped_paths_dict[str(fpath)] = fpath.stat().st_mtime_ns
+            except OSError:
+                continue
+        save_cache(
+            self._metadata_cache,
+            pre_rebuild_mtimes,
+            continuation_map={},
+            path_to_session_id=path_to_session_id,
+            dropped_paths=dropped_paths_dict,
+        )
 
 
 def _apply_scanned_metrics(traj: Trajectory, metrics: dict) -> None:
