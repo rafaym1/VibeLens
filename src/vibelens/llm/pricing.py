@@ -25,6 +25,7 @@ logger = get_logger(__name__)
 # Divisor to convert token counts to the "per million" unit used in pricing.
 TOKENS_PER_MTOK = 1_000_000
 
+
 # Local overrides — populate only when LiteLLM is wrong or missing a model.
 # LiteLLM covers Anthropic, OpenAI, and Google ≤2.5 directly; non-Western
 # providers (DeepSeek, Moonshot, MiniMax, Qwen, Zhipu, ByteDance) are only
@@ -51,30 +52,34 @@ def _mp(input_: float, output: float, cache_read: float, cache_write: float) -> 
 
 PRICING_OVERRIDES: dict[str, ModelPricing] = {
     # Google Gemini 3.x — LiteLLM only ships preview keys.
-    "gemini-3-pro": _mp(2.00, 12.00, 0.20, 2.00),
+    # Verified 2026-04-18 against ai.google.dev/gemini-api/docs/pricing
+    # (Gemini 3 Pro is not publicly listed; only 3.1 Pro Preview exists.)
     "gemini-3.1-pro": _mp(2.00, 12.00, 0.20, 2.00),
-    # DeepSeek
+    # DeepSeek — verified 2026-04-18 against api-docs.deepseek.com/quick_start/pricing
+    # v3 and v3.2 share the deepseek-chat rate.
     "deepseek-v3": _mp(0.28, 0.42, 0.028, 0.28),
-    "deepseek-v3.2": _mp(0.27, 0.41, 0.027, 0.27),
-    "deepseek-chat": _mp(0.32, 0.89, 0.032, 0.32),
-    # Moonshot Kimi
-    "kimi-k2": _mp(0.60, 2.50, 0.15, 0.60),
-    "kimi-k2-0905": _mp(0.40, 2.00, 0.10, 0.40),
-    "kimi-k2-thinking": _mp(0.60, 2.50, 0.15, 0.60),
-    "kimi-k2.5": _mp(0.45, 2.20, 0.225, 0.45),
-    # MiniMax
+    "deepseek-v3.2": _mp(0.28, 0.42, 0.028, 0.28),
+    # Moonshot Kimi — verified 2026-04-18 against platform.kimi.com/docs/pricing/chat-k2,
+    # chat-k25. K2 family unified pricing; K2.5 has higher output rate.
+    "kimi-k2": _mp(0.556, 2.222, 0.139, 0.556),
+    "kimi-k2-0905": _mp(0.556, 2.222, 0.139, 0.556),
+    "kimi-k2-thinking": _mp(0.556, 2.222, 0.139, 0.556),
+    "kimi-k2.5": _mp(0.556, 2.917, 0.097, 0.556),
+    # MiniMax — unverified 2026-04-18 (pricing portal moved/JS-rendered).
     "minimax-m2.5": _mp(0.30, 1.20, 0.03, 0.375),
     "minimax-m2.7": _mp(0.30, 1.20, 0.06, 0.375),
-    # Qwen (Alibaba Cloud)
-    "qwen3-max": _mp(0.78, 3.90, 0.156, 0.78),
+    # Qwen (Alibaba Cloud) — verified 2026-04-18 against help.aliyun.com/zh/model-studio.
+    # qwen3-max uses tier-based pricing; we quote the standard ≤32K tier.
+    # qwen3.5-plus and qwen3-coder-next not verified (page only listed -plus variants).
+    "qwen3-max": _mp(0.35, 1.39, 0.07, 0.35),
     "qwen3.5-plus": _mp(0.26, 1.56, 0.26, 0.26),
     "qwen3-coder-next": _mp(0.12, 0.75, 0.06, 0.12),
-    # Zhipu GLM
+    # Zhipu GLM — unverified 2026-04-18 (open.bigmodel.cn loaded JS-only page).
     "glm-5": _mp(1.00, 3.20, 0.20, 1.00),
     "glm-5-code": _mp(1.20, 5.00, 0.30, 1.20),
     "glm-4.7": _mp(0.60, 2.20, 0.11, 0.60),
     "glm-4.7-flashx": _mp(0.07, 0.40, 0.01, 0.07),
-    # ByteDance Seed (Doubao)
+    # ByteDance Seed (Doubao) — unverified 2026-04-18 (volcengine.com docs returned empty).
     "seed-2.0-pro": _mp(0.47, 2.37, 0.47, 0.47),
     "seed-2.0-lite": _mp(0.09, 0.53, 0.09, 0.09),
     "seed-2.0-mini": _mp(0.03, 0.31, 0.03, 0.03),
