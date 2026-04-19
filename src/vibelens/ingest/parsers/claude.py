@@ -229,15 +229,7 @@ class ClaudeParser(BaseParser):
 
         agent = self.build_agent(version=version, model=model_name)
 
-        has_diagnostics_issues = (
-            collector.skipped_lines > 0
-            or collector.orphaned_tool_calls > 0
-            or collector.orphaned_tool_results > 0
-        )
-        extra: dict | None = None
-        if has_diagnostics_issues:
-            extra = {"diagnostics": collector.to_diagnostics().model_dump()}
-
+        extra: dict | None = self.build_diagnostics_extra(collector)
         if git_branches:
             extra = extra or {}
             extra["git_branches"] = git_branches
@@ -1027,8 +1019,7 @@ def _decompose_raw_content(
                 result_content = mark_error_content(result_content)
             obs_results.append(
                 ObservationResult(
-                    source_call_id=block.get("tool_use_id", ""),
-                    content=result_content,
+                    source_call_id=block.get("tool_use_id", ""), content=result_content
                 )
             )
 
@@ -1327,11 +1318,6 @@ def _collect_tool_results(raw_entries: list[dict]) -> dict[str, dict]:
     calls do not lose early results to eviction. Also captures the
     event-level ``toolUseResult`` field (structured metadata like
     exit_code, stdout, stderr) for downstream extraction.
-
-    Note: does not use shared.tool_pairing.collect_tool_results_by_id
-    because claude carries richer per-result state (raw content may be
-    a list with image blocks, plus the event-level ``toolUseResult``
-    metadata) that does not fit the shared ObservationResult shape.
     """
     tool_results: dict[str, dict] = {}
     for entry in raw_entries:

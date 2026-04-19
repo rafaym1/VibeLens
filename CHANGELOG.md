@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### Added
-- **`ingest/parsers/shared/`** cross-parser helper package. `iter_jsonl_lines` consolidates the in-memory JSONL loop that lived in 5 parsers; `collect_tool_results_by_id` provides id-keyed tool-result pairing for pre-scan parsers; `iter_text_and_tool_uses` normalises Anthropic content-block arrays. 16 new unit tests.
+- **`ingest/parsers/shared/jsonl.py`** with `iter_jsonl_lines`, consolidating the in-memory JSONL loop that lived in 4 parsers (claude, codex, hermes, openclaw). 5 new unit tests.
 - **Hermes agent parser** (`ingest/parsers/hermes.py`) covering JSONL stream + snapshot formats, state.db enrichment, chat-surface project paths, and `system_prompt` / `base_url` surfaced in trajectory `extra`.
 
 ### Changed

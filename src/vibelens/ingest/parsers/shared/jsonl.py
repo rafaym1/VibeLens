@@ -13,8 +13,7 @@ from vibelens.ingest.diagnostics import DiagnosticsCollector
 
 
 def iter_jsonl_lines(
-    content: str,
-    diagnostics: DiagnosticsCollector | None = None,
+    content: str, diagnostics: DiagnosticsCollector | None = None
 ) -> Iterator[dict]:
     """Yield parsed dicts from a JSONL content string.
 
