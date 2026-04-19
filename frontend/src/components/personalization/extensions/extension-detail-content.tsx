@@ -28,6 +28,36 @@ interface ExtensionDetailContentProps {
   onSave?: (nextContent: string) => Promise<void>;
 }
 
+const EXTENSION_TO_LANGUAGE: Record<string, string> = {
+  md: "markdown",
+  mdx: "markdown",
+  json: "json",
+  jsonc: "json",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "toml",
+  py: "python",
+  ts: "typescript",
+  tsx: "tsx",
+  js: "javascript",
+  jsx: "jsx",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  html: "html",
+  css: "css",
+  txt: "",
+};
+
+/** Pick a highlight.js language tag from a file path. Empty string for plain text. */
+function languageForPath(path: string | undefined): string {
+  if (!path) return "markdown";
+  const dot = path.lastIndexOf(".");
+  if (dot < 0) return "";
+  const ext = path.slice(dot + 1).toLowerCase();
+  return EXTENSION_TO_LANGUAGE[ext] ?? "";
+}
+
 /** Parse YAML frontmatter, extracting name and description fields. */
 export function parseFrontmatter(text: string): { data: FrontmatterData; body: string } {
   const match = text.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
@@ -150,21 +180,13 @@ export function ExtensionDetailContent({
 
       <div className="px-6 lg:px-8 pb-8">
         {contentMode === "preview" ? (
-          <>
-            {displayName && (
-              <div className="mb-6 pb-5 border-b border-card">
-                <h1 className="text-2xl font-bold text-primary leading-tight">
-                  {displayName}
-                </h1>
-                {displayDescription && (
-                  <p className="text-[15px] text-secondary mt-2.5 leading-relaxed">
-                    {displayDescription}
-                  </p>
-                )}
-              </div>
-            )}
-            <MarkdownRenderer content={body} variant="document" />
-          </>
+          <PreviewBody
+            itemName={itemName}
+            displayName={displayName}
+            displayDescription={displayDescription}
+            content={content}
+            body={body}
+          />
         ) : editable ? (
           <textarea
             value={draft}
@@ -180,4 +202,61 @@ export function ExtensionDetailContent({
       </div>
     </div>
   );
+}
+
+interface PreviewBodyProps {
+  itemName: string | undefined;
+  displayName: string | undefined;
+  displayDescription: string | undefined;
+  content: string;
+  body: string;
+}
+
+/** Preview mode branches on the file extension: markdown renders rich,
+ *  other file types (json, py, yaml, …) render inside a fenced code block
+ *  so ``rehype-highlight`` provides syntax colouring instead of treating
+ *  the text as a paragraph.
+ */
+function PreviewBody({
+  itemName,
+  displayName,
+  displayDescription,
+  content,
+  body,
+}: PreviewBodyProps) {
+  const language = languageForPath(itemName);
+  const isMarkdown = language === "markdown" || language === "";
+
+  if (isMarkdown) {
+    return (
+      <>
+        {displayName && (
+          <div className="mb-6 pb-5 border-b border-card">
+            <h1 className="text-2xl font-bold text-primary leading-tight">{displayName}</h1>
+            {displayDescription && (
+              <p className="text-[15px] text-secondary mt-2.5 leading-relaxed">
+                {displayDescription}
+              </p>
+            )}
+          </div>
+        )}
+        <MarkdownRenderer content={body} variant="document" />
+      </>
+    );
+  }
+
+  // For JSON/YAML/Python/etc., wrap in a fenced code block so the
+  // highlighter renders it as code instead of prose.
+  const formatted = language === "json" ? prettyJson(content) : content;
+  const fenced = `\`\`\`${language}\n${formatted}\n\`\`\``;
+  return <MarkdownRenderer content={fenced} variant="document" />;
+}
+
+/** Format JSON with two-space indent; return original text if parsing fails. */
+function prettyJson(text: string): string {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return text;
+  }
 }
