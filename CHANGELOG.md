@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+- **`ingest/parsers/shared/`** cross-parser helper package. `iter_jsonl_lines` consolidates the in-memory JSONL loop that lived in 5 parsers; `collect_tool_results_by_id` provides id-keyed tool-result pairing for pre-scan parsers; `iter_text_and_tool_uses` normalises Anthropic content-block arrays. 16 new unit tests.
+- **Hermes agent parser** (`ingest/parsers/hermes.py`) covering JSONL stream + snapshot formats, state.db enrichment, chat-surface project paths, and `system_prompt` / `base_url` surfaced in trajectory `extra`.
+
+### Changed
+- **Renames**: `ingest/parsers/claude_code.py` → `claude.py` (class `ClaudeCodeParser` → `ClaudeParser`); `claude_code_web.py` → `claude_web.py` (`ClaudeCodeWebParser` → `ClaudeWebParser`). External `AgentType` values (`"claude"`, `"claude_web"`) unchanged.
+- **Parser migrations**: claude, codex, openclaw, hermes now call `shared.jsonl.iter_jsonl_lines` instead of their own private JSONL loops. No behaviour change beyond consistent blank-line handling.
+
+### Fixed
+- **Claude duplicate-step-id regression**: some `~/.claude` sessions (12 out of 3,357 observed locally) were rejected by the `Trajectory` validator because Claude Code re-emitted identical JSONL entries after compaction replay. Entries are now deduplicated by `uuid` before step assembly.
+- **Gemini missing `agent.model_name`**: the agent-level model was never populated (0% local coverage). Derived it from the most recently-seen step model, restoring 100% coverage.
+
 ## [1.0.2] - 2026-04-19
 
 ### Fixed
