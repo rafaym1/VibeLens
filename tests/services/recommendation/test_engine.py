@@ -2,6 +2,8 @@
 
 import inspect
 
+from vibelens.models.enums import AgentExtensionType
+from vibelens.models.extension import AgentExtensionItem
 from vibelens.services.recommendation.engine import (
     RATIONALE_MAX_RESULTS,
     RATIONALE_MAX_RESULTS_LIMIT,
@@ -10,7 +12,25 @@ from vibelens.services.recommendation.engine import (
     RECOMMENDATION_TIMEOUT_SECONDS,
     RETRIEVAL_TOP_K,
     SCORING_TOP_K,
+    _build_rationale_candidates,
 )
+
+
+def _mock_item(*, name: str, description: str | None) -> AgentExtensionItem:
+    return AgentExtensionItem(
+        extension_id=f"test:{name}",
+        extension_type=AgentExtensionType.SKILL,
+        name=name,
+        description=description,
+        source_url=f"https://github.com/acme/{name}/tree/main",
+        repo_full_name=f"acme/{name}",
+        discovery_source="seed",
+        topics=[],
+        quality_score=70.0,
+        popularity=0.5,
+        stars=10,
+        forks=0,
+    )
 
 
 def test_engine_constants():
@@ -55,3 +75,33 @@ def test_analyze_recommendation_signature():
 
     top_n_param = sig.parameters["top_n"]
     assert top_n_param.default == RATIONALE_MAX_RESULTS
+
+
+def test_build_rationale_candidates_handles_null_description():
+    """Regression: catalog items may have description=None; the L4 template
+    builder must coerce to empty string instead of crashing in truncate().
+    """
+    scored = [
+        (_mock_item(name="no-desc", description=None), 0.82),
+        (_mock_item(name="with-desc", description="a real skill"), 0.71),
+    ]
+
+    out = _build_rationale_candidates(scored)
+
+    assert len(out) == 2
+    assert out[0] == {"item_id": "test:no-desc", "name": "no-desc", "description": ""}
+    assert out[1]["description"] == "a real skill"
+    print(f"built candidates: {out}")
+
+
+def test_build_rationale_candidates_truncates_long_description():
+    """Descriptions longer than DESCRIPTION_MAX_CHARS get an ellipsis suffix."""
+    from vibelens.services.recommendation.engine import DESCRIPTION_MAX_CHARS
+
+    long_text = "word " * (DESCRIPTION_MAX_CHARS // 4)
+    scored = [(_mock_item(name="long", description=long_text), 0.9)]
+
+    out = _build_rationale_candidates(scored)
+
+    assert out[0]["description"].endswith("...")
+    assert len(out[0]["description"]) <= DESCRIPTION_MAX_CHARS + 3

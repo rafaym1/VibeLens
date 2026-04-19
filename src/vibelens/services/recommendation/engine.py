@@ -360,6 +360,24 @@ def _retrieve_and_score(
     return scored
 
 
+def _build_rationale_candidates(
+    scored_candidates: list[tuple[AgentExtensionItem, float]],
+) -> list[dict[str, str]]:
+    """Shape the L4 prompt's candidate block.
+
+    Catalog items can have ``description=None``; coerce to empty string
+    before truncating so the template renders cleanly.
+    """
+    return [
+        {
+            "item_id": item.extension_id,
+            "name": item.name,
+            "description": truncate(item.description or "", max_chars=DESCRIPTION_MAX_CHARS),
+        }
+        for item, _ in scored_candidates
+    ]
+
+
 async def _generate_rationales(
     backend: InferenceBackend,
     profile: UserProfile,
@@ -379,14 +397,7 @@ async def _generate_rationales(
     Returns:
         Tuple of (RationaleOutput, step metrics).
     """
-    candidates_for_template = [
-        {
-            "item_id": item.extension_id,
-            "name": item.name,
-            "description": truncate(item.description, max_chars=DESCRIPTION_MAX_CHARS),
-        }
-        for item, _ in scored_candidates
-    ]
+    candidates_for_template = _build_rationale_candidates(scored_candidates)
 
     system_prompt = render_system_for(
         RECOMMENDATION_RATIONALE_PROMPT,
