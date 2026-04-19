@@ -40,9 +40,7 @@ def _empty_proposal_result(narrative_title: str) -> EvolutionProposalResult:
         batch_metrics=[],
         created_at="2026-04-16T00:00:00+00:00",
         proposal_batch=EvolutionProposalBatch(
-            title=narrative_title,
-            workflow_patterns=[],
-            proposals=[],
+            title=narrative_title, workflow_patterns=[], proposals=[]
         ),
     )
 

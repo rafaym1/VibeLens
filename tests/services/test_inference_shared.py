@@ -13,10 +13,7 @@ from vibelens.models.trajectories.agent import Agent
 from vibelens.models.trajectories.step import Step
 from vibelens.models.trajectories.trajectory import Trajectory
 from vibelens.services import inference_shared
-from vibelens.services.inference_shared import (
-    _CONTEXT_CACHE,
-    extract_all_contexts,
-)
+from vibelens.services.inference_shared import _CONTEXT_CACHE, extract_all_contexts
 
 _TEST_AGENT = Agent(name="test-agent")
 
@@ -28,10 +25,7 @@ def _make_trajectory(session_id: str, step_count: int = 3) -> Trajectory:
         for i in range(step_count)
     ]
     return Trajectory(
-        session_id=session_id,
-        project_path=f"/proj/{session_id}",
-        agent=_TEST_AGENT,
-        steps=steps,
+        session_id=session_id, project_path=f"/proj/{session_id}", agent=_TEST_AGENT, steps=steps
     )
 
 
@@ -94,9 +88,7 @@ def test_cache_hit_returns_without_reloading(mock_stores):
     assert mock_stores["metadata"] == metadata_after_first
     assert len(first.contexts) == 3
     assert len(second.contexts) == 3
-    print(
-        f"Cache hit: loads={mock_stores['load']}, metadata_calls={mock_stores['metadata']}"
-    )
+    print(f"Cache hit: loads={mock_stores['load']}, metadata_calls={mock_stores['metadata']}")
 
 
 def test_cache_key_isolates_extractor_classes(mock_stores):
@@ -116,14 +108,10 @@ def test_cache_key_isolates_extractor_classes(mock_stores):
 
 def test_cache_key_order_sensitive(mock_stores):
     """Session ID ordering affects the cache key."""
-    extract_all_contexts(
-        session_ids=["a", "b"], session_token=None, extractor=_detail_extractor()
-    )
+    extract_all_contexts(session_ids=["a", "b"], session_token=None, extractor=_detail_extractor())
     loads_after_first = mock_stores["load"]
 
-    extract_all_contexts(
-        session_ids=["b", "a"], session_token=None, extractor=_detail_extractor()
-    )
+    extract_all_contexts(session_ids=["b", "a"], session_token=None, extractor=_detail_extractor())
     assert mock_stores["load"] > loads_after_first
     print(
         f"Reordered ids invalidate cache key: first_loads={loads_after_first}, "
@@ -174,18 +162,13 @@ def test_worker_failure_skips_one_session(monkeypatch):
     monkeypatch.setattr(inference_shared, "load_from_stores", fake_load)
 
     batch = extract_all_contexts(
-        session_ids=["good-1", "bad", "good-2"],
-        session_token=None,
-        extractor=_detail_extractor(),
+        session_ids=["good-1", "bad", "good-2"], session_token=None, extractor=_detail_extractor()
     )
 
     assert batch.session_ids == ["good-1", "good-2"]
     assert batch.skipped_session_ids == ["bad"]
     assert [ctx.session_id for ctx in batch.contexts] == ["good-1", "good-2"]
-    print(
-        f"Bad session skipped: loaded={batch.session_ids}, "
-        f"skipped={batch.skipped_session_ids}"
-    )
+    print(f"Bad session skipped: loaded={batch.session_ids}, skipped={batch.skipped_session_ids}")
 
 
 def test_cache_hit_isolated_from_mutation(mock_stores):
@@ -204,6 +187,4 @@ def test_cache_hit_isolated_from_mutation(mock_stores):
 
     assert second.contexts[0].session_index == 0
     assert "(index=99)" not in second.contexts[0].context_text
-    print(
-        f"Cache isolated from mutation: second.session_index={second.contexts[0].session_index}"
-    )
+    print(f"Cache isolated from mutation: second.session_index={second.contexts[0].session_index}")

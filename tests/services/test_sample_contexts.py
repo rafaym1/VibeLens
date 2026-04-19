@@ -136,18 +136,14 @@ def test_min_steps_filter_drops_small_sessions():
     now = datetime.now(timezone.utc)
     big = _make_context("big", "/proj-a", now - timedelta(days=1), step_count=50)
     small = _make_context("small", "/proj-b", now - timedelta(days=1), step_count=3)
-    batch = SessionContextBatch(
-        contexts=[big, small], session_ids=["big", "small"]
-    )
+    batch = SessionContextBatch(contexts=[big, small], session_ids=["big", "small"])
 
     result = sample_contexts(batch, token_budget=100_000)
 
     selected_ids = [ctx.session_id for ctx in result.contexts]
     assert selected_ids == ["big"]
     assert "small" in result.skipped_session_ids
-    print(
-        f"Filtered small session: selected={selected_ids}, skipped={result.skipped_session_ids}"
-    )
+    print(f"Filtered small session: selected={selected_ids}, skipped={result.skipped_session_ids}")
 
 
 def test_min_steps_threshold_inclusive():
@@ -155,9 +151,7 @@ def test_min_steps_threshold_inclusive():
     now = datetime.now(timezone.utc)
     at_threshold = _make_context("at10", "/proj", now - timedelta(days=1), step_count=10)
     below = _make_context("at9", "/proj", now - timedelta(days=1), step_count=9)
-    batch = SessionContextBatch(
-        contexts=[at_threshold, below], session_ids=["at10", "at9"]
-    )
+    batch = SessionContextBatch(contexts=[at_threshold, below], session_ids=["at10", "at9"])
 
     result = sample_contexts(batch, token_budget=100_000)
 
@@ -173,8 +167,7 @@ def test_custom_min_steps_parameter():
     """A caller-supplied min_steps overrides the default."""
     now = datetime.now(timezone.utc)
     contexts = [
-        _make_context(f"s{i}", "/proj", now - timedelta(days=i), step_count=7)
-        for i in range(3)
+        _make_context(f"s{i}", "/proj", now - timedelta(days=i), step_count=7) for i in range(3)
     ]
     batch = SessionContextBatch(contexts=contexts, session_ids=[c.session_id for c in contexts])
 
@@ -182,9 +175,7 @@ def test_custom_min_steps_parameter():
     result = sample_contexts(batch, token_budget=100_000, min_steps=5)
 
     assert len(result.contexts) == 3
-    assert not any(
-        sid in result.skipped_session_ids for sid in ["s0", "s1", "s2"]
-    )
+    assert not any(sid in result.skipped_session_ids for sid in ["s0", "s1", "s2"])
     print(f"Custom min_steps=5 kept {len(result.contexts)} sessions with 7 steps each")
 
 
@@ -192,8 +183,7 @@ def test_all_small_sessions_returns_empty_batch():
     """When every session is below min_steps, contexts is empty but the call does not raise."""
     now = datetime.now(timezone.utc)
     contexts = [
-        _make_context(f"s{i}", "/proj", now - timedelta(days=i), step_count=2)
-        for i in range(4)
+        _make_context(f"s{i}", "/proj", now - timedelta(days=i), step_count=2) for i in range(4)
     ]
     batch = SessionContextBatch(contexts=contexts, session_ids=[c.session_id for c in contexts])
 
