@@ -48,6 +48,19 @@ logger = get_logger(__name__)
 # Gemini CLI uses "gemini" instead of "assistant" for model responses.
 RELEVANT_TYPES = {"user", "gemini"}
 
+# Default local data root. Used as ``LOCAL_DATA_DIR`` *and* as the
+# fallback when resolving projectHash for sessions outside ~/.gemini/
+# (e.g. archived session files copied elsewhere).
+GEMINI_DATA_DIR = Path.home() / ".gemini"
+
+# Tool-call argument keys we probe when inferring a project path from
+# on-disk paths the agent actually touched.
+_PATH_ARG_KEYS = {"file_path", "path", "filename", "directory"}
+
+# Reject paths shallower than this when inferring from tool args —
+# paths like "/" or "/Users" are not meaningful project roots.
+_MIN_PATH_DEPTH = 3
+
 
 class GeminiParser(BaseParser):
     """Parser for Gemini CLI's native session JSON format.
@@ -57,7 +70,7 @@ class GeminiParser(BaseParser):
     """
 
     AGENT_TYPE = AgentType.GEMINI
-    LOCAL_DATA_DIR: Path | None = Path.home() / ".gemini"
+    LOCAL_DATA_DIR: Path | None = GEMINI_DATA_DIR
 
     def discover_session_files(self, data_dir: Path) -> list[Path]:
         """Find Gemini session files inside chats/ directories."""
@@ -109,9 +122,6 @@ class GeminiParser(BaseParser):
         ]
 
 
-_DEFAULT_GEMINI_DIR = Path.home() / ".gemini"
-
-
 def _resolve_project(file_path: Path, data: dict, steps: list[Step]) -> str:
     """Resolve the project path using all available strategies.
 
@@ -145,8 +155,8 @@ def _resolve_project(file_path: Path, data: dict, steps: list[Step]) -> str:
 
     # Strategy 2: use projectHash from session data against default ~/.gemini/
     project_hash = data.get("projectHash", "")
-    if project_hash and _DEFAULT_GEMINI_DIR.is_dir():
-        result = resolve_project_path(project_hash, _DEFAULT_GEMINI_DIR, steps)
+    if project_hash and GEMINI_DATA_DIR.is_dir():
+        result = resolve_project_path(project_hash, GEMINI_DATA_DIR, steps)
         if result and result != project_hash:
             return result
 
@@ -173,11 +183,11 @@ def _lookup_projects_json(projects_data: dict, hash_dir: str) -> str:
     Returns:
         Resolved project path, or empty string if not found.
     """
-    # Current format: {projects: {path: dirname}}
+    # Current format: {projects: {path: hash_or_dirname}}
     projects_map = projects_data.get("projects", {})
     if isinstance(projects_map, dict):
-        for project_path, dirname in projects_map.items():
-            if dirname == hash_dir:
+        for project_path, project_hash in projects_map.items():
+            if project_hash == hash_dir:
                 return project_path
             path_hash = hashlib.sha256(project_path.encode()).hexdigest()
             if path_hash == hash_dir:
@@ -191,12 +201,6 @@ def _lookup_projects_json(projects_data: dict, hash_dir: str) -> str:
             return project_path
 
     return ""
-
-
-_PATH_ARG_KEYS = {"file_path", "path", "filename", "directory"}
-
-# Avoid interpreting root-level paths like "/" or "/Users" as projects.
-_MIN_PATH_DEPTH = 3
 
 
 def resolve_project_path(hash_dir: str, gemini_dir: Path, steps: list[Step] | None = None) -> str:
