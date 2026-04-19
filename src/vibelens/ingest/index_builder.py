@@ -36,7 +36,11 @@ def build_session_index(
     parsers = list({parser for _, parser in file_index.values()})
     skeletons = _collect_all_skeletons(parsers, file_index, data_dirs)
     valid = _dedup_and_validate(skeletons, file_index)
-    _enrich_continuation_refs(valid, file_index)
+    # TODO(perf-spec 2026-04-18): re-enable once _enrich_continuation_refs
+    # bug is fixed (it currently misses some chains). The partial-rebuild
+    # path in storage/trajectory/local.py also assumes this is disabled —
+    # restoring it requires reasoning about cross-file chain invalidation.
+    # _enrich_continuation_refs(valid, file_index)
     return valid
 
 
