@@ -8,7 +8,7 @@ the file and delegates to ``parse``.
 
 import json
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 
 from vibelens.ingest.diagnostics import DiagnosticsCollector
@@ -103,9 +103,7 @@ _ALL_KNOWN_SYSTEM_TAG_PREFIXES = (
 _SKILL_OUTPUT_PREFIX = "Base directory for this skill:"
 
 
-def _is_meaningful_prompt(
-    text: str, extra_system_prefixes: tuple[str, ...] = ()
-) -> bool:
+def _is_meaningful_prompt(text: str, extra_system_prefixes: tuple[str, ...] = ()) -> bool:
     """Return True if text looks like a real user prompt rather than system chatter.
 
     Args:
@@ -273,7 +271,7 @@ class BaseParser(ABC):
         return None
 
     @staticmethod
-    def build_diagnostics_extra(collector: "DiagnosticsCollector") -> dict | None:
+    def build_diagnostics_extra(collector: DiagnosticsCollector) -> dict | None:
         """Build trajectory extra dict from diagnostics if there are issues.
 
         Args:
@@ -349,36 +347,55 @@ class BaseParser(ABC):
 
     @staticmethod
     def iter_jsonl_safe(
-        file_path: Path, diagnostics: DiagnosticsCollector | None = None
+        source: Path | str, diagnostics: DiagnosticsCollector | None = None
     ) -> Iterator[dict]:
-        """Yield parsed JSON dicts from a JSONL file, catching errors.
+        """Yield parsed JSON dicts from a JSONL file or in-memory string.
+
+        Blank lines are skipped silently; decode errors are recorded to
+        ``diagnostics`` (if provided) and skipped. A ``Path`` streams
+        the file line-by-line; a ``str`` iterates over ``splitlines()``.
 
         Args:
-            file_path: Path to the JSONL file.
+            source: Path to a JSONL file, or the raw content string.
             diagnostics: Optional collector for tracking skipped lines.
 
         Yields:
             Parsed JSON dict per non-empty line.
         """
+        if isinstance(source, Path):
+            try:
+                with open(source, encoding="utf-8") as f:
+                    yield from _iter_parsed_jsonl(f, diagnostics)
+            except OSError:
+                logger.debug("Cannot read file: %s", source)
+        else:
+            yield from _iter_parsed_jsonl(source.splitlines(), diagnostics)
+
+
+def _iter_parsed_jsonl(
+    lines: Iterable[str], diagnostics: DiagnosticsCollector | None
+) -> Iterator[dict]:
+    """Shared loop body for BaseParser.iter_jsonl_safe.
+
+    Kept out of the class so both the file-streaming and string-splitting
+    paths can share the same blank-line / decode-error / diagnostics
+    handling.
+    """
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if diagnostics is not None:
+            diagnostics.total_lines += 1
         try:
-            with open(file_path, encoding="utf-8") as f:
-                for line in f:
-                    stripped = line.strip()
-                    if not stripped:
-                        continue
-                    if diagnostics:
-                        diagnostics.total_lines += 1
-                    try:
-                        parsed = json.loads(stripped)
-                        if diagnostics:
-                            diagnostics.parsed_lines += 1
-                        yield parsed
-                    except json.JSONDecodeError:
-                        if diagnostics:
-                            diagnostics.record_skip("invalid JSON")
-                        continue
-        except OSError:
-            logger.debug("Cannot read file: %s", file_path)
+            parsed = json.loads(stripped)
+        except json.JSONDecodeError:
+            if diagnostics is not None:
+                diagnostics.record_skip("invalid JSON")
+            continue
+        if diagnostics is not None:
+            diagnostics.parsed_lines += 1
+        yield parsed
 
 
 def _compute_final_metrics(steps: list[Step]) -> FinalMetrics:

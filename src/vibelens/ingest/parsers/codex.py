@@ -30,12 +30,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from vibelens.ingest.diagnostics import DiagnosticsCollector
-from vibelens.ingest.parsers.base import (
-    ROLE_TO_SOURCE,
-    BaseParser,
-    mark_error_content,
-)
-from vibelens.ingest.parsers.shared.jsonl import iter_jsonl_lines
+from vibelens.ingest.parsers.base import ROLE_TO_SOURCE, BaseParser, mark_error_content
 from vibelens.models.enums import AgentType, StepSource
 from vibelens.models.trajectories import (
     FinalMetrics,
@@ -303,7 +298,7 @@ def _load_rollout_content(
     content: str, diagnostics: DiagnosticsCollector | None = None
 ) -> list[dict]:
     """Parse JSONL content string into entry dicts."""
-    return list(iter_jsonl_lines(content, diagnostics=diagnostics))
+    return list(BaseParser.iter_jsonl_safe(content, diagnostics=diagnostics))
 
 
 def _scan_session_metadata(entries: list[dict]) -> _CodexSessionMeta:

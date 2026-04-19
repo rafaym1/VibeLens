@@ -96,9 +96,7 @@ class GeminiParser(BaseParser):
         extra = self.build_diagnostics_extra(collector)
         # Gemini doesn't persist a session-level model; use the most
         # recently seen step model so downstream pricing lookup can match.
-        session_model = next(
-            (step.model_name for step in reversed(steps) if step.model_name), None
-        )
+        session_model = next((step.model_name for step in reversed(steps) if step.model_name), None)
         agent = self.build_agent(model=session_model)
         return [
             self.assemble_trajectory(
@@ -201,9 +199,7 @@ _PATH_ARG_KEYS = {"file_path", "path", "filename", "directory"}
 _MIN_PATH_DEPTH = 3
 
 
-def resolve_project_path(
-    hash_dir: str, gemini_dir: Path, steps: list[Step] | None = None
-) -> str:
+def resolve_project_path(hash_dir: str, gemini_dir: Path, steps: list[Step] | None = None) -> str:
     """Resolve a Gemini SHA-256 hash directory to the original project path.
 
     Uses four strategies in order of speed:

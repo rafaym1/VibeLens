@@ -3,12 +3,12 @@
 ## [Unreleased]
 
 ### Added
-- **`ingest/parsers/shared/jsonl.py`** with `iter_jsonl_lines`, consolidating the in-memory JSONL loop that lived in 4 parsers (claude, codex, hermes, openclaw). 5 new unit tests.
 - **Hermes agent parser** (`ingest/parsers/hermes.py`) covering JSONL stream + snapshot formats, state.db enrichment, chat-surface project paths, and `system_prompt` / `base_url` surfaced in trajectory `extra`.
 
 ### Changed
 - **Renames**: `ingest/parsers/claude_code.py` → `claude.py` (class `ClaudeCodeParser` → `ClaudeParser`); `claude_code_web.py` → `claude_web.py` (`ClaudeCodeWebParser` → `ClaudeWebParser`). External `AgentType` values (`"claude"`, `"claude_web"`) unchanged.
-- **Parser migrations**: claude, codex, openclaw, hermes now call `shared.jsonl.iter_jsonl_lines` instead of their own private JSONL loops. No behaviour change beyond consistent blank-line handling.
+- **`BaseParser.iter_jsonl_safe`** accepts either a `Path` (file streaming) or `str` (in-memory content), replacing the private per-parser JSONL loops that lived in claude, codex, hermes, openclaw.
+- **Agent-specific system-tag prefixes** moved out of base into their owning parsers (`_CODEX_SYSTEM_TAG_PREFIXES` in codex, claude's already in claude). Base's union renamed to `_ALL_KNOWN_SYSTEM_TAG_PREFIXES` and documented as an agent-agnostic fallback for demo-mode ATIF loading.
 
 ### Fixed
 - **Claude duplicate-step-id regression**: some `~/.claude` sessions (12 out of 3,357 observed locally) were rejected by the `Trajectory` validator because Claude Code re-emitted identical JSONL entries after compaction replay. Entries are now deduplicated by `uuid` before step assembly.

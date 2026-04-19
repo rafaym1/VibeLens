@@ -13,7 +13,6 @@ message, linked by ``tool_use_id``.  This two-message pairing requires
 a pre-scan to build the result map before constructing ToolCall objects.
 """
 
-import json
 import re
 from collections import Counter
 from datetime import datetime, timezone
@@ -28,7 +27,6 @@ from vibelens.ingest.parsers.base import (
     _is_meaningful_prompt,
     mark_error_content,
 )
-from vibelens.ingest.parsers.shared.jsonl import iter_jsonl_lines
 from vibelens.models.enums import AgentType, ContentType, StepSource
 from vibelens.models.trajectories import (
     Agent,
@@ -706,7 +704,7 @@ def _parse_jsonl_content(
     Returns:
         List of parsed dicts with relevant types only.
     """
-    all_parsed: list[dict] = list(iter_jsonl_lines(content, diagnostics=diagnostics))
+    all_parsed: list[dict] = list(BaseParser.iter_jsonl_safe(content, diagnostics=diagnostics))
 
     # Pre-scan: identify enqueue timestamps that were later dequeued
     # (delivered as normal user messages). Only enqueue+remove pairs
@@ -861,7 +859,7 @@ def _scan_session_metadata(content: str) -> _SessionMeta:
     cwd_values: list[str] = []
     branches: set[str] = set()
 
-    for entry in iter_jsonl_lines(content):
+    for entry in BaseParser.iter_jsonl_safe(content):
         sid = entry.get("sessionId", "")
         if sid:
             session_counter[sid] += 1
@@ -1169,46 +1167,37 @@ def _aggregate_history_lines(history_file: Path, since_ms: int) -> dict[str, dic
         Dict mapping session_id -> aggregated session data.
     """
     sessions: dict[str, dict] = {}
-    with open(history_file, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+    for entry in BaseParser.iter_jsonl_safe(history_file):
+        session_id = entry.get("sessionId", "")
+        if not session_id:
+            continue
 
-            session_id = entry.get("sessionId", "")
-            if not session_id:
-                continue
+        timestamp_ms = entry.get("timestamp", 0)
+        if since_ms and timestamp_ms < since_ms:
+            continue
 
-            timestamp_ms = entry.get("timestamp", 0)
-            if since_ms and timestamp_ms < since_ms:
-                continue
+        display = entry.get("display", "")
+        project_path = entry.get("project", "")
 
-            display = entry.get("display", "")
-            project_path = entry.get("project", "")
-
-            if session_id not in sessions:
-                sessions[session_id] = {
-                    "first_timestamp": timestamp_ms,
-                    "last_timestamp": timestamp_ms,
-                    "first_message": display if _is_meaningful_prompt(display) else "",
-                    "project_path": project_path,
-                    "message_count": 1,
-                }
-            else:
-                sess = sessions[session_id]
-                sess["message_count"] += 1
-                if not sess["first_message"] and _is_meaningful_prompt(display):
+        if session_id not in sessions:
+            sessions[session_id] = {
+                "first_timestamp": timestamp_ms,
+                "last_timestamp": timestamp_ms,
+                "first_message": display if _is_meaningful_prompt(display) else "",
+                "project_path": project_path,
+                "message_count": 1,
+            }
+        else:
+            sess = sessions[session_id]
+            sess["message_count"] += 1
+            if not sess["first_message"] and _is_meaningful_prompt(display):
+                sess["first_message"] = display
+            if timestamp_ms < sess["first_timestamp"]:
+                sess["first_timestamp"] = timestamp_ms
+                if _is_meaningful_prompt(display):
                     sess["first_message"] = display
-                if timestamp_ms < sess["first_timestamp"]:
-                    sess["first_timestamp"] = timestamp_ms
-                    if _is_meaningful_prompt(display):
-                        sess["first_message"] = display
-                if timestamp_ms > sess["last_timestamp"]:
-                    sess["last_timestamp"] = timestamp_ms
+            if timestamp_ms > sess["last_timestamp"]:
+                sess["last_timestamp"] = timestamp_ms
     return sessions
 
 
@@ -1255,7 +1244,7 @@ def _build_agent_spawn_map(
     spawn_tc_ids: set[str] = set()
     result_candidates: list[tuple[str, str]] = []  # (tool_use_id, text_content)
 
-    for entry in iter_jsonl_lines(raw_content):
+    for entry in BaseParser.iter_jsonl_safe(raw_content):
         entry_type = entry.get("type")
         msg = entry.get("message", {})
         if not isinstance(msg, dict):

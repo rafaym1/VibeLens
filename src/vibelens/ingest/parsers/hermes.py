@@ -41,7 +41,6 @@ from uuid import uuid4
 
 from vibelens.ingest.diagnostics import DiagnosticsCollector
 from vibelens.ingest.parsers.base import BaseParser
-from vibelens.ingest.parsers.shared.jsonl import iter_jsonl_lines
 from vibelens.models.enums import AgentType, StepSource
 from vibelens.models.trajectories import (
     FinalMetrics,
@@ -293,7 +292,7 @@ def _session_id_from_path(path: Path) -> str | None:
 
 def _parse_jsonl(content: str, diagnostics: DiagnosticsCollector) -> list[dict]:
     """Parse line-delimited JSON into a list of record dicts."""
-    return list(iter_jsonl_lines(content, diagnostics=diagnostics))
+    return list(BaseParser.iter_jsonl_safe(content, diagnostics=diagnostics))
 
 
 def _parse_snapshot(content: str) -> dict | None:
