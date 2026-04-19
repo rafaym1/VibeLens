@@ -113,7 +113,7 @@ function RecommendationCard({
           handleClick();
         }
       }}
-      className={`border border-default rounded-xl bg-subtle overflow-hidden cursor-pointer hover:border-hover transition ${
+      className={`border border-card bg-panel hover:bg-control/80 rounded-xl overflow-hidden cursor-pointer transition ${
         loading ? "opacity-60" : ""
       }`}
     >

@@ -1,4 +1,22 @@
-import { Check, ChevronDown, Compass, LayoutGrid, List, Package, RefreshCw, Search, SlidersHorizontal, Sparkles, Zap } from "lucide-react";
+import {
+  Anchor,
+  Bot,
+  Boxes,
+  Check,
+  ChevronDown,
+  Compass,
+  LayoutGrid,
+  List,
+  type LucideIcon,
+  Package,
+  RefreshCw,
+  Search,
+  Server,
+  SlidersHorizontal,
+  Sparkles,
+  Terminal,
+  Zap,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useExtensionsClient } from "../../../app";
 import { TOGGLE_ACTIVE, TOGGLE_BUTTON_BASE, TOGGLE_CONTAINER, TOGGLE_INACTIVE } from "../../../styles";
@@ -7,10 +25,24 @@ import { EmptyState } from "../../ui/empty-state";
 import { ErrorBanner } from "../../ui/error-banner";
 import { LoadingState } from "../../ui/loading-state";
 import { ExtensionCard } from "./extension-card";
-import { EXTENSION_PAGE_SIZE, ITEM_TYPE_LABELS, SORT_OPTIONS, type ExtensionViewMode } from "./extension-constants";
+import { EXTENSION_PAGE_SIZE, ITEM_TYPE_ICON_COLORS, ITEM_TYPE_LABELS, SORT_OPTIONS, type ExtensionViewMode } from "./extension-constants";
 import { ExtensionDetailView } from "./extension-detail-view";
 import { ExtensionPagination } from "./extension-pagination";
 import { NoResultsState } from "../result-shared";
+
+const TYPE_PILL_ORDER: readonly string[] = ["", "skill", "subagent", "command", "hook", "repo"];
+const TYPE_PILL_ICONS: Record<string, LucideIcon> = {
+  "": Boxes,
+  skill: Package,
+  subagent: Bot,
+  command: Terminal,
+  hook: Anchor,
+  repo: Server,
+};
+const TYPE_PILL_LABELS: Record<string, string> = {
+  "": "All",
+  ...ITEM_TYPE_LABELS,
+};
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -153,14 +185,6 @@ export function ExtensionExploreTab({ resetKey = 0, onSwitchToRecommend }: Exten
     setInstalledIds((prev) => new Set([...prev, itemId]));
   }, []);
 
-  const typeDropdownOptions = useMemo(
-    () => [
-      { value: "", label: "All Types" },
-      ...Object.entries(ITEM_TYPE_LABELS).map(([key, label]) => ({ value: key, label })),
-    ],
-    [],
-  );
-
   const sortOptions = useMemo(
     () =>
       SORT_OPTIONS.filter((o) => !o.needsProfile || hasProfile).map((o) => ({
@@ -194,19 +218,67 @@ export function ExtensionExploreTab({ resetKey = 0, onSwitchToRecommend }: Exten
           </div>
           <div>
             <h2 className="text-lg font-bold text-primary">Explore</h2>
-            <p className="text-xs text-secondary">Browse tools, skills, hooks, and agents</p>
+            <p className="text-sm text-secondary">Browse tools, skills, hooks, and agents</p>
           </div>
         </div>
-        <button
-          onClick={fetchCatalog}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted hover:text-secondary bg-control hover:bg-control-hover border border-card rounded-md transition disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className={TOGGLE_CONTAINER}>
+            <button
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+              className={`${TOGGLE_BUTTON_BASE} px-2.5 ${viewMode === "list" ? TOGGLE_ACTIVE : TOGGLE_INACTIVE}`}
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("card")}
+              aria-label="Grid view"
+              className={`${TOGGLE_BUTTON_BASE} px-2.5 ${viewMode === "card" ? TOGGLE_ACTIVE : TOGGLE_INACTIVE}`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <button
+            onClick={fetchCatalog}
+            disabled={loading}
+            aria-label="Refresh"
+            className="p-2 text-muted hover:text-primary bg-control hover:bg-control-hover border border-card rounded-md transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
-      {/* Search + Type + Sort */}
+      {/* Type selector */}
+      <div className="flex rounded-lg bg-control p-0.5 mb-3 w-fit" role="tablist">
+        {TYPE_PILL_ORDER.map((k) => {
+          const active = (typeFilter ?? "") === k;
+          const Icon = TYPE_PILL_ICONS[k] ?? Package;
+          const accentText =
+            k && ITEM_TYPE_ICON_COLORS[k] ? ITEM_TYPE_ICON_COLORS[k].text : "text-accent-teal";
+          return (
+            <button
+              key={k || "all"}
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                setTypeFilter(k || null);
+                setPage(1);
+              }}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-md transition ${
+                active
+                  ? "bg-panel text-primary font-semibold shadow-sm"
+                  : "text-muted hover:text-secondary"
+              }`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${active ? accentText : ""}`} />
+              {TYPE_PILL_LABELS[k]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search + Sort */}
       <div className="flex items-center gap-2 mb-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
@@ -219,39 +291,12 @@ export function ExtensionExploreTab({ resetKey = 0, onSwitchToRecommend }: Exten
           />
         </div>
         <FilterDropdown
-          value={typeFilter ?? ""}
-          options={typeDropdownOptions}
-          onChange={(v) => { setTypeFilter(v || null); setPage(1); }}
-          icon={<Package className="w-3.5 h-3.5 text-muted shrink-0" />}
-          placeholder="All Types"
-        />
-        <FilterDropdown
           value={sortBy}
           options={sortOptions}
           onChange={(v) => { setSortBy(v); setPage(1); }}
           icon={<SlidersHorizontal className="w-3.5 h-3.5 text-muted shrink-0" />}
           placeholder="Sort"
         />
-      </div>
-
-      {/* View mode */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="ml-auto">
-          <div className={TOGGLE_CONTAINER}>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`${TOGGLE_BUTTON_BASE} px-2.5 ${viewMode === "list" ? TOGGLE_ACTIVE : TOGGLE_INACTIVE}`}
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode("card")}
-              className={`${TOGGLE_BUTTON_BASE} px-2.5 ${viewMode === "card" ? TOGGLE_ACTIVE : TOGGLE_INACTIVE}`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Recommend tutorial banner */}
@@ -262,9 +307,9 @@ export function ExtensionExploreTab({ resetKey = 0, onSwitchToRecommend }: Exten
               <Zap className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-primary">Not sure which skills to add?</p>
+              <p className="text-base font-bold text-primary">Not sure what to add?</p>
               <p className="text-sm text-secondary mt-0.5">
-                Switch to the <span className="font-semibold">Recommend</span> tab. It analyzes your sessions and recommends skills tailored to your workflow.
+                Switch to the <span className="font-semibold">Recommend</span> tab. It analyzes your sessions and suggests skills, subagents, commands, and plugins tailored to your workflow.
               </p>
             </div>
             <button

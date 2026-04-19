@@ -235,7 +235,7 @@ export function TutorialBanner({ tutorial, accentColor }: { tutorial: Tutorial; 
           <Lightbulb className={`w-4 h-4 ${s.iconColor}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-semibold ${s.title}`}>{tutorial.title}</p>
+          <p className={`text-base font-bold ${s.title}`}>{tutorial.title}</p>
           <p className={`text-sm ${s.desc} mt-0.5`}>{tutorial.description}</p>
         </div>
       </div>
