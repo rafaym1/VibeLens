@@ -6,14 +6,20 @@ import pytest
 from fastapi.testclient import TestClient
 
 from vibelens.app import create_app
+from vibelens.services.extensions.platforms import rebuild_platforms
 
 
 @pytest.fixture
-def client_with_fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def client_with_fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
     (tmp_path / ".claude").mkdir()
-    app = create_app()
-    return TestClient(app)
+    # Rebuild the platform table against the patched home so ``PLATFORMS``
+    # reflects ``tmp_path`` instead of the real user dir.
+    rebuild_platforms()
+    try:
+        yield TestClient(create_app())
+    finally:
+        rebuild_platforms()
 
 
 def test_agents_endpoint_returns_list(client_with_fake_home: TestClient):

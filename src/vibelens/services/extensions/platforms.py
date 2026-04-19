@@ -46,8 +46,9 @@ def _home(*parts: str) -> Path:
 def _build_platforms() -> dict[ExtensionSource, AgentPlatform]:
     """Build the platform table using the current ``Path.home()``.
 
-    Called lazily via module ``__getattr__`` so tests that patch
-    ``HOME`` or ``Path.home`` after import still see fresh paths.
+    Tests that patch ``HOME`` or ``Path.home`` should call
+    :func:`rebuild_platforms` after the patch is applied so the
+    module-level ``PLATFORMS`` dict picks up the new paths.
     """
     return {
         ExtensionSource.CLAUDE: AgentPlatform(
@@ -197,16 +198,20 @@ def _build_platforms() -> dict[ExtensionSource, AgentPlatform]:
 }
 
 
-def __getattr__(name: str) -> object:
-    """Module ``__getattr__`` so ``PLATFORMS`` rebuilds lazily.
+PLATFORMS: dict[ExtensionSource, AgentPlatform] = _build_platforms()
 
-    External callers that do ``from ...platforms import PLATFORMS`` get
-    a fresh table each time the attribute is accessed, so monkey-patching
-    ``Path.home`` in tests works without reloading the module.
+
+def rebuild_platforms() -> None:
+    """Rebuild the module-level ``PLATFORMS`` dict from the current ``Path.home()``.
+
+    Production code never calls this; ``Path.home()`` is stable within a
+    process. Tests that monkeypatch ``HOME`` or ``Path.home`` call it
+    after the patch so ``PLATFORMS`` reflects the test's fake home.
+    Keeps ``PLATFORMS`` a real module-level dict (so existing
+    ``patch.dict`` tests continue to work).
     """
-    if name == "PLATFORMS":
-        return _build_platforms()
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    PLATFORMS.clear()
+    PLATFORMS.update(_build_platforms())
 
 
 def get_platform(key: str) -> AgentPlatform:
@@ -225,10 +230,9 @@ def get_platform(key: str) -> AgentPlatform:
         source = ExtensionSource(key)
     except ValueError as exc:
         raise ValueError(f"Unknown agent: {key!r}") from exc
-    platforms = _build_platforms()
-    if source not in platforms:
+    if source not in PLATFORMS:
         raise ValueError(f"Unknown agent: {key!r}")
-    return platforms[source]
+    return PLATFORMS[source]
 
 
 def installed_platforms() -> dict[str, AgentPlatform]:
@@ -238,8 +242,4 @@ def installed_platforms() -> dict[str, AgentPlatform]:
         Dict mapping ``ExtensionSource.value`` to platform for agents the
         user actually has installed.
     """
-    return {
-        p.source.value: p
-        for p in _build_platforms().values()
-        if p.root.expanduser().is_dir()
-    }
+    return {p.source.value: p for p in PLATFORMS.values() if p.root.expanduser().is_dir()}

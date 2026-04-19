@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from vibelens.app import create_app
+from vibelens.services.extensions.platforms import rebuild_platforms
 
 
 def _manifest_text(name: str = "my-plugin", version: str = "1.0.0") -> str:
@@ -22,11 +23,14 @@ def _manifest_text(name: str = "my-plugin", version: str = "1.0.0") -> str:
 
 
 @pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
     (tmp_path / ".claude").mkdir()
-    app = create_app()
-    return TestClient(app)
+    rebuild_platforms()
+    try:
+        yield TestClient(create_app())
+    finally:
+        rebuild_platforms()
 
 
 def test_list_empty_plugins(client: TestClient):
