@@ -93,6 +93,15 @@ class HermesParser(BaseParser):
     Selects one primary file per unique session_id (preferring jsonl)
     and enriches it with the paired snapshot, state.db, and sessions.json
     index when those sources are available.
+
+    Note on ``parse_session_index``: Hermes stores rich per-session
+    metadata in ``state.db`` (tokens, cost, parent_session_id) and
+    ``sessions/sessions.json`` (chat origin), but neither caches the
+    first user message. A skeleton Trajectory without a first_message
+    gives a poor listing experience, and reading one line per JSONL to
+    recover it would already be most of a full parse. We keep the
+    default (return None) and let index_builder fall through to
+    full-file parsing, which is acceptable at the volumes Hermes sees.
     """
 
     AGENT_TYPE = AgentType.HERMES
