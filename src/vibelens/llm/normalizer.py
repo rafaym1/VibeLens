@@ -11,6 +11,7 @@ import re
 # and preview tags (e.g. gemini-2.5-flash-preview-04-17) naturally.
 _MODEL_PREFIX_MAP: list[tuple[str, str]] = [
     # Anthropic — specific versions before base names
+    ("claude-opus-4-7", "claude-opus-4-7"),
     ("claude-opus-4-6", "claude-opus-4-6"),
     ("claude-opus-4-1", "claude-opus-4-1"),
     ("claude-sonnet-4-6", "claude-sonnet-4-6"),

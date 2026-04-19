@@ -14,6 +14,7 @@ class TestNormalizeModelName:
 
     def test_exact_canonical_names(self):
         """Canonical names normalize to themselves."""
+        assert normalize_model_name("claude-opus-4-7") == "claude-opus-4-7"
         assert normalize_model_name("claude-opus-4-6") == "claude-opus-4-6"
         assert normalize_model_name("gpt-5.4") == "gpt-5.4"
         assert normalize_model_name("gemini-2.5-pro") == "gemini-2.5-pro"
@@ -26,6 +27,8 @@ class TestNormalizeModelName:
         assert normalize_model_name("claude-3-5-sonnet-20241022") == "claude-3-5-sonnet"
         assert normalize_model_name("claude-sonnet-4-6-20250514") == "claude-sonnet-4-6"
         assert normalize_model_name("claude-haiku-4-5-20251001") == "claude-haiku-4-5"
+        # claude-opus-4-7 must match before any earlier opus prefix; date suffix optional.
+        assert normalize_model_name("claude-opus-4-7-20260101") == "claude-opus-4-7"
         print("Date suffixes handled correctly")
 
     def test_gemini_path_prefixes(self):

@@ -29,6 +29,12 @@ TOKENS_PER_MTOK = 1_000_000
 #   Meta     — via Together/Fireworks hosted pricing
 PRICING_TABLE: dict[str, ModelPricing] = {
     # Anthropic
+    "claude-opus-4-7": ModelPricing(
+        input_per_mtok=5.00,
+        output_per_mtok=25.00,
+        cache_read_per_mtok=0.50,
+        cache_write_per_mtok=6.25,
+    ),
     "claude-opus-4-6": ModelPricing(
         input_per_mtok=5.00,
         output_per_mtok=25.00,
