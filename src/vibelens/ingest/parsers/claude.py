@@ -28,6 +28,7 @@ from vibelens.ingest.parsers.base import (
     _is_meaningful_prompt,
     mark_error_content,
 )
+from vibelens.ingest.parsers.shared.jsonl import iter_jsonl_lines
 from vibelens.models.enums import AgentType, ContentType, StepSource
 from vibelens.models.trajectories import (
     Agent,
@@ -712,22 +713,7 @@ def _parse_jsonl_content(
     Returns:
         List of parsed dicts with relevant types only.
     """
-    all_parsed: list[dict] = []
-    for line in content.split("\n"):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if diagnostics:
-            diagnostics.total_lines += 1
-        try:
-            entry = json.loads(stripped)
-            if diagnostics:
-                diagnostics.parsed_lines += 1
-        except json.JSONDecodeError:
-            if diagnostics:
-                diagnostics.record_skip("invalid JSON")
-            continue
-        all_parsed.append(entry)
+    all_parsed: list[dict] = list(iter_jsonl_lines(content, diagnostics=diagnostics))
 
     # Pre-scan: identify enqueue timestamps that were later dequeued
     # (delivered as normal user messages). Only enqueue+remove pairs
@@ -861,15 +847,7 @@ def _scan_session_metadata(content: str) -> _SessionMeta:
     cwd_values: list[str] = []
     branches: set[str] = set()
 
-    for line in content.split("\n"):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            entry = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-
+    for entry in iter_jsonl_lines(content):
         sid = entry.get("sessionId", "")
         if sid:
             session_counter[sid] += 1
@@ -1264,15 +1242,7 @@ def _build_agent_spawn_map(
     spawn_tc_ids: set[str] = set()
     result_candidates: list[tuple[str, str]] = []  # (tool_use_id, text_content)
 
-    for line in raw_content.split("\n"):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            entry = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-
+    for entry in iter_jsonl_lines(raw_content):
         entry_type = entry.get("type")
         msg = entry.get("message", {})
         if not isinstance(msg, dict):
