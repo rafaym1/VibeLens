@@ -117,10 +117,7 @@ class OpenClawParser(BaseParser):
 
             timestamp = normalize_timestamp(entry.get("updatedAt"))
             skeleton_step = Step(
-                step_id="index-0",
-                source=StepSource.USER,
-                message="",
-                timestamp=timestamp,
+                step_id="index-0", source=StepSource.USER, message="", timestamp=timestamp
             )
 
             trajectories.append(

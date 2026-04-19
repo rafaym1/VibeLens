@@ -415,21 +415,12 @@ def _build_tool_calls_and_observation(
             "tc", session_id, tool_name, str(msg_idx), str(tc_idx)
         )
         calls.append(
-            ToolCall(
-                tool_call_id=tc_id,
-                function_name=tool_name,
-                arguments=tool.get("args"),
-            )
+            ToolCall(tool_call_id=tc_id, function_name=tool_name, arguments=tool.get("args"))
         )
         output = _extract_tool_output(tool.get("result", []))
         has_error = tool.get("status") == "error"
         content = mark_error_content(output) if has_error else output
-        obs_results.append(
-            ObservationResult(
-                source_call_id=tc_id,
-                content=content,
-            )
-        )
+        obs_results.append(ObservationResult(source_call_id=tc_id, content=content))
 
     observation = Observation(results=obs_results) if obs_results else None
     return calls, observation
