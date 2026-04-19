@@ -115,7 +115,7 @@ const KIND_CONFIGS: Record<LocalExtensionKind, KindConfig> = {
   },
 };
 
-const KIND_ORDER: LocalExtensionKind[] = ["skill", "subagent", "command", "plugin"];
+const KIND_ORDER: LocalExtensionKind[] = ["skill", "plugin", "subagent", "command"];
 
 interface LocalExtensionsTabProps {
   refreshTrigger?: number;

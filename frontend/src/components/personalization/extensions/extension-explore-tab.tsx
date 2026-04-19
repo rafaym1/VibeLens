@@ -30,10 +30,19 @@ import { ExtensionDetailView } from "./extension-detail-view";
 import { ExtensionPagination } from "./extension-pagination";
 import { NoResultsState } from "../result-shared";
 
-const TYPE_PILL_ORDER: readonly string[] = ["", "skill", "subagent", "command", "hook", "repo"];
+const TYPE_PILL_ORDER: readonly string[] = [
+  "",
+  "skill",
+  "plugin",
+  "subagent",
+  "command",
+  "hook",
+  "repo",
+];
 const TYPE_PILL_ICONS: Record<string, LucideIcon> = {
   "": Boxes,
   skill: Package,
+  plugin: Package,
   subagent: Bot,
   command: Terminal,
   hook: Anchor,

@@ -22,6 +22,7 @@ export const TYPE_PLURAL: Record<string, string> = {
 /** Badge colors for extension item types. */
 export const ITEM_TYPE_COLORS: Record<string, string> = {
   skill: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/30",
+  plugin: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-700/30",
   subagent: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-700/30",
   command: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-700/30",
   hook: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/30",
@@ -31,6 +32,7 @@ export const ITEM_TYPE_COLORS: Record<string, string> = {
 /** Human-readable labels for item types. */
 export const ITEM_TYPE_LABELS: Record<string, string> = {
   skill: "Skill",
+  plugin: "Plugin",
   subagent: "Agent",
   command: "Command",
   hook: "Hook",
@@ -40,6 +42,7 @@ export const ITEM_TYPE_LABELS: Record<string, string> = {
 /** Icon container colors for item types. */
 export const ITEM_TYPE_ICON_COLORS: Record<string, { bg: string; text: string }> = {
   skill: { bg: "bg-teal-50 dark:bg-teal-900/30", text: "text-teal-600 dark:text-teal-400" },
+  plugin: { bg: "bg-indigo-50 dark:bg-indigo-900/30", text: "text-indigo-600 dark:text-indigo-400" },
   subagent: { bg: "bg-violet-50 dark:bg-violet-900/30", text: "text-violet-600 dark:text-violet-400" },
   command: { bg: "bg-sky-50 dark:bg-sky-900/30", text: "text-sky-600 dark:text-sky-400" },
   hook: { bg: "bg-amber-50 dark:bg-amber-900/30", text: "text-amber-600 dark:text-amber-400" },
