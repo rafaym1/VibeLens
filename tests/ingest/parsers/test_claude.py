@@ -1,4 +1,4 @@
-"""Unit tests for vibelens.ingest.claude_code parser."""
+"""Unit tests for vibelens.ingest.parsers.claude parser."""
 
 import json
 import logging
@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 
 from vibelens.ingest.parsers.base import MAX_FIRST_MESSAGE_LENGTH, is_error_content
-from vibelens.ingest.parsers.claude_code import (
-    ClaudeCodeParser,
+from vibelens.ingest.parsers.claude import (
+    ClaudeParser,
     _decompose_raw_content,
     _extract_git_branches,
 )
@@ -22,7 +22,7 @@ from vibelens.models.trajectories import (
     ToolCall,
 )
 
-_parser = ClaudeCodeParser()
+_parser = ClaudeParser()
 
 
 @pytest.fixture
@@ -1122,7 +1122,7 @@ class TestSubagentLinkageValidation:
                 ],
             )
 
-        with caplog.at_level(logging.DEBUG, logger="vibelens.ingest.parsers.claude_code"):
+        with caplog.at_level(logging.DEBUG, logger="vibelens.ingest.parsers.claude"):
             trajectories = _parser.parse_file(main_file)
 
         # Should succeed with main + 2 sub-agents
@@ -1241,3 +1241,33 @@ class TestErrorHandling:
         content = "not json\nalso not json\n"
         result = _parser.parse(content, source_path="test.jsonl")
         assert result == []
+
+    def test_duplicate_uuid_entries_do_not_produce_duplicate_step_ids(self):
+        """Claude Code occasionally writes the same entry twice (seen with compaction replay).
+
+        When the file contains two entries sharing a uuid, we must emit only
+        one Step so the Trajectory model's unique-step-id validator passes.
+        """
+        dup_uuid = "d871cdff-101f-460f-baa8-5db4049ecae9"
+        content = "\n".join(
+            [
+                json.dumps({
+                    "type": "user",
+                    "uuid": dup_uuid,
+                    "sessionId": "s1",
+                    "timestamp": "2026-04-19T00:00:00Z",
+                    "message": {"role": "user", "content": "hi"},
+                }),
+                json.dumps({
+                    "type": "user",
+                    "uuid": dup_uuid,
+                    "sessionId": "s1",
+                    "timestamp": "2026-04-19T00:00:00Z",
+                    "message": {"role": "user", "content": "hi"},
+                }),
+            ]
+        )
+        trajectories = _parser.parse(content, source_path="test.jsonl")
+        assert len(trajectories) == 1
+        step_ids = [s.step_id for s in trajectories[0].steps]
+        assert len(step_ids) == len(set(step_ids)), f"duplicate step_ids: {step_ids}"

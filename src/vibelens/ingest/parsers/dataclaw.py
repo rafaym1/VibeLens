@@ -23,7 +23,12 @@ from vibelens.ingest.diagnostics import DiagnosticsCollector
 from vibelens.ingest.parsers.base import ROLE_TO_SOURCE, BaseParser
 from vibelens.models.enums import AgentType, StepSource
 from vibelens.models.trajectories import Step, ToolCall, Trajectory
-from vibelens.utils import coerce_to_string, deterministic_id, get_logger, parse_iso_timestamp
+from vibelens.utils import (
+    coerce_to_string,
+    deterministic_id,
+    get_logger,
+    parse_iso_timestamp,
+)
 
 logger = get_logger(__name__)
 

@@ -30,12 +30,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from vibelens.ingest.diagnostics import DiagnosticsCollector
-from vibelens.ingest.parsers.base import (
-    _SYSTEM_TAG_PREFIXES,
-    ROLE_TO_SOURCE,
-    BaseParser,
-    mark_error_content,
-)
+from vibelens.ingest.parsers.base import ROLE_TO_SOURCE, BaseParser, mark_error_content
 from vibelens.models.enums import AgentType, StepSource
 from vibelens.models.trajectories import (
     FinalMetrics,
@@ -74,6 +69,15 @@ _TOOL_OUTPUT_TYPES = {"function_call_output", "custom_tool_call_output"}
 
 # Tool call types that initiate tool invocations
 _TOOL_CALL_TYPES = {"function_call", "custom_tool_call"}
+
+# Codex injects several XML-wrapped system turns as role=user messages.
+# We reclassify them to StepSource.SYSTEM so they do not look like user input.
+_CODEX_SYSTEM_TAG_PREFIXES = (
+    "<environment_context",
+    "<turn_aborted",
+    "<subagent_notification",
+    "<user_instructions",
+)
 
 
 class _CodexSessionMeta(NamedTuple):
@@ -294,21 +298,7 @@ def _load_rollout_content(
     content: str, diagnostics: DiagnosticsCollector | None = None
 ) -> list[dict]:
     """Parse JSONL content string into entry dicts."""
-    entries = []
-    for line in content.split("\n"):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if diagnostics:
-            diagnostics.total_lines += 1
-        try:
-            entries.append(json.loads(stripped))
-            if diagnostics:
-                diagnostics.parsed_lines += 1
-        except json.JSONDecodeError:
-            if diagnostics:
-                diagnostics.record_skip("invalid JSON")
-    return entries
+    return list(BaseParser.iter_jsonl_safe(content, diagnostics=diagnostics))
 
 
 def _scan_session_metadata(entries: list[dict]) -> _CodexSessionMeta:
@@ -510,7 +500,9 @@ def _handle_response_item(
         source = ROLE_TO_SOURCE.get(role, StepSource.USER)
         # Reclassify agent-injected context (e.g. <environment_context>)
         # that arrives as role=user but is system boilerplate.
-        if source == StepSource.USER and content_text.lstrip().startswith(_SYSTEM_TAG_PREFIXES):
+        if source == StepSource.USER and content_text.lstrip().startswith(
+            _CODEX_SYSTEM_TAG_PREFIXES
+        ):
             source = StepSource.SYSTEM
         extra = _build_step_extra(state) if role == "assistant" else None
         status = payload.get("status")
@@ -562,7 +554,9 @@ def _handle_response_item(
             text = item.get("text", "")
             if not text:
                 continue
-            content_hash = hashlib.md5(text.encode()).hexdigest()
+            # md5 is fine here — used as a content fingerprint for dedup,
+            # not for any security or integrity claim.
+            content_hash = hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()
             if content_hash not in state.thinking_seen:
                 state.thinking_seen.add(content_hash)
                 state.pending_thinking.append(text)
@@ -720,7 +714,10 @@ def _extract_final_token_usage(entries: list[dict]) -> dict | None:
         payload = entry.get("payload", {})
         if payload.get("type") != "token_count":
             continue
-        info = payload.get("info", {})
+        # Codex sometimes writes ``info: null`` when a turn failed before
+        # the usage block was produced; ``.get("info", {})`` returns None
+        # in that case (key is present, value is None), so guard explicitly.
+        info = payload.get("info") or {}
         total_usage = info.get("total_token_usage")
         if isinstance(total_usage, dict) and total_usage:
             return total_usage

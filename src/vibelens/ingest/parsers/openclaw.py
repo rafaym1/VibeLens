@@ -117,10 +117,7 @@ class OpenClawParser(BaseParser):
 
             timestamp = normalize_timestamp(entry.get("updatedAt"))
             skeleton_step = Step(
-                step_id="index-0",
-                source=StepSource.USER,
-                message="",
-                timestamp=timestamp,
+                step_id="index-0", source=StepSource.USER, message="", timestamp=timestamp
             )
 
             trajectories.append(
@@ -134,7 +131,7 @@ class OpenClawParser(BaseParser):
                 )
             )
 
-        return trajectories if trajectories else None
+        return trajectories or None
 
     def parse(self, content: str, source_path: str | None = None) -> list[Trajectory]:
         """Parse OpenClaw JSONL session content into Trajectory objects.
@@ -184,19 +181,7 @@ def _parse_jsonl_content(content: str, diagnostics: DiagnosticsCollector) -> lis
     Returns:
         List of parsed JSON dicts.
     """
-    entries: list[dict] = []
-    for line in content.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        diagnostics.total_lines += 1
-        try:
-            parsed = json.loads(stripped)
-            diagnostics.parsed_lines += 1
-            entries.append(parsed)
-        except json.JSONDecodeError:
-            diagnostics.record_skip("invalid JSON")
-    return entries
+    return list(BaseParser.iter_jsonl_safe(content, diagnostics=diagnostics))
 
 
 def _extract_session_meta(entries: list[dict]) -> dict:

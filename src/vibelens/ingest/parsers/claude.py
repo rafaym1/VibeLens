@@ -1,4 +1,4 @@
-"""Claude Code JSONL format parser.
+"""Claude (Claude Code CLI) session parser.
 
 Parses ~/.claude/history.jsonl for session indices and individual session
 .jsonl files for full conversation data, including subagent conversations
@@ -13,7 +13,6 @@ message, linked by ``tool_use_id``.  This two-message pairing requires
 a pre-scan to build the result map before constructing ToolCall objects.
 """
 
-import json
 import re
 from collections import Counter
 from datetime import datetime, timezone
@@ -159,7 +158,7 @@ class _SessionMeta(NamedTuple):
     git_branches: list[str] | None
 
 
-class ClaudeCodeParser(BaseParser):
+class ClaudeParser(BaseParser):
     """Parser for Claude Code's native JSONL format.
 
     Handles both the history index (history.jsonl) and individual
@@ -228,15 +227,7 @@ class ClaudeCodeParser(BaseParser):
 
         agent = self.build_agent(version=version, model=model_name)
 
-        has_diagnostics_issues = (
-            collector.skipped_lines > 0
-            or collector.orphaned_tool_calls > 0
-            or collector.orphaned_tool_results > 0
-        )
-        extra: dict | None = None
-        if has_diagnostics_issues:
-            extra = {"diagnostics": collector.to_diagnostics().model_dump()}
-
+        extra: dict | None = self.build_diagnostics_extra(collector)
         if git_branches:
             extra = extra or {}
             extra["git_branches"] = git_branches
@@ -488,6 +479,7 @@ class ClaudeCodeParser(BaseParser):
             List of Step objects.
         """
         raw_entries = _parse_jsonl_content(content, diagnostics)
+        raw_entries = _deduplicate_entries_by_uuid(raw_entries)
 
         # Two-pass: first scan user messages for tool results,
         # then construct Steps with results already paired
@@ -712,22 +704,7 @@ def _parse_jsonl_content(
     Returns:
         List of parsed dicts with relevant types only.
     """
-    all_parsed: list[dict] = []
-    for line in content.split("\n"):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if diagnostics:
-            diagnostics.total_lines += 1
-        try:
-            entry = json.loads(stripped)
-            if diagnostics:
-                diagnostics.parsed_lines += 1
-        except json.JSONDecodeError:
-            if diagnostics:
-                diagnostics.record_skip("invalid JSON")
-            continue
-        all_parsed.append(entry)
+    all_parsed: list[dict] = list(BaseParser.iter_jsonl_safe(content, diagnostics=diagnostics))
 
     # Pre-scan: identify enqueue timestamps that were later dequeued
     # (delivered as normal user messages). Only enqueue+remove pairs
@@ -748,6 +725,27 @@ def _parse_jsonl_content(
         ):
             raw_entries.append(_make_enqueue_user_entry(entry))
     return raw_entries
+
+
+def _deduplicate_entries_by_uuid(entries: list[dict]) -> list[dict]:
+    """Drop entries whose uuid has already appeared in this stream.
+
+    Claude Code occasionally re-emits the same JSONL line (observed with
+    compaction replay, where a prior turn is re-written). Emitting
+    both copies produces Step objects with duplicate step_id, which the
+    Trajectory validator then rejects. Keeping only the first occurrence
+    preserves ordering without losing information.
+    """
+    seen: set[str] = set()
+    deduped: list[dict] = []
+    for entry in entries:
+        uuid = entry.get("uuid", "")
+        if uuid and uuid in seen:
+            continue
+        if uuid:
+            seen.add(uuid)
+        deduped.append(entry)
+    return deduped
 
 
 def _collect_dequeued_timestamps(all_parsed: list[dict]) -> set[str]:
@@ -861,15 +859,7 @@ def _scan_session_metadata(content: str) -> _SessionMeta:
     cwd_values: list[str] = []
     branches: set[str] = set()
 
-    for line in content.split("\n"):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            entry = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-
+    for entry in BaseParser.iter_jsonl_safe(content):
         sid = entry.get("sessionId", "")
         if sid:
             session_counter[sid] += 1
@@ -1027,8 +1017,7 @@ def _decompose_raw_content(
                 result_content = mark_error_content(result_content)
             obs_results.append(
                 ObservationResult(
-                    source_call_id=block.get("tool_use_id", ""),
-                    content=result_content,
+                    source_call_id=block.get("tool_use_id", ""), content=result_content
                 )
             )
 
@@ -1153,7 +1142,7 @@ def count_history_entries(claude_dir: Path) -> int:
     count = 0
     buf_size = 65536
     try:
-        with open(history_file, "rb") as f:
+        with history_file.open("rb") as f:
             while True:
                 buf = f.read(buf_size)
                 if not buf:
@@ -1178,46 +1167,37 @@ def _aggregate_history_lines(history_file: Path, since_ms: int) -> dict[str, dic
         Dict mapping session_id -> aggregated session data.
     """
     sessions: dict[str, dict] = {}
-    with open(history_file, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+    for entry in BaseParser.iter_jsonl_safe(history_file):
+        session_id = entry.get("sessionId", "")
+        if not session_id:
+            continue
 
-            session_id = entry.get("sessionId", "")
-            if not session_id:
-                continue
+        timestamp_ms = entry.get("timestamp", 0)
+        if since_ms and timestamp_ms < since_ms:
+            continue
 
-            timestamp_ms = entry.get("timestamp", 0)
-            if since_ms and timestamp_ms < since_ms:
-                continue
+        display = entry.get("display", "")
+        project_path = entry.get("project", "")
 
-            display = entry.get("display", "")
-            project_path = entry.get("project", "")
-
-            if session_id not in sessions:
-                sessions[session_id] = {
-                    "first_timestamp": timestamp_ms,
-                    "last_timestamp": timestamp_ms,
-                    "first_message": display if _is_meaningful_prompt(display) else "",
-                    "project_path": project_path,
-                    "message_count": 1,
-                }
-            else:
-                sess = sessions[session_id]
-                sess["message_count"] += 1
-                if not sess["first_message"] and _is_meaningful_prompt(display):
+        if session_id not in sessions:
+            sessions[session_id] = {
+                "first_timestamp": timestamp_ms,
+                "last_timestamp": timestamp_ms,
+                "first_message": display if _is_meaningful_prompt(display) else "",
+                "project_path": project_path,
+                "message_count": 1,
+            }
+        else:
+            sess = sessions[session_id]
+            sess["message_count"] += 1
+            if not sess["first_message"] and _is_meaningful_prompt(display):
+                sess["first_message"] = display
+            if timestamp_ms < sess["first_timestamp"]:
+                sess["first_timestamp"] = timestamp_ms
+                if _is_meaningful_prompt(display):
                     sess["first_message"] = display
-                if timestamp_ms < sess["first_timestamp"]:
-                    sess["first_timestamp"] = timestamp_ms
-                    if _is_meaningful_prompt(display):
-                        sess["first_message"] = display
-                if timestamp_ms > sess["last_timestamp"]:
-                    sess["last_timestamp"] = timestamp_ms
+            if timestamp_ms > sess["last_timestamp"]:
+                sess["last_timestamp"] = timestamp_ms
     return sessions
 
 
@@ -1264,15 +1244,7 @@ def _build_agent_spawn_map(
     spawn_tc_ids: set[str] = set()
     result_candidates: list[tuple[str, str]] = []  # (tool_use_id, text_content)
 
-    for line in raw_content.split("\n"):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            entry = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-
+    for entry in BaseParser.iter_jsonl_safe(raw_content):
         entry_type = entry.get("type")
         msg = entry.get("message", {})
         if not isinstance(msg, dict):

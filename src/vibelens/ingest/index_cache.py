@@ -15,9 +15,33 @@ from vibelens.utils.log import get_logger
 logger = get_logger(__name__)
 
 # Bump to invalidate all existing caches after schema changes
-CACHE_VERSION = 3
+CACHE_VERSION = 4
 # User-home path for the persistent session index cache
 DEFAULT_CACHE_PATH = Path.home() / ".vibelens" / "session_index.json"
+
+# Fields stripped from each entry before writing the cache. They are
+# large (~42% of the file on observed data) and no cache reader
+# consults them — anything that needs them falls through to a full
+# re-parse of the source session file.
+_STRIPPED_AGENT_KEYS: frozenset[str] = frozenset({"tool_definitions"})
+_STRIPPED_EXTRA_KEYS: frozenset[str] = frozenset({"system_prompt"})
+
+
+def _compact_entry(entry: dict) -> dict:
+    """Return a copy of entry with heavy, never-read fields stripped.
+
+    Callers must still tolerate missing keys via ``.get()`` — those
+    defensive reads already exist today so no call site is affected.
+    """
+    out = dict(entry)
+    agent = out.get("agent")
+    if isinstance(agent, dict):
+        out["agent"] = {k: v for k, v in agent.items() if k not in _STRIPPED_AGENT_KEYS}
+    extra = out.get("extra")
+    if isinstance(extra, dict):
+        trimmed = {k: v for k, v in extra.items() if k not in _STRIPPED_EXTRA_KEYS}
+        out["extra"] = trimmed or None
+    return out
 
 
 def load_cache(cache_path: Path | None = None) -> dict | None:
@@ -80,7 +104,7 @@ def save_cache(
         "continuation_map": continuation_map,
         "path_to_session_id": path_to_session_id or {},
         "dropped_paths": dropped_paths or {},
-        "entries": metadata_cache,
+        "entries": {sid: _compact_entry(entry) for sid, entry in metadata_cache.items()},
     }
     try:
         atomic_write_json(cache_path, payload, indent=2)

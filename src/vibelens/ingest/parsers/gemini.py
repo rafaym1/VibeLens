@@ -21,7 +21,7 @@ Claude Code and Codex:
 import hashlib
 import json
 from collections import Counter
-from os.path import commonpath, dirname
+from os.path import commonpath
 from pathlib import Path
 
 from vibelens.ingest.diagnostics import DiagnosticsCollector
@@ -48,6 +48,19 @@ logger = get_logger(__name__)
 # Gemini CLI uses "gemini" instead of "assistant" for model responses.
 RELEVANT_TYPES = {"user", "gemini"}
 
+# Default local data root. Used as ``LOCAL_DATA_DIR`` *and* as the
+# fallback when resolving projectHash for sessions outside ~/.gemini/
+# (e.g. archived session files copied elsewhere).
+GEMINI_DATA_DIR = Path.home() / ".gemini"
+
+# Tool-call argument keys we probe when inferring a project path from
+# on-disk paths the agent actually touched.
+_PATH_ARG_KEYS = {"file_path", "path", "filename", "directory"}
+
+# Reject paths shallower than this when inferring from tool args —
+# paths like "/" or "/Users" are not meaningful project roots.
+_MIN_PATH_DEPTH = 3
+
 
 class GeminiParser(BaseParser):
     """Parser for Gemini CLI's native session JSON format.
@@ -57,7 +70,7 @@ class GeminiParser(BaseParser):
     """
 
     AGENT_TYPE = AgentType.GEMINI
-    LOCAL_DATA_DIR: Path | None = Path.home() / ".gemini"
+    LOCAL_DATA_DIR: Path | None = GEMINI_DATA_DIR
 
     def discover_session_files(self, data_dir: Path) -> list[Path]:
         """Find Gemini session files inside chats/ directories."""
@@ -94,7 +107,10 @@ class GeminiParser(BaseParser):
         file_path = Path(source_path) if source_path else None
         project_path = _resolve_project(file_path, data, steps) if file_path else None
         extra = self.build_diagnostics_extra(collector)
-        agent = self.build_agent()
+        # Gemini doesn't persist a session-level model; use the most
+        # recently seen step model so downstream pricing lookup can match.
+        session_model = next((step.model_name for step in reversed(steps) if step.model_name), None)
+        agent = self.build_agent(model=session_model)
         return [
             self.assemble_trajectory(
                 session_id=session_id,
@@ -104,9 +120,6 @@ class GeminiParser(BaseParser):
                 extra=extra,
             )
         ]
-
-
-_DEFAULT_GEMINI_DIR = Path.home() / ".gemini"
 
 
 def _resolve_project(file_path: Path, data: dict, steps: list[Step]) -> str:
@@ -142,8 +155,8 @@ def _resolve_project(file_path: Path, data: dict, steps: list[Step]) -> str:
 
     # Strategy 2: use projectHash from session data against default ~/.gemini/
     project_hash = data.get("projectHash", "")
-    if project_hash and _DEFAULT_GEMINI_DIR.is_dir():
-        result = resolve_project_path(project_hash, _DEFAULT_GEMINI_DIR, steps)
+    if project_hash and GEMINI_DATA_DIR.is_dir():
+        result = resolve_project_path(project_hash, GEMINI_DATA_DIR, steps)
         if result and result != project_hash:
             return result
 
@@ -170,11 +183,11 @@ def _lookup_projects_json(projects_data: dict, hash_dir: str) -> str:
     Returns:
         Resolved project path, or empty string if not found.
     """
-    # Current format: {projects: {path: dirname}}
+    # Current format: {projects: {path: hash_or_dirname}}
     projects_map = projects_data.get("projects", {})
     if isinstance(projects_map, dict):
-        for project_path, dirname in projects_map.items():
-            if dirname == hash_dir:
+        for project_path, project_hash in projects_map.items():
+            if project_hash == hash_dir:
                 return project_path
             path_hash = hashlib.sha256(project_path.encode()).hexdigest()
             if path_hash == hash_dir:
@@ -190,15 +203,7 @@ def _lookup_projects_json(projects_data: dict, hash_dir: str) -> str:
     return ""
 
 
-_PATH_ARG_KEYS = {"file_path", "path", "filename", "directory"}
-
-# Avoid interpreting root-level paths like "/" or "/Users" as projects.
-_MIN_PATH_DEPTH = 3
-
-
-def resolve_project_path(
-    hash_dir: str, gemini_dir: Path, steps: list[Step] | None = None
-) -> str:
+def resolve_project_path(hash_dir: str, gemini_dir: Path, steps: list[Step] | None = None) -> str:
     """Resolve a Gemini SHA-256 hash directory to the original project path.
 
     Uses four strategies in order of speed:
@@ -264,7 +269,9 @@ def _infer_project_from_tool_args(steps: list[Step]) -> str:
     if len(absolute_paths) < 2:
         return ""
 
-    directories = [dirname(p) if not p.endswith("/") else p.rstrip("/") for p in absolute_paths]
+    directories = [
+        p.rstrip("/") if p.endswith("/") else str(Path(p).parent) for p in absolute_paths
+    ]
     dir_counts: Counter[str] = Counter()
     for directory in directories:
         parts = directory.split("/")
@@ -323,7 +330,7 @@ def _build_steps(raw_messages: list, session_id: str) -> list[Step]:
             content = raw.get("content", "")
             thinking = _extract_thinking(raw)
             # Gemini sometimes produces only thoughts with empty content
-            message = content if content else (thinking or "")
+            message = content or (thinking or "")
             tool_calls, observation = _build_tool_calls_and_observation(
                 raw.get("toolCalls", []), session_id, idx
             )
@@ -408,21 +415,12 @@ def _build_tool_calls_and_observation(
             "tc", session_id, tool_name, str(msg_idx), str(tc_idx)
         )
         calls.append(
-            ToolCall(
-                tool_call_id=tc_id,
-                function_name=tool_name,
-                arguments=tool.get("args"),
-            )
+            ToolCall(tool_call_id=tc_id, function_name=tool_name, arguments=tool.get("args"))
         )
         output = _extract_tool_output(tool.get("result", []))
         has_error = tool.get("status") == "error"
         content = mark_error_content(output) if has_error else output
-        obs_results.append(
-            ObservationResult(
-                source_call_id=tc_id,
-                content=content,
-            )
-        )
+        obs_results.append(ObservationResult(source_call_id=tc_id, content=content))
 
     observation = Observation(results=obs_results) if obs_results else None
     return calls, observation

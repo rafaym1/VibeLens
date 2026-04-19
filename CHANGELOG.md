@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+- **Hermes agent parser** (`ingest/parsers/hermes.py`) covering JSONL stream + snapshot formats, state.db enrichment, chat-surface project paths, and `system_prompt` / `base_url` surfaced in trajectory `extra`.
+
+### Changed
+- **Renames**: `ingest/parsers/claude_code.py` → `claude.py` (class `ClaudeCodeParser` → `ClaudeParser`); `claude_code_web.py` → `claude_web.py` (`ClaudeCodeWebParser` → `ClaudeWebParser`). External `AgentType` values (`"claude"`, `"claude_web"`) unchanged.
+- **`BaseParser.iter_jsonl_safe`** accepts either a `Path` (file streaming) or `str` (in-memory content), replacing the private per-parser JSONL loops that lived in claude, codex, hermes, openclaw.
+- **Agent-specific system-tag prefixes** moved out of base into their owning parsers (`_CODEX_SYSTEM_TAG_PREFIXES` in codex, claude's already in claude). Base's union renamed to `_ALL_KNOWN_SYSTEM_TAG_PREFIXES` and documented as an agent-agnostic fallback for demo-mode ATIF loading.
+
+### Fixed
+- **Claude duplicate-step-id regression**: some `~/.claude` sessions (12 out of 3,357 observed locally) were rejected by the `Trajectory` validator because Claude Code re-emitted identical JSONL entries after compaction replay. Entries are now deduplicated by `uuid` before step assembly.
+- **Gemini missing `agent.model_name`**: the agent-level model was never populated (0% local coverage). Derived it from the most recently-seen step model, restoring 100% coverage.
+
 ## [1.0.2] - 2026-04-19
 
 ### Fixed
