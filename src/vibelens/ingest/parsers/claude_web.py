@@ -1,4 +1,4 @@
-"""Claude Code Web (claude.ai) export parser.
+"""Claude Web (claude.ai) export parser.
 
 Parses the ``conversations.json`` file from claude.ai's **Settings > Export Data**
 ZIP download. Each exported ZIP contains a JSON array of conversations with chat
@@ -43,7 +43,7 @@ CONVERSATIONS_FILENAME = "conversations.json"
 SKIP_BLOCK_TYPES = {"token_budget"}
 
 
-class ClaudeCodeWebParser(BaseParser):
+class ClaudeWebParser(BaseParser):
     """Parser for claude.ai web export datasets."""
 
     AGENT_TYPE = AgentType.CLAUDE_WEB
@@ -96,7 +96,7 @@ class ClaudeCodeWebParser(BaseParser):
         return trajectories
 
 
-def _parse_conversation(parser: ClaudeCodeWebParser, conversation: dict) -> Trajectory | None:
+def _parse_conversation(parser: ClaudeWebParser, conversation: dict) -> Trajectory | None:
     """Convert one conversation dict to a Trajectory.
 
     Args:

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from vibelens.ingest.parsers.base import BaseParser
 from vibelens.ingest.parsers.claude import ClaudeParser
-from vibelens.ingest.parsers.claude_code_web import ClaudeCodeWebParser
+from vibelens.ingest.parsers.claude_web import ClaudeWebParser
 from vibelens.ingest.parsers.codex import CodexParser
 from vibelens.ingest.parsers.gemini import GeminiParser
 from vibelens.ingest.parsers.hermes import HermesParser
@@ -27,7 +27,7 @@ PARSEABLE_EXTENSIONS = {".json", ".jsonl"}
 
 _PARSERS_BY_TYPE: dict[AgentType, type[BaseParser]] = {
     AgentType.CLAUDE: ClaudeParser,
-    AgentType.CLAUDE_WEB: ClaudeCodeWebParser,
+    AgentType.CLAUDE_WEB: ClaudeWebParser,
     AgentType.CODEX: CodexParser,
     AgentType.GEMINI: GeminiParser,
     AgentType.HERMES: HermesParser,

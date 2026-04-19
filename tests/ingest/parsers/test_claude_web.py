@@ -1,12 +1,12 @@
-"""Unit tests for vibelens.ingest.parsers.claude_code_web parser."""
+"""Unit tests for vibelens.ingest.parsers.claude_web parser."""
 
 import json
 from pathlib import Path
 
-from vibelens.ingest.parsers.claude_code_web import ClaudeCodeWebParser
+from vibelens.ingest.parsers.claude_web import ClaudeWebParser
 from vibelens.models.enums import StepSource
 
-_parser = ClaudeCodeWebParser()
+_parser = ClaudeWebParser()
 
 DATASET_DIR_1 = Path("datasets/Claude Data Mar 29 2026")
 DATASET_DIR_2 = Path("datasets/data-2026-03-29-19-48-24-batch-0000")
@@ -502,7 +502,7 @@ def test_parse_token_budget_skipped():
     print("token_budget: skipped correctly")
 
 
-def test_agent_type_is_claude_code_web():
+def test_agent_type_is_claude_web():
     """Parser AGENT_TYPE is set correctly."""
     from vibelens.models.enums import AgentType
 
