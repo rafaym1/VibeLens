@@ -41,6 +41,7 @@ from uuid import uuid4
 
 from vibelens.ingest.diagnostics import DiagnosticsCollector
 from vibelens.ingest.parsers.base import BaseParser
+from vibelens.ingest.parsers.shared.jsonl import iter_jsonl_lines
 from vibelens.models.enums import AgentType, StepSource
 from vibelens.models.trajectories import (
     FinalMetrics,
@@ -184,6 +185,7 @@ class HermesParser(BaseParser):
             steps, session_model, session_tools = _build_steps_from_jsonl(records, collector)
             snapshot = _load_snapshot(sessions_dir, session_id)
             base_url = snapshot.get("base_url") if snapshot else None
+            system_prompt = snapshot.get("system_prompt") if snapshot else None
             platform = _first_nonnull(
                 _session_meta_value(records, "platform"),
                 snapshot.get("platform") if snapshot else None,
@@ -200,6 +202,7 @@ class HermesParser(BaseParser):
                 return []
             steps = _build_steps_from_snapshot(snapshot, collector)
             base_url = snapshot.get("base_url")
+            system_prompt = snapshot.get("system_prompt")
             platform = snapshot.get("platform")
             model = snapshot.get("model")
             tools = snapshot.get("tools")
@@ -224,6 +227,7 @@ class HermesParser(BaseParser):
         extra = _build_trajectory_extra(
             platform=platform,
             base_url=base_url,
+            system_prompt=system_prompt,
             db_row=db_row,
             origin=origin,
             diagnostics=self.build_diagnostics_extra(collector),
@@ -280,18 +284,7 @@ def _session_id_from_path(path: Path) -> str | None:
 
 def _parse_jsonl(content: str, diagnostics: DiagnosticsCollector) -> list[dict]:
     """Parse line-delimited JSON into a list of record dicts."""
-    records: list[dict] = []
-    for line in content.split("\n"):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        diagnostics.total_lines += 1
-        try:
-            records.append(json.loads(stripped))
-            diagnostics.parsed_lines += 1
-        except json.JSONDecodeError:
-            diagnostics.record_skip("invalid JSON")
-    return records
+    return list(iter_jsonl_lines(content, diagnostics=diagnostics))
 
 
 def _parse_snapshot(content: str) -> dict | None:
@@ -715,6 +708,7 @@ def _derive_project_path(platform: str | None, origin: dict | None, db_row: dict
 def _build_trajectory_extra(
     platform: str | None,
     base_url: str | None,
+    system_prompt: str | None,
     db_row: dict | None,
     origin: dict | None,
     diagnostics: dict | None,
@@ -725,6 +719,8 @@ def _build_trajectory_extra(
         extra["platform"] = platform
     if base_url:
         extra["base_url"] = base_url
+    if system_prompt:
+        extra["system_prompt"] = system_prompt
     if db_row:
         for key in ("title", "end_reason", "cost_status", "cost_source", "billing_provider"):
             value = db_row.get(key)
