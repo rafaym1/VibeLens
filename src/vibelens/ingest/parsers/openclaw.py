@@ -25,6 +25,7 @@ from uuid import uuid4
 
 from vibelens.ingest.diagnostics import DiagnosticsCollector
 from vibelens.ingest.parsers.base import ROLE_TO_SOURCE, BaseParser, mark_error_content
+from vibelens.ingest.parsers.shared.jsonl import iter_jsonl_lines
 from vibelens.models.enums import AgentType, StepSource
 from vibelens.models.trajectories import (
     Agent,
@@ -184,19 +185,7 @@ def _parse_jsonl_content(content: str, diagnostics: DiagnosticsCollector) -> lis
     Returns:
         List of parsed JSON dicts.
     """
-    entries: list[dict] = []
-    for line in content.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        diagnostics.total_lines += 1
-        try:
-            parsed = json.loads(stripped)
-            diagnostics.parsed_lines += 1
-            entries.append(parsed)
-        except json.JSONDecodeError:
-            diagnostics.record_skip("invalid JSON")
-    return entries
+    return list(iter_jsonl_lines(content, diagnostics=diagnostics))
 
 
 def _extract_session_meta(entries: list[dict]) -> dict:
