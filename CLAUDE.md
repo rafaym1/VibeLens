@@ -26,9 +26,9 @@ Canonical flow: [`docs/release.md`](docs/release.md). User-facing entry points: 
 
 Quick-reference for executing a release:
 
-1. **Version bump** — update `version` in `pyproject.toml` and `__version__` in `src/vibelens/__init__.py`. They must match.
-2. **CHANGELOG** — promote `[Unreleased]` entries into a new `## [X.Y.Z] - YYYY-MM-DD` section. Keep the `[Unreleased]` heading empty for the next cycle.
-3. **Catalog** (only if `agent-tool-hub` output is newer): `uv run python scripts/build_catalog.py --hub-output <path> --out src/vibelens/data/catalog`. Commit the regenerated `src/vibelens/data/catalog/`.
+1. **Version bump**: update `version` in `pyproject.toml` and `__version__` in `src/vibelens/__init__.py`. They must match.
+2. **CHANGELOG**: promote `[Unreleased]` entries into a new `## [X.Y.Z] - YYYY-MM-DD` section. Keep the `[Unreleased]` heading empty for the next cycle.
+3. **Catalog**: Skip.
 4. **Frontend** (only if `frontend/src/` changed): `cd frontend && npm run build && cd ..`. Commit `src/vibelens/static/`.
 5. **Verify**: `uv run ruff check src/ tests/ && uv run pytest tests/ && uv build`.
 6. **Tag and push**: `git commit -am "Release vX.Y.Z" && git tag vX.Y.Z && git push origin main --tags`. Trusted publishing on PyPI (`.github/workflows/publish.yml`) takes over from the tag push — no token, no `twine`.
