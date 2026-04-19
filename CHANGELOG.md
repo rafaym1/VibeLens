@@ -2,29 +2,48 @@
 
 ## [Unreleased]
 
-### Changed
-- Catalog schema migrated to `agent-tool-hub` format. `AgentExtensionItem` field names aligned to the hub; `tags → topics`, `license_name → license`. Detail-only fields (`scores`, `item_metadata`, `readme_description`, `repo_description`, `author`, `author_followers`, `contributors_count`, `created_at`, `discovery_origin`, `validation_errors`) load on demand via byte offsets.
-- Catalog list API drops `category` and `platform` query parameters (accepted-but-ignored for backward compatibility). Metadata endpoint returns `topics` instead of `categories`.
-- Catalog scoring weights rebalanced (relevance 50%, quality 30%, popularity 15%, composability 5%) since platforms is unavailable this release.
-- Startup latency increases ~1–3s to warm the new catalog. The legacy `~/.vibelens/catalog/` user cache is deleted on startup (contents not migrated).
-- Trajectory-index cache uses per-file invalidation instead of all-or-nothing. Touching one session JSONL re-parses only that file (~200 ms) rather than rebuilding the whole index (~12 s). The cache file `~/.vibelens/session_index.json` schema bumps to v3; pre-existing v2 caches are discarded cleanly on first startup.
-- Dashboard tool-usage warming now uses a persisted per-session cache at `~/.vibelens/tool_usage_cache.json`. Warm restarts skip ~99% of trajectory loading and complete in <1 s instead of ~2 m 43 s. Cold start cost is unchanged but writes the cache for subsequent runs.
-
-### Fixed
-- Files that produce no parseable trajectory (Claude Code Desktop file-history snapshots, etc.) are now memoized in the index cache and skipped on subsequent startups, eliminating the per-startup parse-and-fail loop.
+## [1.0.1] - 2026-04-18
 
 ### Added
+- **Local extensions tab** now manages skills, subagents, commands, and plugins under one "Local" header with a pill-style type selector. Each type gets install, uninstall, sync-to-agents, and (for editable types) inline editing. Cards click through to a full detail page.
+- **Extension detail page** (shared by Local and Explore) with a collapsible file-tree sidebar, per-file preview/code modes, optional Save in code mode, and a sticky "On this page" TOC that follows scroll. Non-markdown files (`json`, `yaml`, `py`, `sh`, …) render in syntax-highlighted code blocks; JSON is pretty-printed.
+- **Explore pill-style type selector** replacing the type dropdown. Plugin pill sits between Skill and Subagent; Local tab mirrors the same ordering.
+- **Per-type tree/file API**: `GET /api/extensions/{type}s/{name}/tree` and `/files/{path}` expose the on-disk directory for any locally-installed extension. Path-traversal guarded, 500-entry walk cap, 200 KB file-read cap. Catalog gets an equivalent `/catalog/{id}/tree` + `/files/{path}` pair that walks GitHub's Contents API.
+- **Claude plugin discovery** across every marketplace. `ClaudePluginStore` now scans `~/.claude/plugins/cache/<marketplace>/<name>/<version>/` instead of a single `vibelens/` bucket, so plugins installed via `/plugin install` (superpowers, local-plugins, etc.) surface in Local. Plugins auto-import into the central VibeLens store on startup, mirroring the skill flow.
+- **Uninstall confirmation dialog** shared by the card and the detail page. Lists every agent the item is synced to and warns that confirming removes it from all of them.
+- **Topics "+N more" toggle** on the detail page when an item has more than 5 topics.
 - `scripts/build_catalog.py` converts `agent-tool-hub` output into the bundled two-tier catalog (summary + offsets + per-type JSONs).
 - `MCP_SERVER` extension type.
 - `SessionToolUsage` model + `tool_usage_cache` module backing the per-session warming cache.
 - `build_partial_session_index` for path-scoped trajectory-index rebuilds.
 
-### Disabled (temporarily)
-- `_enrich_continuation_refs` is commented out — the chain extractor has a bug that misses some links. Re-enable once the bug is fixed.
+### Fixed
+- **Explore detail content** returned "No content available" for every subagent and command. The catalog emits `tree/.../file.md` URLs for ~5,700 single-file items; `_resolve_content` appended `/SKILL.md` to any tree URL, producing 404s. A new `is_github_single_file_tree` heuristic (extension whitelist) routes single-file sources through the correct raw URL.
+- **Catalog plugin install + content fetch for bare-repo URLs**. Around 10% of catalog plugins use `https://github.com/owner/repo` without a `/tree/` suffix. Added `GITHUB_REPO_RE` + a shared `parse_github_url` normalizer; `download_directory`, `list_github_tree`, and `fetch_github_tree_file` all accept bare-repo URLs now (walked from default branch root).
+- **Plugin content display**. `_resolve_content` has a plugin branch that fetches `README.md` first, then `.claude-plugin/plugin.json`, instead of always looking for `SKILL.md`. Non-plugin bare-repo URLs fall back to the repo's top-level README at HEAD.
+- **Subagent / command install layout**. Single-file items land at `{dir}/{name}.md`, matching what `uninstall_extension` expected. Directory-shaped items keep the `{dir}/{name}/` layout.
+- **Recommendation L4 crash** when catalog items had `description=None`. Extracted template building into `_build_rationale_candidates` with `item.description or ""` coercion; the pipeline now returns rationales end-to-end instead of raising `AttributeError`.
+- **LiteLLM pricing**: Kimi / DeepSeek / Qwen rates corrected against official sources; `claude-opus-4-7` pricing added + normalizer prefix extended.
+- **Files that produce no parseable trajectory** (Claude Code Desktop file-history snapshots, etc.) are memoized in the index cache and skipped on subsequent startups, eliminating the per-startup parse-and-fail loop.
+
+### Changed
+- **Catalog schema migrated to `agent-tool-hub` format**. `AgentExtensionItem` field names aligned to the hub; `tags → topics`, `license_name → license`. Detail-only fields (`scores`, `item_metadata`, `readme_description`, `repo_description`, `author`, `author_followers`, `contributors_count`, `created_at`, `discovery_origin`, `validation_errors`) load on demand via byte offsets.
+- **Catalog list API** drops `category` and `platform` query parameters (accepted-but-ignored for backward compatibility). Metadata endpoint returns `topics` instead of `categories`.
+- **Catalog scoring weights** rebalanced (relevance 50%, quality 30%, popularity 15%, composability 5%) since platforms is unavailable this release.
+- **Plugin store layout**: central store remains at `~/.vibelens/plugins/` (canonical Claude layout); Claude agent store widens to `~/.claude/plugins/cache/` and walks two levels (`<marketplace>/<name>/`).
+- **Cache gating** in `services/extensions/catalog`: `_content_cache` / `_tree_cache` only cache successful results, so a transient GitHub 503 no longer pins an hour of errors.
+- **Type selector** (Local + Explore) uses the DESIGN.md Apple-style pill pattern (`bg-control` track with `bg-panel shadow-sm` active pill) instead of the old segmented toggle or dropdown.
+- **Recommendation card background** matches the Explore list card (`border-card bg-panel hover:bg-control/80`).
+- **Startup latency** increases ~1–3s to warm the new catalog. The legacy `~/.vibelens/catalog/` user cache is deleted on startup (contents not migrated).
+- **Trajectory-index cache** uses per-file invalidation instead of all-or-nothing. Touching one session JSONL re-parses only that file (~200 ms) rather than rebuilding the whole index (~12 s). Cache file `~/.vibelens/session_index.json` schema bumps to v3; pre-existing v2 caches are discarded cleanly on first startup.
+- **Dashboard tool-usage warming** uses a persisted per-session cache at `~/.vibelens/tool_usage_cache.json`. Warm restarts skip ~99% of trajectory loading and complete in <1 s instead of ~2 m 43 s. Cold start cost is unchanged but writes the cache for subsequent runs.
 
 ### Removed
 - Catalog `install_content` / `install_method` payloads. Every install now fetches from `source_url` at install time.
 - Frontend "Category" and "Platform" filter dropdowns in the Explore tab.
+
+### Disabled (temporarily)
+- `_enrich_continuation_refs` is commented out — the chain extractor has a bug that misses some links. Re-enable once the bug is fixed.
 
 ### Unsupported this release
 - HOOK install from the catalog returns 501. Hook items still browse and view fine.

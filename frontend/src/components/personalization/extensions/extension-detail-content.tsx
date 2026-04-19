@@ -28,34 +28,38 @@ interface ExtensionDetailContentProps {
   onSave?: (nextContent: string) => Promise<void>;
 }
 
-const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  md: "markdown",
-  mdx: "markdown",
-  json: "json",
-  jsonc: "json",
-  yaml: "yaml",
-  yml: "yaml",
-  toml: "toml",
-  py: "python",
-  ts: "typescript",
-  tsx: "tsx",
-  js: "javascript",
-  jsx: "jsx",
-  sh: "bash",
-  bash: "bash",
-  zsh: "bash",
-  html: "html",
-  css: "css",
-  txt: "",
+type PreviewKind =
+  | { kind: "markdown" }
+  | { kind: "code"; language: string }
+  | { kind: "plain" };
+
+const EXTENSION_TO_PREVIEW: Record<string, PreviewKind> = {
+  md: { kind: "markdown" },
+  mdx: { kind: "markdown" },
+  json: { kind: "code", language: "json" },
+  jsonc: { kind: "code", language: "json" },
+  yaml: { kind: "code", language: "yaml" },
+  yml: { kind: "code", language: "yaml" },
+  toml: { kind: "code", language: "toml" },
+  py: { kind: "code", language: "python" },
+  ts: { kind: "code", language: "typescript" },
+  tsx: { kind: "code", language: "tsx" },
+  js: { kind: "code", language: "javascript" },
+  jsx: { kind: "code", language: "jsx" },
+  sh: { kind: "code", language: "bash" },
+  bash: { kind: "code", language: "bash" },
+  zsh: { kind: "code", language: "bash" },
+  html: { kind: "code", language: "html" },
+  css: { kind: "code", language: "css" },
+  txt: { kind: "plain" },
 };
 
-/** Pick a highlight.js language tag from a file path. Empty string for plain text. */
-function languageForPath(path: string | undefined): string {
-  if (!path) return "markdown";
+function previewKindForPath(path: string | undefined): PreviewKind {
+  if (!path) return { kind: "markdown" };
   const dot = path.lastIndexOf(".");
-  if (dot < 0) return "";
+  if (dot < 0) return { kind: "plain" };
   const ext = path.slice(dot + 1).toLowerCase();
-  return EXTENSION_TO_LANGUAGE[ext] ?? "";
+  return EXTENSION_TO_PREVIEW[ext] ?? { kind: "plain" };
 }
 
 /** Parse YAML frontmatter, extracting name and description fields. */
@@ -212,11 +216,6 @@ interface PreviewBodyProps {
   body: string;
 }
 
-/** Preview mode branches on the file extension: markdown renders rich,
- *  other file types (json, py, yaml, …) render inside a fenced code block
- *  so ``rehype-highlight`` provides syntax colouring instead of treating
- *  the text as a paragraph.
- */
 function PreviewBody({
   itemName,
   displayName,
@@ -224,10 +223,15 @@ function PreviewBody({
   content,
   body,
 }: PreviewBodyProps) {
-  const language = languageForPath(itemName);
-  const isMarkdown = language === "markdown" || language === "";
+  const previewKind = useMemo(() => previewKindForPath(itemName), [itemName]);
 
-  if (isMarkdown) {
+  const fenced = useMemo(() => {
+    if (previewKind.kind !== "code") return null;
+    const formatted = previewKind.language === "json" ? prettyJson(content) : content;
+    return `\`\`\`${previewKind.language}\n${formatted}\n\`\`\``;
+  }, [previewKind, content]);
+
+  if (previewKind.kind === "markdown") {
     return (
       <>
         {displayName && (
@@ -245,14 +249,17 @@ function PreviewBody({
     );
   }
 
-  // For JSON/YAML/Python/etc., wrap in a fenced code block so the
-  // highlighter renders it as code instead of prose.
-  const formatted = language === "json" ? prettyJson(content) : content;
-  const fenced = `\`\`\`${language}\n${formatted}\n\`\`\``;
-  return <MarkdownRenderer content={fenced} variant="document" />;
+  if (fenced !== null) {
+    return <MarkdownRenderer content={fenced} variant="document" />;
+  }
+
+  return (
+    <pre className="font-mono text-sm text-secondary whitespace-pre-wrap break-words leading-relaxed">
+      {content}
+    </pre>
+  );
 }
 
-/** Format JSON with two-space indent; return original text if parsing fails. */
 function prettyJson(text: string): string {
   try {
     return JSON.stringify(JSON.parse(text), null, 2);
