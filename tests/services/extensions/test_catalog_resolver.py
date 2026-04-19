@@ -1,8 +1,10 @@
 """Tests for catalog_resolver install/uninstall dispatch.
 
-Every install path now downloads from GitHub (download_directory). HOOK
-and MCP_SERVER are gated upstream by services/extensions/catalog.py;
-this module tests the resolver's direct entry points.
+Install paths download from GitHub: directory-shaped items via
+``download_directory``, single-file items (subagent / command whose
+``source_url`` ends in ``.md``) via ``download_file``. HOOK and
+MCP_SERVER are gated upstream by services/extensions/catalog.py; this
+module tests the resolver's direct entry points.
 """
 
 from pathlib import Path
@@ -93,7 +95,31 @@ def test_install_skill_routes_to_skills_dir(monkeypatch, tmp_path: Path):
     print(f"skill installed at {installed}")
 
 
-def test_install_subagent_routes_to_subagents_dir(monkeypatch, tmp_path: Path):
+def test_install_subagent_single_file_routes_to_md(monkeypatch, tmp_path: Path):
+    """Tree URL ending in .md installs as {name}.md, matching uninstall layout."""
+    platform = _stub_platform(monkeypatch, tmp_path)
+    captured: dict = {}
+
+    def fake_download_file(*, source_url: str, target_path: Path) -> bool:
+        captured["url"] = source_url
+        captured["path"] = target_path
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("---\nname: reviewer\n---\nbody")
+        return True
+
+    monkeypatch.setattr(catalog_resolver, "download_file", fake_download_file)
+    item = _make_item(
+        extension_type=AgentExtensionType.SUBAGENT,
+        name="reviewer",
+        source_url="https://github.com/acme/widget/tree/main/agents/reviewer.md",
+    )
+    installed = install_catalog_item(item=item, target_platform="claude", overwrite=False)
+    assert installed == platform.subagents_dir / "reviewer.md"
+    assert captured["path"] == platform.subagents_dir / "reviewer.md"
+
+
+def test_install_subagent_directory_routes_to_dir(monkeypatch, tmp_path: Path):
+    """Tree URL to a directory installs as {name}/ with downloaded contents."""
     platform = _stub_platform(monkeypatch, tmp_path)
 
     def fake_download(*, source_url: str, target_dir: Path) -> bool:
@@ -110,21 +136,22 @@ def test_install_subagent_routes_to_subagents_dir(monkeypatch, tmp_path: Path):
     assert installed == platform.subagents_dir / "reviewer"
 
 
-def test_install_command_routes_to_commands_dir(monkeypatch, tmp_path: Path):
+def test_install_command_single_file_routes_to_md(monkeypatch, tmp_path: Path):
     platform = _stub_platform(monkeypatch, tmp_path)
 
-    def fake_download(*, source_url: str, target_dir: Path) -> bool:
-        target_dir.mkdir(parents=True, exist_ok=True)
+    def fake_download_file(*, source_url: str, target_path: Path) -> bool:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("x")
         return True
 
-    monkeypatch.setattr(catalog_resolver, "download_directory", fake_download)
+    monkeypatch.setattr(catalog_resolver, "download_file", fake_download_file)
     item = _make_item(
         extension_type=AgentExtensionType.COMMAND,
         name="sync",
-        source_url="https://github.com/acme/widget/tree/main/commands/sync",
+        source_url="https://github.com/acme/widget/tree/main/commands/sync.md",
     )
     installed = install_catalog_item(item=item, target_platform="claude", overwrite=False)
-    assert installed == platform.commands_dir / "sync"
+    assert installed == platform.commands_dir / "sync.md"
 
 
 def test_install_unsupported_type_for_platform_raises(monkeypatch, tmp_path: Path):

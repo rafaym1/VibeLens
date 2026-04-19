@@ -8,7 +8,13 @@ from vibelens.deps import get_plugin_service, get_skill_service
 from vibelens.models.enums import AgentExtensionType, ExtensionSource
 from vibelens.models.extension import AgentExtensionItem
 from vibelens.services.extensions.platforms import AgentPlatform, get_platform
-from vibelens.utils.github import GITHUB_TREE_RE, download_directory
+from vibelens.utils.github import (
+    GITHUB_BLOB_RE,
+    GITHUB_TREE_RE,
+    download_directory,
+    download_file,
+    is_github_single_file_tree,
+)
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -34,70 +40,90 @@ def install_catalog_item(
     """
     platform = _resolve_platform(target_platform)
     if item.extension_type not in platform.supported_types:
-        raise ValueError(
-            f"Agent {target_platform!r} does not support {item.extension_type.value}"
-        )
+        raise ValueError(f"Agent {target_platform!r} does not support {item.extension_type.value}")
 
     if item.extension_type == AgentExtensionType.PLUGIN:
         return _install_plugin(
             item=item, target_platform=target_platform, platform=platform, overwrite=overwrite
         )
 
-    return install_from_source_url(
-        item=item, target_platform=target_platform, overwrite=overwrite
-    )
+    return install_from_source_url(item=item, target_platform=target_platform, overwrite=overwrite)
 
 
 def install_from_source_url(
     item: AgentExtensionItem, target_platform: str, overwrite: bool = False
 ) -> Path:
-    """Download the item's GitHub tree into the target agent directory.
+    """Download the item's GitHub source into the target agent directory.
 
-    Used for SKILL (directory), SUBAGENT (single file), COMMAND (single file).
-    ``download_directory`` handles both tree URLs and single-file blob paths.
+    SKILL items are installed as a directory (``{skills_dir}/{name}/``).
+    SUBAGENT and COMMAND items are installed as a single ``.md`` file
+    (``{subagents_dir|commands_dir}/{name}.md``) when the source URL points
+    at one file, and as a directory otherwise.
     """
     platform = _resolve_platform(target_platform)
 
-    if not item.source_url or not GITHUB_TREE_RE.match(item.source_url):
-        raise ValueError(
-            f"Item {item.extension_id} has no installable content or valid source URL"
-        )
+    if not item.source_url or not (
+        GITHUB_TREE_RE.match(item.source_url) or GITHUB_BLOB_RE.match(item.source_url)
+    ):
+        raise ValueError(f"Item {item.extension_id} has no installable content or valid source URL")
 
-    target_dir = _target_dir_for(item=item, platform=platform)
-    if target_dir is None:
+    target_path = _target_path_for(item=item, platform=platform)
+    if target_path is None:
         raise ValueError(
             f"Platform {target_platform!r} has no directory for {item.extension_type.value}"
         )
 
-    if target_dir.exists() and not overwrite:
+    if target_path.exists() and not overwrite:
         raise FileExistsError(
-            f"Directory already exists: {target_dir}. Use overwrite=true to replace."
+            f"Path already exists: {target_path}. Use overwrite=true to replace."
         )
 
-    logger.debug(
-        "Downloading %s from %s to %s", item.extension_id, item.source_url, target_dir
-    )
+    logger.debug("Downloading %s from %s to %s", item.extension_id, item.source_url, target_path)
 
-    success = download_directory(source_url=item.source_url, target_dir=target_dir)
+    if _is_single_file_source(item.source_url):
+        if target_path.is_dir():
+            shutil.rmtree(target_path)
+        success = download_file(source_url=item.source_url, target_path=target_path)
+    else:
+        if target_path.is_file():
+            target_path.unlink()
+        success = download_directory(source_url=item.source_url, target_dir=target_path)
+
     if not success:
         raise ValueError(f"Failed to download {item.extension_type.value} from {item.source_url}")
 
     if item.extension_type == AgentExtensionType.SKILL:
-        _mirror_skill_to_central(name=item.name, target_dir=target_dir)
+        _mirror_skill_to_central(name=item.name, target_dir=target_path)
 
-    logger.debug("Installed %s to %s", item.extension_id, target_dir)
-    return target_dir
+    logger.debug("Installed %s to %s", item.extension_id, target_path)
+    return target_path
 
 
-def _target_dir_for(item: AgentExtensionItem, platform: AgentPlatform) -> Path | None:
-    """Return the on-agent install path for the item's type, or None if unsupported."""
+def _is_single_file_source(source_url: str) -> bool:
+    """True when source_url is a GitHub blob URL or tree URL pointing at a file."""
+    return bool(GITHUB_BLOB_RE.match(source_url)) or is_github_single_file_tree(source_url)
+
+
+def _target_path_for(item: AgentExtensionItem, platform: AgentPlatform) -> Path | None:
+    """Return the on-agent install path for the item's type, or None if unsupported.
+
+    SKILL -> directory. SUBAGENT / COMMAND -> ``.md`` file when the source
+    URL points at one file, otherwise a directory.
+    """
     if item.extension_type == AgentExtensionType.SKILL and platform.skills_dir:
         return platform.skills_dir / item.name
     if item.extension_type == AgentExtensionType.SUBAGENT and platform.subagents_dir:
-        return platform.subagents_dir / item.name
+        return _single_file_or_dir(dir_=platform.subagents_dir, item=item)
     if item.extension_type == AgentExtensionType.COMMAND and platform.commands_dir:
-        return platform.commands_dir / item.name
+        return _single_file_or_dir(dir_=platform.commands_dir, item=item)
     return None
+
+
+def _single_file_or_dir(dir_: Path, item: AgentExtensionItem) -> Path:
+    """Return ``dir/{name}.md`` for single-file sources, ``dir/{name}/`` otherwise."""
+    if item.source_url and _is_single_file_source(item.source_url):
+        return dir_ / f"{item.name}.md"
+    return dir_ / item.name
 
 
 def _mirror_skill_to_central(name: str, target_dir: Path) -> None:
@@ -115,10 +141,7 @@ def _mirror_skill_to_central(name: str, target_dir: Path) -> None:
 
 
 def _install_plugin(
-    item: AgentExtensionItem,
-    target_platform: str,
-    platform: AgentPlatform,
-    overwrite: bool,
+    item: AgentExtensionItem, target_platform: str, platform: AgentPlatform, overwrite: bool
 ) -> Path:
     """Install a PLUGIN extension via PluginService.
 

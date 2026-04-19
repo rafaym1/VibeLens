@@ -133,3 +133,56 @@ def test_get_extension_item_returns_summary_when_offsets_empty(client):
 def test_get_extension_item_not_found(client):
     resp = client.get("/api/extensions/catalog/nonexistent")
     assert resp.status_code == 404
+
+
+def test_catalog_tree_returns_stubbed_entries(client, monkeypatch):
+    """Tree endpoint shapes the service output into ExtensionTreeResponse."""
+    import vibelens.services.extensions.catalog as catalog_service
+
+    def fake_list(source_url: str, max_entries: int) -> tuple[list[dict], bool]:
+        assert source_url == "https://github.com/test/test-skill/tree/main"
+        return (
+            [
+                {"path": "SKILL.md", "kind": "file", "size": 100},
+                {"path": "LICENSE.txt", "kind": "file", "size": 50},
+            ],
+            False,
+        )
+
+    monkeypatch.setattr(catalog_service, "list_github_tree", fake_list)
+    # Clear the tree cache so the stub is exercised.
+    catalog_service._tree_cache.clear()
+
+    resp = client.get("/api/extensions/catalog/bwc:skill:test-skill/tree")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["name"] == "test-skill"
+    assert body["truncated"] is False
+    paths = {e["path"] for e in body["entries"]}
+    assert paths == {"SKILL.md", "LICENSE.txt"}
+    print(f"catalog tree paths: {sorted(paths)}")
+
+
+def test_catalog_file_returns_stubbed_content(client, monkeypatch):
+    """File endpoint returns the fetched file body."""
+    import vibelens.services.extensions.catalog as catalog_service
+
+    def fake_fetch(source_url: str, relative: str) -> str | None:
+        assert source_url == "https://github.com/test/test-skill/tree/main"
+        assert relative == "SKILL.md"
+        return "# skill body\n"
+
+    monkeypatch.setattr(catalog_service, "fetch_github_tree_file", fake_fetch)
+    catalog_service._file_cache.clear()
+
+    resp = client.get("/api/extensions/catalog/bwc:skill:test-skill/files/SKILL.md")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["path"] == "SKILL.md"
+    assert body["content"] == "# skill body\n"
+    assert body["truncated"] is False
+
+
+def test_catalog_tree_unknown_item_returns_404(client):
+    resp = client.get("/api/extensions/catalog/nope/tree")
+    assert resp.status_code == 404

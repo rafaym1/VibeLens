@@ -7,11 +7,16 @@ from vibelens.schemas.extensions import (
     CatalogInstallResponse,
     CatalogInstallResult,
     CatalogListResponse,
+    ExtensionFileResponse,
     ExtensionMetaResponse,
+    ExtensionTreeEntry,
+    ExtensionTreeResponse,
 )
 from vibelens.services.extensions.catalog import (
+    fetch_extension_file,
     get_extension_metadata,
     install_extension,
+    list_extension_tree,
     list_extensions,
     resolve_extension_content,
 )
@@ -38,8 +43,7 @@ async def list_extensions_endpoint(
         description="Deprecated: platforms are not derived in this release.",
     ),
     sort: str = Query(
-        default="quality",
-        description="Sort: quality, name, popularity, recent, relevance.",
+        default="quality", description="Sort: quality, name, popularity, recent, relevance."
     ),
     page: int = Query(default=1, ge=1, description="Page number."),
     per_page: int = Query(default=50, ge=1, le=200, description="Items per page."),
@@ -50,16 +54,10 @@ async def list_extensions_endpoint(
     backward compatibility with older clients and ignored server-side.
     """
     if category is not None or platform is not None:
-        logger.debug(
-            "ignoring deprecated filter(s): category=%r platform=%r", category, platform
-        )
+        logger.debug("ignoring deprecated filter(s): category=%r platform=%r", category, platform)
     try:
         items, total = list_extensions(
-            search=search,
-            extension_type=extension_type,
-            sort=sort,
-            page=page,
-            per_page=per_page,
+            search=search, extension_type=extension_type, sort=sort, page=page, per_page=per_page
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -83,6 +81,31 @@ async def get_extension_content(item_id: str) -> dict:
         return await resolve_extension_content(item_id=item_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/{item_id:path}/tree")
+async def get_extension_tree(item_id: str) -> ExtensionTreeResponse:
+    """List the remote file structure for a catalog item (via GitHub Contents API)."""
+    try:
+        payload = list_extension_tree(item_id=item_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return ExtensionTreeResponse(
+        name=payload["name"],
+        root=payload["root"],
+        entries=[ExtensionTreeEntry(**e) for e in payload["entries"]],
+        truncated=payload["truncated"],
+    )
+
+
+@router.get("/{item_id:path}/files/{relative:path}")
+async def get_extension_file(item_id: str, relative: str) -> ExtensionFileResponse:
+    """Fetch a single file from a catalog item's remote tree."""
+    try:
+        payload = fetch_extension_file(item_id=item_id, relative=relative)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return ExtensionFileResponse(**payload)
 
 
 @router.post("/{item_id:path}/install")
@@ -135,14 +158,9 @@ async def install_extension_endpoint(
     if not all_ok:
         failed = {k: v.message for k, v in results.items() if not v.success}
         logger.error("Install incomplete for %s: %s", item_id, failed)
-    summary = (
-        f"Installed to {sum(r.success for r in results.values())}/{len(platforms)} platforms"
-    )
+    summary = f"Installed to {sum(r.success for r in results.values())}/{len(platforms)} platforms"
     return CatalogInstallResponse(
-        success=all_ok,
-        installed_path=first_path,
-        message=summary,
-        results=results,
+        success=all_ok, installed_path=first_path, message=summary, results=results
     )
 
 

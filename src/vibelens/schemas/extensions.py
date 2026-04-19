@@ -1,5 +1,7 @@
 """Extension API schemas — unified for all types + catalog-specific."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -49,6 +51,35 @@ class ExtensionListResponse(BaseModel):
     page: int = Field(description="Current page.")
     page_size: int = Field(description="Items per page.")
     sync_targets: list[SyncTargetResponse] = Field(description="Agent platforms available.")
+
+
+class ExtensionTreeEntry(BaseModel):
+    """One entry in an on-disk extension file tree."""
+
+    path: str = Field(description="Path relative to the extension root, posix-style.")
+    kind: Literal["file", "dir"] = Field(description="Entry kind.")
+    size: int | None = Field(default=None, description="File byte size (None for dirs).")
+
+
+class ExtensionTreeResponse(BaseModel):
+    """On-disk file tree rooted at the extension's central store dir."""
+
+    name: str = Field(description="Extension name.")
+    root: str = Field(description="Absolute on-disk root directory.")
+    entries: list[ExtensionTreeEntry] = Field(description="Flat listing of files and dirs.")
+    truncated: bool = Field(
+        default=False, description="True when the walk was capped at the entry limit."
+    )
+
+
+class ExtensionFileResponse(BaseModel):
+    """Raw text content of a single file inside an extension directory."""
+
+    path: str = Field(description="Path relative to the extension root, posix-style.")
+    content: str = Field(description="UTF-8 text content; empty string for binaries.")
+    truncated: bool = Field(
+        default=False, description="True when the file exceeded the read cap."
+    )
 
 
 class CatalogListResponse(BaseModel):

@@ -22,6 +22,47 @@ GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
 GITHUB_API_BASE = "https://api.github.com"
 REQUEST_TIMEOUT_SECONDS = 30
 
+# Known file extensions that indicate a single-file GitHub tree URL. Kept
+# narrow on purpose: a mere dot in the last segment would false-positive on
+# dotted directory names like ``v1.2.3`` or ``my.plugin``.
+_SINGLE_FILE_TREE_EXTENSIONS = frozenset(
+    {
+        ".md",
+        ".mdx",
+        ".json",
+        ".jsonc",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".py",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".sh",
+        ".bash",
+        ".zsh",
+        ".txt",
+    }
+)
+
+
+def is_github_single_file_tree(url: str) -> bool:
+    """True when ``url`` is a tree URL pointing at a single known-file type.
+
+    Matches only when the last path segment ends in a known source/text
+    extension. This avoids false positives on dotted directory names (e.g.
+    ``.../tree/main/plugins/my.plugin``).
+    """
+    match = GITHUB_TREE_RE.match(url)
+    if not match:
+        return False
+    last_segment = match.group("path").rsplit("/", 1)[-1].lower()
+    dot_index = last_segment.rfind(".")
+    if dot_index <= 0:
+        return False
+    return last_segment[dot_index:] in _SINGLE_FILE_TREE_EXTENSIONS
+
 
 def _github_headers() -> dict[str, str]:
     """Build HTTP headers for GitHub API requests.
@@ -78,6 +119,66 @@ def github_blob_to_raw_url(blob_url: str) -> str | None:
     ref = match.group("ref")
     path = match.group("path")
     return f"{GITHUB_RAW_BASE}/{owner}/{repo}/{ref}/{path}"
+
+
+def github_tree_file_to_raw_url(tree_url: str) -> str | None:
+    """Convert a GitHub tree URL that already points at a single file.
+
+    Unlike :func:`github_tree_to_raw_url`, this does NOT append a filename -
+    it treats the tree path itself as the file path.
+
+    Args:
+        tree_url: GitHub tree URL whose path points to a file
+            (e.g. ``https://github.com/owner/repo/tree/main/agents/x.md``).
+
+    Returns:
+        Raw content URL, or None if the URL is not a tree URL.
+    """
+    match = GITHUB_TREE_RE.match(tree_url)
+    if not match:
+        return None
+    return (
+        f"{GITHUB_RAW_BASE}/{match.group('owner')}/{match.group('repo')}/"
+        f"{match.group('ref')}/{match.group('path')}"
+    )
+
+
+def download_file(source_url: str, target_path: Path) -> bool:
+    """Download a single file from a GitHub tree or blob URL.
+
+    Converts ``source_url`` to a ``raw.githubusercontent.com`` URL and writes
+    the content to ``target_path``. The parent directory is created if
+    missing.
+
+    Args:
+        source_url: GitHub tree or blob URL pointing at a single file
+            (e.g. ``https://github.com/owner/repo/tree/main/agents/x.md``).
+        target_path: Local file path to write.
+
+    Returns:
+        True on success, False if the URL is unparseable or the request fails.
+    """
+    raw_url = github_blob_to_raw_url(blob_url=source_url) or github_tree_file_to_raw_url(
+        tree_url=source_url
+    )
+    if raw_url is None:
+        logger.warning("Cannot parse GitHub URL: %s", source_url)
+        return False
+
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with httpx.Client(
+            timeout=REQUEST_TIMEOUT_SECONDS,
+            headers=_github_headers(),
+        ) as client:
+            response = client.get(raw_url)
+            response.raise_for_status()
+            target_path.write_bytes(response.content)
+        logger.debug("Downloaded %s to %s", raw_url, target_path)
+        return True
+    except httpx.HTTPError as exc:
+        logger.error("Failed to download %s: %s", raw_url, exc)
+        return False
 
 
 def download_directory(source_url: str, target_dir: Path) -> bool:
@@ -194,3 +295,129 @@ def _fetch_file(client: httpx.Client, url: str, local_path: Path) -> int:
     except httpx.HTTPError as exc:
         logger.warning("Failed to download %s: %s", url, exc)
         return 0
+
+
+def list_github_tree(source_url: str, max_entries: int = 500) -> tuple[list[dict], bool]:
+    """Walk a GitHub tree URL via the Contents API and return file entries.
+
+    Returns a flat list of ``{path, kind, size}`` dicts (paths relative to
+    the source tree root) plus a ``truncated`` flag if the walk hit
+    ``max_entries``. For a single-file ``tree/.../x.md`` URL, the sole entry
+    is the file itself. Returns ``([], False)`` on any HTTP failure.
+    """
+    match = GITHUB_TREE_RE.match(source_url)
+    if not match:
+        return [], False
+    owner = match.group("owner")
+    repo = match.group("repo")
+    ref = match.group("ref")
+    path = match.group("path")
+    entries: list[dict] = []
+    try:
+        with httpx.Client(
+            timeout=REQUEST_TIMEOUT_SECONDS, headers=_github_headers()
+        ) as client:
+            truncated = _collect_tree_entries(
+                client=client,
+                owner=owner,
+                repo=repo,
+                ref=ref,
+                remote_path=path,
+                rel_prefix="",
+                out=entries,
+                max_entries=max_entries,
+            )
+        entries.sort(key=lambda e: e["path"])
+        return entries, truncated
+    except httpx.HTTPError as exc:
+        logger.error("Failed to list GitHub tree %s: %s", source_url, exc)
+        return [], False
+
+
+def fetch_github_tree_file(source_url: str, relative: str) -> str | None:
+    """Fetch one file from a GitHub tree at ``source_url`` + ``relative`` path.
+
+    Args:
+        source_url: Tree URL rooting the lookup
+            (e.g. ``https://github.com/owner/repo/tree/main/skills/foo``).
+        relative: Relative path within the tree, posix-style.
+
+    Returns:
+        UTF-8 text content, or None on failure.
+    """
+    match = GITHUB_TREE_RE.match(source_url)
+    if not match:
+        return None
+    owner = match.group("owner")
+    repo = match.group("repo")
+    ref = match.group("ref")
+    base_path = match.group("path").rstrip("/")
+    remote_path = f"{base_path}/{relative}".strip("/") if relative else base_path
+    raw_url = f"{GITHUB_RAW_BASE}/{owner}/{repo}/{ref}/{remote_path}"
+    try:
+        with httpx.Client(
+            timeout=REQUEST_TIMEOUT_SECONDS, headers=_github_headers()
+        ) as client:
+            response = client.get(raw_url)
+            response.raise_for_status()
+            return response.text
+    except httpx.HTTPError as exc:
+        logger.error("Failed to fetch %s: %s", raw_url, exc)
+        return None
+
+
+def _collect_tree_entries(
+    *,
+    client: httpx.Client,
+    owner: str,
+    repo: str,
+    ref: str,
+    remote_path: str,
+    rel_prefix: str,
+    out: list[dict],
+    max_entries: int,
+) -> bool:
+    """Recurse into the Contents API, filling ``out`` with entries.
+
+    Returns True if the ``max_entries`` cap was hit (truncated).
+    """
+    api_url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{remote_path}?ref={ref}"
+    response = client.get(api_url)
+    response.raise_for_status()
+    payload = response.json()
+
+    if not isinstance(payload, list):
+        if isinstance(payload, dict) and payload.get("type") == "file":
+            if len(out) >= max_entries:
+                return True
+            out.append(
+                {
+                    "path": rel_prefix + payload["name"],
+                    "kind": "file",
+                    "size": payload.get("size"),
+                }
+            )
+        return False
+
+    for entry in payload:
+        if len(out) >= max_entries:
+            return True
+        name = entry["name"]
+        kind = "dir" if entry["type"] == "dir" else "file"
+        rel = rel_prefix + name
+        if kind == "dir":
+            out.append({"path": rel, "kind": "dir", "size": None})
+            if _collect_tree_entries(
+                client=client,
+                owner=owner,
+                repo=repo,
+                ref=ref,
+                remote_path=entry["path"],
+                rel_prefix=f"{rel}/",
+                out=out,
+                max_entries=max_entries,
+            ):
+                return True
+        else:
+            out.append({"path": rel, "kind": "file", "size": entry.get("size")})
+    return False

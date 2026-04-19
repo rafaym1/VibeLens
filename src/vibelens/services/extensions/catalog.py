@@ -10,13 +10,24 @@ from vibelens.models.extension import AgentExtensionItem
 from vibelens.models.personalization.recommendation import UserProfile
 from vibelens.services.extensions.catalog_resolver import install_catalog_item
 from vibelens.storage.extension.catalog import CatalogSnapshot, load_catalog
-from vibelens.utils.github import github_blob_to_raw_url, github_tree_to_raw_url
+from vibelens.utils.github import (
+    fetch_github_tree_file,
+    github_blob_to_raw_url,
+    github_tree_file_to_raw_url,
+    github_tree_to_raw_url,
+    is_github_single_file_tree,
+    list_github_tree,
+)
 from vibelens.utils.http import async_fetch_text
 from vibelens.utils.log import get_logger
 
 logger = get_logger(__name__)
 
+CATALOG_TREE_MAX_ENTRIES = 500
+CATALOG_FILE_MAX_BYTES = 200_000
 _content_cache: TTLCache = TTLCache(maxsize=64, ttl=3600)
+_tree_cache: TTLCache = TTLCache(maxsize=128, ttl=3600)
+_file_cache: TTLCache = TTLCache(maxsize=256, ttl=3600)
 
 
 def list_extensions(
@@ -117,8 +128,85 @@ async def resolve_extension_content(item_id: str) -> dict:
         raise ValueError(f"Item {item_id} not found")
 
     result = await _resolve_content(item)
-    _content_cache[item_id] = result
+    if result.get("content") is not None:
+        _content_cache[item_id] = result
     return result
+
+
+def list_extension_tree(item_id: str) -> dict:
+    """List the remote file tree for a catalog item via the GitHub Contents API.
+
+    Returns:
+        Dict with ``name``, ``root`` (source_url), ``entries`` (list of
+        ``{path, kind, size}``), and ``truncated`` flag. Empty entries list
+        when the item has no parseable GitHub source URL.
+
+    Raises:
+        ValueError: If the catalog is unavailable or the item is unknown.
+    """
+    if item_id in _tree_cache:
+        return _tree_cache[item_id]
+
+    catalog = _get_catalog()
+    item = catalog.get_full(item_id) or catalog.get_item(item_id)
+    if not item:
+        raise ValueError(f"Item {item_id} not found")
+
+    source_url = item.source_url or ""
+    entries, truncated = list_github_tree(
+        source_url=source_url, max_entries=CATALOG_TREE_MAX_ENTRIES
+    )
+    result = {"name": item.name, "root": source_url, "entries": entries, "truncated": truncated}
+    if entries:
+        _tree_cache[item_id] = result
+    return result
+
+
+def fetch_extension_file(item_id: str, relative: str) -> dict:
+    """Fetch one file from a catalog item's remote tree.
+
+    Args:
+        item_id: Catalog item id.
+        relative: Posix-style path relative to the item's source_url root.
+            For single-file sources, pass the file's basename or an empty
+            string.
+
+    Returns:
+        Dict with ``path``, ``content``, and ``truncated``.
+
+    Raises:
+        ValueError: If the catalog is unavailable, the item is unknown, or
+            the file is missing.
+    """
+    cache_key = (item_id, relative)
+    if cache_key in _file_cache:
+        return _file_cache[cache_key]
+
+    catalog = _get_catalog()
+    item = catalog.get_full(item_id) or catalog.get_item(item_id)
+    if not item:
+        raise ValueError(f"Item {item_id} not found")
+
+    if not item.source_url:
+        raise ValueError(f"Item {item_id} has no source URL")
+
+    lookup = relative
+    if is_github_single_file_tree(item.source_url):
+        lookup = ""
+
+    text = fetch_github_tree_file(source_url=item.source_url, relative=lookup)
+    if text is None:
+        raise ValueError(f"File {relative!r} not found for {item_id}")
+
+    truncated = len(text.encode("utf-8")) > CATALOG_FILE_MAX_BYTES
+    if truncated:
+        text = text.encode("utf-8")[:CATALOG_FILE_MAX_BYTES].decode("utf-8", errors="ignore")
+
+    display_path = relative or lookup or item.source_url.rsplit("/", 1)[-1]
+    result = {"path": display_path, "content": text, "truncated": truncated}
+    _file_cache[cache_key] = result
+    return result
+
 
 
 def install_extension(item_id: str, target_platform: str, overwrite: bool) -> tuple[str, Path]:
@@ -176,9 +264,7 @@ def _get_catalog() -> CatalogSnapshot:
 
 
 def _filter_items(
-    items: list[AgentExtensionItem],
-    search: str | None,
-    extension_type: str | None,
+    items: list[AgentExtensionItem], search: str | None, extension_type: str | None
 ) -> list[AgentExtensionItem]:
     """Apply search and type filter to items."""
     result = items
@@ -241,17 +327,22 @@ def _sort_items(
 
 
 async def _resolve_content(item: AgentExtensionItem) -> dict:
-    """Resolve displayable content for an extension item from GitHub."""
+    """Resolve displayable content for an extension item from GitHub.
+
+    Branching on source URL shape:
+
+    * REPO -> fetch the repo README.
+    * Blob URL -> fetch the blob's raw content.
+    * Tree URL pointing at a single file (e.g. ``.../tree/main/agents/x.md``)
+      -> fetch that file directly.
+    * Tree URL pointing at a directory -> fetch ``SKILL.md`` inside it.
+    """
     if item.extension_type == AgentExtensionType.REPO and item.repo_full_name:
         owner, repo = item.repo_full_name.split("/", 1)
         readme_url = f"https://raw.githubusercontent.com/{owner}/{repo}/HEAD/README.md"
         content = await async_fetch_text(readme_url)
         if content:
-            return {
-                "item_id": item.extension_id,
-                "content": content,
-                "content_type": "readme",
-            }
+            return {"item_id": item.extension_id, "content": content, "content_type": "readme"}
         return {
             "item_id": item.extension_id,
             "content": None,
@@ -259,36 +350,45 @@ async def _resolve_content(item: AgentExtensionItem) -> dict:
             "error": "Failed to fetch README from GitHub",
         }
 
-    raw_url = github_tree_to_raw_url(tree_url=item.source_url, filename="SKILL.md")
-    if raw_url:
-        content = await async_fetch_text(raw_url)
-        if content:
-            return {
-                "item_id": item.extension_id,
-                "content": content,
-                "content_type": "skill_md",
-            }
-        return {
-            "item_id": item.extension_id,
-            "content": None,
-            "content_type": None,
-            "error": "Failed to fetch SKILL.md from GitHub",
-        }
-
     blob_raw_url = github_blob_to_raw_url(blob_url=item.source_url)
     if blob_raw_url:
         content = await async_fetch_text(blob_raw_url)
         if content:
-            return {
-                "item_id": item.extension_id,
-                "content": content,
-                "content_type": "markdown",
-            }
+            return {"item_id": item.extension_id, "content": content, "content_type": "markdown"}
         return {
             "item_id": item.extension_id,
             "content": None,
             "content_type": None,
             "error": "Failed to fetch content from GitHub",
+        }
+
+    if is_github_single_file_tree(item.source_url):
+        raw_url = github_tree_file_to_raw_url(tree_url=item.source_url)
+        if raw_url:
+            content = await async_fetch_text(raw_url)
+            if content:
+                return {
+                    "item_id": item.extension_id,
+                    "content": content,
+                    "content_type": "markdown",
+                }
+            return {
+                "item_id": item.extension_id,
+                "content": None,
+                "content_type": None,
+                "error": "Failed to fetch file from GitHub",
+            }
+
+    raw_url = github_tree_to_raw_url(tree_url=item.source_url, filename="SKILL.md")
+    if raw_url:
+        content = await async_fetch_text(raw_url)
+        if content:
+            return {"item_id": item.extension_id, "content": content, "content_type": "skill_md"}
+        return {
+            "item_id": item.extension_id,
+            "content": None,
+            "content_type": None,
+            "error": "Failed to fetch SKILL.md from GitHub",
         }
 
     return {"item_id": item.extension_id, "content": None, "content_type": None}
