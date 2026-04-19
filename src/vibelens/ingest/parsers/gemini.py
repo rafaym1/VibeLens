@@ -94,7 +94,12 @@ class GeminiParser(BaseParser):
         file_path = Path(source_path) if source_path else None
         project_path = _resolve_project(file_path, data, steps) if file_path else None
         extra = self.build_diagnostics_extra(collector)
-        agent = self.build_agent()
+        # Gemini doesn't persist a session-level model; use the most
+        # recently seen step model so downstream pricing lookup can match.
+        session_model = next(
+            (step.model_name for step in reversed(steps) if step.model_name), None
+        )
+        agent = self.build_agent(model=session_model)
         return [
             self.assemble_trajectory(
                 session_id=session_id,
