@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { formatCount, formatRelativeDate } from "./extension-format";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useExtensionsClient } from "../../../app";
+import { useAppContext, useExtensionsClient } from "../../../app";
 import { typeApi, type TypeApiKey } from "../../../api/extensions";
 import type {
   ExtensionItemSummary,
@@ -113,6 +113,12 @@ function DetailShell({
   initialCollapsed = false,
   onSaveContent,
 }: DetailShellProps) {
+  const { setSidebarOpen } = useAppContext();
+  useEffect(() => {
+    setSidebarOpen(false);
+    return () => setSidebarOpen(true);
+  }, [setSidebarOpen]);
+
   const tocEntries = useMemo(
     () => (fileContent ? extractTocEntries(stripFrontmatter(fileContent)) : []),
     [fileContent],
@@ -123,7 +129,7 @@ function DetailShell({
   const showToc = contentMode === "preview" && tocEntries.length > 2;
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-6">
+    <div className="max-w-[1400px] mx-auto px-6 py-6">
       <button
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-muted hover:text-secondary mb-4 transition"
@@ -135,12 +141,6 @@ function DetailShell({
       <div className="border border-card rounded-xl bg-panel overflow-hidden mb-6">
         {headerContent}
         {metadataContent}
-      </div>
-
-      <div className="mb-2">
-        <h3 className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-          Content
-        </h3>
       </div>
 
       <div className="flex gap-6 items-start">

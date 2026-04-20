@@ -244,7 +244,7 @@ function TreeRow({
         <Tooltip text={node.path}>
           <button
             onClick={() => onToggleDir(node.path)}
-            className="w-full flex items-center gap-1 py-0.5 text-left text-[11px] text-secondary hover:bg-control/60 rounded transition"
+            className="w-full min-w-0 flex items-center gap-1 py-0.5 text-left text-[11px] text-secondary hover:bg-control/60 rounded transition"
             style={{ paddingLeft: `${8 + depth * 12}px`, paddingRight: 8 }}
           >
             {open ? (
@@ -257,7 +257,7 @@ function TreeRow({
             ) : (
               <Folder className="w-3.5 h-3.5 shrink-0 text-accent-amber" />
             )}
-            <span className="truncate flex-1 font-medium">{node.name}</span>
+            <span className="truncate flex-1 min-w-0 font-medium">{node.name}</span>
           </button>
         </Tooltip>
       </li>
@@ -291,7 +291,7 @@ function TreeFile({ path, label, depth, selected, onSelect }: TreeFileProps) {
       <Tooltip text={path}>
         <button
           onClick={() => onSelect(path)}
-          className={`w-full flex items-center gap-1.5 py-0.5 text-left font-mono text-[11px] rounded transition ${
+          className={`w-full min-w-0 flex items-center gap-1.5 py-0.5 text-left font-mono text-[11px] rounded transition ${
             selected
               ? "bg-accent-amber-subtle text-amber-700 dark:text-amber-300"
               : "text-secondary hover:bg-control/60"
@@ -299,7 +299,7 @@ function TreeFile({ path, label, depth, selected, onSelect }: TreeFileProps) {
           style={{ paddingLeft: `${20 + depth * 12}px`, paddingRight: 8 }}
         >
           <FileText className="w-3 h-3 shrink-0 text-muted" />
-          <span className="truncate flex-1">{label}</span>
+          <span className="truncate flex-1 min-w-0">{label}</span>
         </button>
       </Tooltip>
     </li>

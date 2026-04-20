@@ -442,7 +442,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange }:
       {/* Content area */}
       <div className="flex-1 min-h-0 flex">
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {isAnalysisTab && (
+          {isAnalysisTab && !analysisDetailItem && (
             <div className="px-6 pt-5 pb-2">
               <TutorialBanner tutorial={MODE_DESCRIPTIONS[currentMode].tutorial} accentColor="teal" />
             </div>

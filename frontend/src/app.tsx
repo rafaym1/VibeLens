@@ -46,6 +46,7 @@ interface AppContextValue {
   maxSessions: number;
   fetchWithToken: (url: string, init?: RequestInit) => Promise<Response>;
   extensionsClient: ExtensionsClient;
+  setSidebarOpen: (open: boolean) => void;
 }
 
 const DEFAULT_MAX_ZIP_BYTES = 500 * 1024 * 1024;
@@ -60,6 +61,7 @@ const AppContext = createContext<AppContextValue>({
   maxSessions: DEFAULT_MAX_SESSIONS,
   fetchWithToken: defaultFetch,
   extensionsClient: createExtensionsClient(defaultFetch),
+  setSidebarOpen: () => {},
 });
 
 export function useAppContext(): AppContextValue {
@@ -143,6 +145,7 @@ export function App() {
     maxSessions,
     fetchWithToken,
     extensionsClient,
+    setSidebarOpen,
   };
 
   const handleSidebarResize = useCallback((delta: number) => {
