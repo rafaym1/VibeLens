@@ -5,7 +5,7 @@ import {
   Settings,
   Share2,
 } from "lucide-react";
-import { useEffect, useRef, useState, useCallback, useMemo, createContext, useContext } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, createContext, useContext } from "react";
 import { createExtensionsClient, type ExtensionsClient } from "./api/extensions";
 import { donationClient } from "./api/donation";
 import { ConfirmDialog } from "./components/ui/confirm-dialog";
@@ -14,13 +14,30 @@ import { DonationResultDialog } from "./components/donation/donation-result-dial
 import { DonationHistoryDialog } from "./components/donation/donation-history-dialog";
 import { ResizeHandle } from "./components/ui/resize-handle";
 import { SessionList, type ViewMode } from "./components/session/session-list";
-import { SessionView } from "./components/session/session-view";
-import { SharedSessionView } from "./components/session/shared-session-view";
+import { LoadingSpinner } from "./components/ui/loading-spinner";
 import { UploadDialog } from "./components/upload/upload-dialog";
-import { DashboardView } from "./components/dashboard/dashboard-view";
-import { FrictionPanel } from "./components/friction/friction-panel";
-import { PersonalizationPanel } from "./components/personalization/personalization-panel";
 import { SettingsDialog } from "./components/settings-dialog";
+
+// Heavy route-level views. Code-split so the initial bundle only loads what
+// the user lands on (session list + browse). Analysis panels pull in markdown,
+// syntax highlighting, and domain-specific chart code.
+const SessionView = lazy(() =>
+  import("./components/session/session-view").then((m) => ({ default: m.SessionView })),
+);
+const SharedSessionView = lazy(() =>
+  import("./components/session/shared-session-view").then((m) => ({ default: m.SharedSessionView })),
+);
+const DashboardView = lazy(() =>
+  import("./components/dashboard/dashboard-view").then((m) => ({ default: m.DashboardView })),
+);
+const FrictionPanel = lazy(() =>
+  import("./components/friction/friction-panel").then((m) => ({ default: m.FrictionPanel })),
+);
+const PersonalizationPanel = lazy(() =>
+  import("./components/personalization/personalization-panel").then((m) => ({
+    default: m.PersonalizationPanel,
+  })),
+);
 import { Tooltip } from "./components/ui/tooltip";
 import { RecommendationWelcomeDialog, shouldShowRecWelcome } from "./components/recommendation-welcome-dialog";
 import { SpotlightTour } from "./components/tutorial/spotlight-tour";
@@ -370,7 +387,9 @@ export function App() {
             </div>
           </div>
           <div className="flex-1 min-h-0">
-            <SharedSessionView shareToken={shareToken} />
+            <Suspense fallback={<LoadingSpinner label="Loading shared session" />}>
+              <SharedSessionView shareToken={shareToken} />
+            </Suspense>
           </div>
         </div>
       </AppContext.Provider>
@@ -544,6 +563,7 @@ export function App() {
 
           {/* Content Area */}
           <div className="flex-1 min-h-0 relative">
+            <Suspense fallback={<LoadingSpinner />}>
             {mainView === "skills" ? (
               <PersonalizationPanel checkedIds={checkedIds} activeJobId={skillJobId} onJobIdChange={setSkillJobId} resetKey={skillsResetKey} />
             ) : mainView === "friction" ? (
@@ -576,6 +596,7 @@ export function App() {
                 </div>
               </div>
             )}
+            </Suspense>
           </div>
         </main>
 
