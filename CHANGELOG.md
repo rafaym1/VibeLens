@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [1.0.3] - 2026-04-20
+## [1.0.4] - 2026-04-20
 
 ### Added
 - **Hermes agent parser** (`ingest/parsers/hermes.py`) covering JSONL stream + snapshot formats, state.db enrichment, chat-surface project paths, and `system_prompt` / `base_url` surfaced in trajectory `extra`.
