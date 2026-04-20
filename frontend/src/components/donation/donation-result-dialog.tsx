@@ -1,8 +1,8 @@
 import { Check, Copy, ExternalLink, Heart } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "../ui/modal";
 import { buildWithdrawUrl } from "./donation-constants";
-import { copyToClipboard } from "../../utils";
+import { useCopyFeedback } from "../../hooks/use-copy-feedback";
 import type { DonateResult } from "../../types";
 
 interface DonationResultDialogProps {
@@ -10,21 +10,14 @@ interface DonationResultDialogProps {
   onClose: () => void;
 }
 
-type CopyState = "idle" | "copied" | "failed";
-
-const COPY_FEEDBACK_MS = 1500;
-
 export function DonationResultDialog({ result, onClose }: DonationResultDialogProps) {
-  const [copyState, setCopyState] = useState<CopyState>("idle");
+  const { state: copyState, copy } = useCopyFeedback();
   const hasErrors = result.errors.length > 0;
   const donationId = result.donation_id ?? "";
 
-  const handleCopy = useCallback(async () => {
-    if (!donationId) return;
-    const ok = await copyToClipboard(donationId);
-    setCopyState(ok ? "copied" : "failed");
-    window.setTimeout(() => setCopyState("idle"), COPY_FEEDBACK_MS);
-  }, [donationId]);
+  const handleCopy = useCallback(() => {
+    if (donationId) copy(donationId);
+  }, [copy, donationId]);
 
   const copyLabel =
     copyState === "copied" ? "Copied!" : copyState === "failed" ? "Copy failed" : "Copy";

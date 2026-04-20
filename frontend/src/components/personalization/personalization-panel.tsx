@@ -1,8 +1,9 @@
 import { Check, History, Info, PanelRightClose, PanelRightOpen, Search, Sparkles, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppContext, useExtensionsClient } from "../../app";
+import { useJobPolling } from "../../hooks/use-job-polling";
 import { useResetOnKey } from "../../hooks/use-reset-on-key";
-import type { AnalysisJobResponse, AnalysisJobStatus, CostEstimate, ExtensionItemSummary, LLMStatus, PersonalizationResult, Skill, PersonalizationMode } from "../../types";
+import type { AnalysisJobResponse, CostEstimate, ExtensionItemSummary, LLMStatus, PersonalizationResult, Skill, PersonalizationMode } from "../../types";
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from "../../styles";
 import { AnalysisLoadingScreen } from "../analysis-loading-screen";
 import { AnalysisWelcomePage, TutorialBanner } from "../analysis-welcome";
@@ -80,8 +81,6 @@ const MODE_LOADING_TITLES: Record<PersonalizationMode, string> = {
   creation: "Generating custom skills from your workflow",
   evolution: "Checking installed skills against your usage",
 };
-
-const POLL_INTERVAL_MS = 3000;
 
 interface PersonalizationPanelProps {
   checkedIds: Set<string>;
@@ -369,38 +368,41 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
     setHistoryRefresh((n) => n + 1);
   }, []);
 
-  // Poll for job completion when activeJobId is set
+  const pollApiBase = API_BASE_MAP[activeTab] ?? "/api/recommendation";
   useEffect(() => {
-    if (!activeJobId) return;
-    setAnalysisLoading(true);
-    const apiBase = API_BASE_MAP[activeTab] ?? "/api/recommendation";
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetchWithToken(`${apiBase}/jobs/${activeJobId}`);
-        if (!res.ok) return;
-        const status: AnalysisJobStatus = await res.json();
-        if (status.status === "completed" && status.analysis_id) {
-          onJobIdChange(null);
-          setAnalysisLoading(false);
-          const loadRes = await fetchWithToken(`${apiBase}/${status.analysis_id}`);
-          if (loadRes.ok) {
-            setAnalysisResult(await loadRes.json());
-          }
-          setHistoryRefresh((n) => n + 1);
-        } else if (status.status === "failed") {
-          onJobIdChange(null);
-          setAnalysisLoading(false);
-          setAnalysisError(status.error_message || "Analysis failed");
-        } else if (status.status === "cancelled") {
-          onJobIdChange(null);
-          setAnalysisLoading(false);
-        }
-      } catch {
-        /* polling is best-effort */
+    if (activeJobId) setAnalysisLoading(true);
+  }, [activeJobId]);
+
+  const handleJobCompleted = useCallback(
+    async (analysisId: string) => {
+      onJobIdChange(null);
+      setAnalysisLoading(false);
+      const loadRes = await fetchWithToken(`${pollApiBase}/${analysisId}`);
+      if (loadRes.ok) {
+        setAnalysisResult(await loadRes.json());
       }
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [activeJobId, activeTab, fetchWithToken, onJobIdChange]);
+      setHistoryRefresh((n) => n + 1);
+    },
+    [fetchWithToken, onJobIdChange, pollApiBase],
+  );
+  const handleJobFailed = useCallback(
+    (message: string) => {
+      onJobIdChange(null);
+      setAnalysisLoading(false);
+      setAnalysisError(message);
+    },
+    [onJobIdChange],
+  );
+  const handleJobCancelled = useCallback(() => {
+    onJobIdChange(null);
+    setAnalysisLoading(false);
+  }, [onJobIdChange]);
+
+  useJobPolling(activeJobId, pollApiBase, fetchWithToken, {
+    onCompleted: handleJobCompleted,
+    onFailed: handleJobFailed,
+    onCancelled: handleJobCancelled,
+  });
 
   const handleStopAnalysis = useCallback(async () => {
     if (!activeJobId) return;

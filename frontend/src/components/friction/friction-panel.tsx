@@ -10,7 +10,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../app";
 import type {
   AnalysisJobResponse,
-  AnalysisJobStatus,
   CostEstimate,
   FrictionAnalysisResult,
   LLMStatus,
@@ -18,6 +17,7 @@ import type {
 import { formatCost } from "../../utils";
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH } from "../../styles";
 import { SHOW_ANALYSIS_DETAIL_SECTIONS } from "../../constants";
+import { useJobPolling } from "../../hooks/use-job-polling";
 import { AnalysisLoadingScreen } from "../analysis-loading-screen";
 import { DemoBanner } from "../demo-banner";
 import { AnalysisWelcomePage, TutorialBanner } from "../analysis-welcome";
@@ -25,7 +25,7 @@ import { CostEstimateDialog } from "../cost-estimate-dialog";
 import { Tooltip } from "../ui/tooltip";
 import { FrictionHistory } from "./friction-history";
 import { WarningsBanner } from "../warnings-banner";
-import { FRICTION_TUTORIAL, POLL_INTERVAL_MS } from "./friction-constants";
+import { FRICTION_TUTORIAL } from "./friction-constants";
 import { MitigationsSection } from "./friction-mitigations";
 import { FrictionTypesSection } from "./friction-types";
 
@@ -174,35 +174,39 @@ export function FrictionPanel({ checkedIds, activeJobId, onJobIdChange }: Fricti
   }, []);
 
   useEffect(() => {
-    if (!activeJobId) return;
-    setLoading(true);
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetchWithToken(`/api/analysis/friction/jobs/${activeJobId}`);
-        if (!res.ok) return;
-        const status: AnalysisJobStatus = await res.json();
-        if (status.status === "completed" && status.analysis_id) {
-          onJobIdChange(null);
-          setLoading(false);
-          const loadRes = await fetchWithToken(`/api/analysis/friction/${status.analysis_id}`);
-          if (loadRes.ok) {
-            setResult(await loadRes.json());
-            setHistoryRefresh((n) => n + 1);
-          }
-        } else if (status.status === "failed") {
-          onJobIdChange(null);
-          setLoading(false);
-          setError(status.error_message || "Analysis failed");
-        } else if (status.status === "cancelled") {
-          onJobIdChange(null);
-          setLoading(false);
-        }
-      } catch {
-        /* polling is best-effort */
+    if (activeJobId) setLoading(true);
+  }, [activeJobId]);
+
+  const handleJobCompleted = useCallback(
+    async (analysisId: string) => {
+      onJobIdChange(null);
+      setLoading(false);
+      const loadRes = await fetchWithToken(`/api/analysis/friction/${analysisId}`);
+      if (loadRes.ok) {
+        setResult(await loadRes.json());
+        setHistoryRefresh((n) => n + 1);
       }
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [activeJobId, fetchWithToken, onJobIdChange]);
+    },
+    [fetchWithToken, onJobIdChange],
+  );
+  const handleJobFailed = useCallback(
+    (message: string) => {
+      onJobIdChange(null);
+      setLoading(false);
+      setError(message);
+    },
+    [onJobIdChange],
+  );
+  const handleJobCancelled = useCallback(() => {
+    onJobIdChange(null);
+    setLoading(false);
+  }, [onJobIdChange]);
+
+  useJobPolling(activeJobId, "/api/analysis/friction", fetchWithToken, {
+    onCompleted: handleJobCompleted,
+    onFailed: handleJobFailed,
+    onCancelled: handleJobCancelled,
+  });
 
   const handleStopAnalysis = useCallback(async () => {
     if (!activeJobId) return;
