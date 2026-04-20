@@ -2,8 +2,9 @@ import { Check, Copy, ExternalLink, Heart, History, Loader2 } from "lucide-react
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, ModalBody, ModalHeader } from "../ui/modal";
 import { buildWithdrawUrl, formatDonatedAt } from "./donation-constants";
+import { donationClient } from "../../api/donation";
 import { useCopyFeedback } from "../../hooks/use-copy-feedback";
-import type { DonationHistoryEntry, DonationHistoryResponse } from "../../types";
+import type { DonationHistoryEntry } from "../../types";
 
 interface DonationHistoryDialogProps {
   fetchWithToken: (url: string, init?: RequestInit) => Promise<Response>;
@@ -61,22 +62,18 @@ function HistoryRow({ entry }: { entry: DonationHistoryEntry }) {
 }
 
 export function DonationHistoryDialog({ fetchWithToken, onClose }: DonationHistoryDialogProps) {
+  const api = useMemo(() => donationClient(fetchWithToken), [fetchWithToken]);
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
     try {
-      const res = await fetchWithToken("/api/sessions/donations/history");
-      if (!res.ok) {
-        setState({ kind: "error", message: `HTTP ${res.status}` });
-        return;
-      }
-      const body: DonationHistoryResponse = await res.json();
+      const body = await api.history();
       setState({ kind: "ready", entries: body.entries });
     } catch (err) {
       setState({ kind: "error", message: String(err) });
     }
-  }, [fetchWithToken]);
+  }, [api]);
 
   useEffect(() => {
     void load();

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, useCallback, useMemo, createContext, useContext } from "react";
 import { createExtensionsClient, type ExtensionsClient } from "./api/extensions";
+import { donationClient } from "./api/donation";
 import { ConfirmDialog } from "./components/ui/confirm-dialog";
 import { DonationConsentDialog } from "./components/donation/donation-consent-dialog";
 import { DonationResultDialog } from "./components/donation/donation-result-dialog";
@@ -138,6 +139,7 @@ export function App() {
     () => createExtensionsClient(fetchWithToken),
     [fetchWithToken],
   );
+  const donationApi = useMemo(() => donationClient(fetchWithToken), [fetchWithToken]);
 
   const contextValue: AppContextValue = {
     sessionToken,
@@ -261,13 +263,7 @@ export function App() {
   const handleDownloadClick = async () => {
     if (checkedIds.size === 0) return;
     try {
-      const res = await fetchWithToken("/api/sessions/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_ids: [...checkedIds] }),
-      });
-      if (!res.ok) return;
-      const blob = await res.blob();
+      const blob = await donationApi.download([...checkedIds]);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -287,31 +283,7 @@ export function App() {
   const handleDonateConfirm = useCallback(async () => {
     setDialog({ kind: "donating" });
     try {
-      const res = await fetchWithToken("/api/sessions/donate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_ids: [...checkedIds] }),
-      });
-      if (!res.ok) {
-        let errorMsg = `HTTP ${res.status}`;
-        try {
-          const body = await res.json();
-          errorMsg = body.detail || JSON.stringify(body);
-        } catch {
-          errorMsg = await res.text().catch(() => errorMsg);
-        }
-        setDialog({
-          kind: "donate-result",
-          result: {
-            total: checkedIds.size,
-            donated: 0,
-            donation_id: null,
-            errors: [{ session_id: "", error: errorMsg }],
-          },
-        });
-        return;
-      }
-      const result: DonateResult = await res.json();
+      const result = await donationApi.donate([...checkedIds]);
       setDialog({ kind: "donate-result", result });
     } catch (err) {
       setDialog({
@@ -320,11 +292,11 @@ export function App() {
           total: checkedIds.size,
           donated: 0,
           donation_id: null,
-          errors: [{ session_id: "", error: String(err) }],
+          errors: [{ session_id: "", error: err instanceof Error ? err.message : String(err) }],
         },
       });
     }
-  }, [checkedIds, fetchWithToken]);
+  }, [checkedIds, donationApi]);
 
   const handleDialogClose = () => {
     if (dialog.kind === "donate-result" && dialog.result.donated > 0) {

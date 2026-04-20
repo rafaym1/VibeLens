@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../app";
+import { sessionsClient } from "../../api/sessions";
 import type { Step, Trajectory, FlowData } from "../../types";
 import { StepBlock } from "./step-block";
 import { SubAgentBlock } from "./sub-agent-block";
@@ -56,6 +57,7 @@ interface SessionViewProps {
 
 export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavigateSession, allSessions, pendingScrollStepId, onScrollComplete }: SessionViewProps) {
   const { fetchWithToken, appMode } = useAppContext();
+  const api = useMemo(() => sessionsClient(fetchWithToken), [fetchWithToken]);
   const [trajectories, setTrajectories] = useState<Trajectory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -100,44 +102,36 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
     setError("");
     setTrajectories([]);
 
-    fetchWithToken(`/api/sessions/${sessionId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to load session: ${res.status}`);
-        return res.json();
-      })
-      .then((data: Trajectory[]) => {
-        setTrajectories(data);
-      })
+    api
+      .get(sessionId)
+      .then((data) => setTrajectories(data))
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [sessionId, fetchWithToken, sharedTrajectories]);
+  }, [sessionId, api, sharedTrajectories]);
 
   // Fetch session analytics for cost estimation (non-blocking, skip for shared views)
   useEffect(() => {
     if (!sessionId || loading || isSharedView) return;
-    fetchWithToken(`/api/analysis/sessions/${sessionId}/stats`)
-      .then((res) => (res.ok ? res.json() : null))
+    api
+      .stats(sessionId)
       .then((data) => {
         if (data?.cost_usd != null) setSessionCost(data.cost_usd);
       })
       .catch((err) => console.error("Failed to load session stats:", err));
-  }, [sessionId, loading, fetchWithToken]);
+  }, [sessionId, loading, api, isSharedView]);
 
   // Fetch flow data lazily when user toggles to flow view
   useEffect(() => {
     if (viewMode !== "workflow" || flowData || flowLoading || !sessionId) return;
     setFlowLoading(true);
-    const url = isSharedView && shareToken
-      ? `/api/shares/${shareToken}/flow`
-      : `/api/sessions/${sessionId}/flow`;
-    fetchWithToken(url)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: FlowData | null) => {
+    api
+      .flow(sessionId, isSharedView ? shareToken : null)
+      .then((data) => {
         if (data) setFlowData(data);
       })
       .catch((err) => console.error("Failed to load flow data:", err))
       .finally(() => setFlowLoading(false));
-  }, [viewMode, flowData, flowLoading, sessionId, fetchWithToken, isSharedView, shareToken]);
+  }, [viewMode, flowData, flowLoading, sessionId, api, isSharedView, shareToken]);
 
   const main = useMemo(
     () => trajectories.find((t) => !t.parent_trajectory_ref) ?? trajectories[0] ?? null,
@@ -356,13 +350,7 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
     }
     setShareDialog({ kind: "sharing" });
     try {
-      const res = await fetchWithToken("/api/shares", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId }),
-      });
-      if (!res.ok) throw new Error(`Failed to create share: ${res.status}`);
-      const data = await res.json();
+      const data = await api.createShare(sessionId);
       const shareUrl = `${window.location.origin}/?share=${data.session_id}`;
       setShareDialog({ kind: "ready", url: shareUrl, copied: false });
     } catch (err) {
@@ -499,12 +487,7 @@ export function SessionView({ sessionId, sharedTrajectories, shareToken, onNavig
                 <button
                   onClick={async () => {
                     try {
-                      const res = await fetchWithToken(`/api/sessions/${sessionId}/export`);
-                      if (!res.ok) {
-                        console.error("Session download failed:", res.status, await res.text());
-                        return;
-                      }
-                      const blob = await res.blob();
+                      const blob = await api.exportJson(sessionId);
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;

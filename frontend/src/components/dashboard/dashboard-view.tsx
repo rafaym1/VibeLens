@@ -12,8 +12,10 @@ import {
   RefreshCw,
   Wrench,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../app";
+import { dashboardClient } from "../../api/dashboard";
+import { DASHBOARD_POLL_INTERVAL_MS } from "../../constants";
 import type { DashboardStats, ToolUsageStat } from "../../types";
 import { formatTokens, formatDuration, formatCost, baseProjectName } from "../../utils";
 import { LoadingSpinnerRings } from "../ui/loading-spinner";
@@ -33,6 +35,7 @@ interface DashboardViewProps {
 
 export function DashboardView({ cache }: DashboardViewProps) {
   const { fetchWithToken } = useAppContext();
+  const api = useMemo(() => dashboardClient(fetchWithToken), [fetchWithToken]);
   const [stats, setStats] = useState<DashboardStats | null>(cache?.stats ?? null);
   const [toolUsage, setToolUsage] = useState<ToolUsageStat[]>(cache?.toolUsage ?? []);
   const [loading, setLoading] = useState(!cache);
@@ -60,48 +63,28 @@ export function DashboardView({ cache }: DashboardViewProps) {
   // Stats use metadata (fast); tool usage loads all sessions (slow) and arrives later.
   useEffect(() => {
     if (cache || stats || selectedProject || selectedAgent) return;
-    fetchWithToken("/api/analysis/dashboard")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: DashboardStats | null) => {
-        if (data) setStats(data);
-        else setError("Failed to load dashboard data");
-      })
+    api
+      .stats()
+      .then(setStats)
       .catch((err) => setError(String(err)))
       .finally(() => setLoading(false));
-
-    fetchWithToken("/api/analysis/tool-usage")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data: ToolUsageStat[]) => setToolUsage(data))
-      .catch(() => {});
-  }, [cache, stats, fetchWithToken, selectedProject]);
+    api.toolUsage().then(setToolUsage).catch(() => {});
+  }, [cache, stats, api, selectedProject, selectedAgent]);
 
   // Fetch on-demand when filtering by project or agent
   useEffect(() => {
     if (!selectedProject && !selectedAgent) return;
-
     setLoading(true);
     setError(null);
-    const params = new URLSearchParams();
-    if (selectedProject) params.set("project_path", selectedProject);
-    if (selectedAgent) params.set("agent_name", selectedAgent);
-
-    Promise.all([
-      fetchWithToken(`/api/analysis/dashboard?${params}`)
-        .then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r.json();
-        }),
-      fetchWithToken(`/api/analysis/tool-usage?${params}`)
-        .then((r) => (r.ok ? r.json() : []))
-        .catch(() => []),
-    ])
-      .then(([dashData, toolData]: [DashboardStats, ToolUsageStat[]]) => {
+    const filters = { project: selectedProject, agent: selectedAgent };
+    Promise.all([api.stats(filters), api.toolUsage(filters)])
+      .then(([dashData, toolData]) => {
         setStats(dashData);
         setToolUsage(toolData);
       })
       .catch((err) => setError(String(err)))
       .finally(() => setLoading(false));
-  }, [fetchWithToken, selectedProject, selectedAgent]);
+  }, [api, selectedProject, selectedAgent]);
 
   // Restore cached global data when clearing filters
   const handleClearFilters = useCallback(() => {
@@ -119,18 +102,13 @@ export function DashboardView({ cache }: DashboardViewProps) {
     setError(null);
     try {
       // Re-scan sessions from disk, then invalidate cache and recompute stats
-      await fetchWithToken("/api/sessions?refresh=true");
+      await api.refreshSessions();
       const [dashData, toolData] = await Promise.all([
-        fetchWithToken("/api/analysis/dashboard?refresh=true").then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r.json();
-        }),
-        fetchWithToken("/api/analysis/tool-usage")
-          .then((r) => (r.ok ? r.json() : []))
-          .catch(() => []),
+        api.stats(undefined, { refresh: true }),
+        api.toolUsage(),
       ]);
-      setStats(dashData as DashboardStats);
-      setToolUsage(toolData as ToolUsageStat[]);
+      setStats(dashData);
+      setToolUsage(toolData);
       setSelectedProject(null);
       setSelectedAgent(null);
     } catch (err) {
@@ -138,19 +116,15 @@ export function DashboardView({ cache }: DashboardViewProps) {
     } finally {
       setRefreshing(false);
     }
-  }, [fetchWithToken]);
+  }, [api]);
 
   const handleExport = async (format: "csv" | "json") => {
     setExporting(format);
-    const params = new URLSearchParams({ format });
-    if (selectedProject) params.set("project_path", selectedProject);
-    if (selectedAgent) params.set("agent_name", selectedAgent);
     try {
-      const res = await fetchWithToken(
-        `/api/analysis/dashboard/export?${params}`
-      );
-      if (!res.ok) return;
-      const blob = await res.blob();
+      const blob = await api.export(format, {
+        project: selectedProject,
+        agent: selectedAgent,
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -686,32 +660,22 @@ export function DashboardView({ cache }: DashboardViewProps) {
 
 /* ── Warming progress bar shown while cache is loading ── */
 
-const POLL_INTERVAL_MS = 1500;
-
-interface WarmingStatus {
-  total: number;
-  loaded: number;
-  done: boolean;
-}
-
 function WarmingProgressBar() {
   const { fetchWithToken } = useAppContext();
-  const [status, setStatus] = useState<WarmingStatus | null>(null);
+  const api = useMemo(() => dashboardClient(fetchWithToken), [fetchWithToken]);
+  const [status, setStatus] = useState<Awaited<ReturnType<typeof api.warmingStatus>>>(null);
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => {
     const poll = () => {
-      fetchWithToken("/api/warming-status")
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data: WarmingStatus | null) => {
-          if (data) setStatus(data);
-        })
-        .catch(() => {});
+      api.warmingStatus().then((data) => {
+        if (data) setStatus(data);
+      }).catch(() => {});
     };
     poll();
-    timerRef.current = setInterval(poll, POLL_INTERVAL_MS);
+    timerRef.current = setInterval(poll, DASHBOARD_POLL_INTERVAL_MS);
     return () => clearInterval(timerRef.current);
-  }, [fetchWithToken]);
+  }, [api]);
 
   const total = status?.total ?? 0;
   const loaded = status?.loaded ?? 0;
