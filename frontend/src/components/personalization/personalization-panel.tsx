@@ -1,10 +1,13 @@
 import { Check, History, Info, PanelRightClose, PanelRightOpen, Search, Sparkles, TrendingUp } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext, useExtensionsClient } from "../../app";
+import { analysisClient } from "../../api/analysis";
+import { llmClient } from "../../api/llm";
 import { useJobPolling } from "../../hooks/use-job-polling";
 import { useResetOnKey } from "../../hooks/use-reset-on-key";
-import type { AnalysisJobResponse, CostEstimate, ExtensionItemSummary, LLMStatus, PersonalizationResult, Skill, PersonalizationMode } from "../../types";
+import type { ExtensionItemSummary, LLMStatus, PersonalizationResult, Skill, PersonalizationMode } from "../../types";
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from "../../styles";
+import { useCostEstimate } from "../../hooks/use-cost-estimate";
 import { AnalysisLoadingScreen } from "../analysis-loading-screen";
 import { AnalysisWelcomePage, TutorialBanner } from "../analysis-welcome";
 import { CostEstimateDialog } from "../cost-estimate-dialog";
@@ -91,6 +94,7 @@ interface PersonalizationPanelProps {
 
 export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, resetKey = 0 }: PersonalizationPanelProps) {
   const { fetchWithToken, appMode, maxSessions } = useAppContext();
+  const llmApi = useMemo(() => llmClient(fetchWithToken), [fetchWithToken]);
   const [activeTab, setActiveTab] = useState<PersonalizationTab>(() => {
     const stored = localStorage.getItem("vibelens-personalization-tab");
     if (stored && TAB_CONFIG.some((t) => t.id === stored)) return stored as PersonalizationTab;
@@ -108,8 +112,10 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
   const [exploreResetKey, setExploreResetKey] = useState(0);
   const [localResetKey, setLocalResetKey] = useState(0);
   const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null);
-  const [estimate, setEstimate] = useState<CostEstimate | null>(null);
-  const [estimating, setEstimating] = useState(false);
+  const { estimate, estimating, requestEstimate, clearEstimate } = useCostEstimate(
+    fetchWithToken,
+    setAnalysisError,
+  );
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const draggingRef = useRef(false);
 
@@ -151,12 +157,11 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
 
   const refreshLlmStatus = useCallback(async () => {
     try {
-      const res = await fetchWithToken("/api/llm/status");
-      if (res.ok) setLlmStatus(await res.json());
+      setLlmStatus(await llmApi.status());
     } catch {
-      /* ignore — status check is best-effort */
+      /* best-effort */
     }
-  }, [fetchWithToken]);
+  }, [llmApi]);
 
   useEffect(() => {
     refreshLlmStatus();
@@ -175,63 +180,32 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
   }, [fetchWithToken]);
 
   const proceedToEstimate = useCallback(
-    async (mode: PersonalizationMode, overrideSessionIds?: string[]) => {
-      setEstimating(true);
+    (mode: PersonalizationMode, overrideSessionIds?: string[]) => {
       setAnalysisError(null);
-      try {
-        const sessionIds = overrideSessionIds ?? [...checkedIds];
-        const body: Record<string, unknown> = { session_ids: sessionIds };
-        if (selectedSkillNamesRef.current) body.skill_names = selectedSkillNamesRef.current;
-        const tabKey = Object.entries(MODE_MAP).find(([, v]) => v === mode)?.[0] ?? "retrieve";
-        const apiBase = API_BASE_MAP[tabKey];
-        const res = await fetchWithToken(`${apiBase}/estimate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          throw new Error(data?.detail || `HTTP ${res.status}`);
-        }
-        setEstimate(await res.json());
-      } catch (err) {
-        setAnalysisError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setEstimating(false);
-      }
+      const sessionIds = overrideSessionIds ?? [...checkedIds];
+      const body: Record<string, unknown> = { session_ids: sessionIds };
+      if (selectedSkillNamesRef.current) body.skill_names = selectedSkillNamesRef.current;
+      const tabKey = Object.entries(MODE_MAP).find(([, v]) => v === mode)?.[0] ?? "retrieve";
+      requestEstimate(`${API_BASE_MAP[tabKey]}/estimate`, body);
     },
-    [checkedIds, fetchWithToken],
+    [checkedIds, requestEstimate],
   );
 
   const handleConfirmAnalysis = useCallback(async () => {
     const mode = pendingModeRef.current;
     const tabKey = Object.entries(MODE_MAP).find(([, v]) => v === mode)?.[0] ?? "retrieve";
-    const apiBase = API_BASE_MAP[tabKey];
+    const api = analysisClient(fetchWithToken, API_BASE_MAP[tabKey]);
     const isRecommend = mode === "recommendation";
-    setEstimate(null);
+    clearEstimate();
     setAnalysisLoading(true);
     setAnalysisError(null);
     try {
-      const sessionIds = isRecommend
-        ? resolvedSessionIdsRef.current
-        : [...checkedIds];
+      const sessionIds = isRecommend ? resolvedSessionIdsRef.current : [...checkedIds];
       const body: Record<string, unknown> = { session_ids: sessionIds };
       if (selectedSkillNamesRef.current) body.skill_names = selectedSkillNamesRef.current;
-      const res = await fetchWithToken(apiBase, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.detail || `HTTP ${res.status}`);
-      }
-      const data: AnalysisJobResponse = await res.json();
+      const data = await api.submit(body);
       if (data.status === "completed" && data.analysis_id) {
-        const loadRes = await fetchWithToken(`${apiBase}/${data.analysis_id}`);
-        if (loadRes.ok) {
-          setAnalysisResult(await loadRes.json());
-        }
+        setAnalysisResult(await api.load<PersonalizationResult>(data.analysis_id));
         setHistoryRefresh((n) => n + 1);
         setAnalysisLoading(false);
       } else {
@@ -241,7 +215,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
       setAnalysisError(err instanceof Error ? err.message : String(err));
       setAnalysisLoading(false);
     }
-  }, [checkedIds, fetchWithToken, onJobIdChange]);
+  }, [checkedIds, clearEstimate, fetchWithToken, onJobIdChange]);
 
   const handleRequestEstimate = useCallback(
     async (mode: PersonalizationMode) => {
@@ -306,18 +280,14 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
     async (mode: PersonalizationMode) => {
       if (appMode !== "demo") return;
       const tabKey = Object.entries(MODE_MAP).find(([, v]) => v === mode)?.[0] ?? "retrieve";
-      const apiBase = API_BASE_MAP[tabKey];
+      const api = analysisClient(fetchWithToken, API_BASE_MAP[tabKey]);
       try {
         if (!demoHistoryRef.current) {
-          const res = await fetchWithToken(`${apiBase}/history`);
-          if (!res.ok) return;
-          demoHistoryRef.current = await res.json();
+          demoHistoryRef.current = await api.history<{ id: string; mode: PersonalizationMode }>();
         }
         const match = demoHistoryRef.current?.find((h) => h.mode === mode);
         if (!match) return;
-        const loadRes = await fetchWithToken(`${apiBase}/${match.id}`);
-        if (!loadRes.ok) return;
-        setAnalysisResult(await loadRes.json());
+        setAnalysisResult(await api.load<PersonalizationResult>(match.id));
       } catch {
         /* best-effort — fall back to welcome page */
       }
@@ -336,20 +306,15 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
     const targetMode = storedTab && MODE_MAP[storedTab] ? MODE_MAP[storedTab] : null;
     if (!targetMode) return;
 
-    const apiBase = API_BASE_MAP[storedTab!];
+    const api = analysisClient(fetchWithToken, API_BASE_MAP[storedTab!]);
 
     (async () => {
       try {
-        const res = await fetchWithToken(`${apiBase}/history`);
-        if (!res.ok) return;
-        const history: { id: string; mode: PersonalizationMode }[] = await res.json();
+        const history = await api.history<{ id: string; mode: PersonalizationMode }>();
         demoHistoryRef.current = history;
         if (history.length === 0) return;
         const match = history.find((h) => h.mode === targetMode) ?? history[0];
-        const loadRes = await fetchWithToken(`${apiBase}/${match.id}`);
-        if (!loadRes.ok) return;
-        const result: PersonalizationResult = await loadRes.json();
-        handleHistorySelect(result);
+        handleHistorySelect(await api.load<PersonalizationResult>(match.id));
       } catch {
         /* best-effort */
       }
@@ -377,9 +342,11 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
     async (analysisId: string) => {
       onJobIdChange(null);
       setAnalysisLoading(false);
-      const loadRes = await fetchWithToken(`${pollApiBase}/${analysisId}`);
-      if (loadRes.ok) {
-        setAnalysisResult(await loadRes.json());
+      try {
+        const api = analysisClient(fetchWithToken, pollApiBase);
+        setAnalysisResult(await api.load<PersonalizationResult>(analysisId));
+      } catch {
+        /* best-effort */
       }
       setHistoryRefresh((n) => n + 1);
     },
@@ -406,11 +373,9 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
 
   const handleStopAnalysis = useCallback(async () => {
     if (!activeJobId) return;
-    const apiBase = API_BASE_MAP[activeTab] ?? "/api/recommendation";
+    const api = analysisClient(fetchWithToken, API_BASE_MAP[activeTab] ?? "/api/recommendation");
     try {
-      await fetchWithToken(`${apiBase}/jobs/${activeJobId}/cancel`, {
-        method: "POST",
-      });
+      await api.cancelJob(activeJobId);
     } catch {
       /* best-effort */
     }
@@ -578,7 +543,7 @@ export function PersonalizationPanel({ checkedIds, activeJobId, onJobIdChange, r
           estimate={estimate}
           sessionCount={activeTab === "retrieve" ? resolvedSessionIdsRef.current.length : checkedIds.size}
           onConfirm={handleConfirmAnalysis}
-          onCancel={() => setEstimate(null)}
+          onCancel={clearEstimate}
         />
       )}
       {showSkillSelector && (
